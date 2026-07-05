@@ -1,0 +1,6116 @@
+Next Generation Very Large Array Memo #72
+A Study of ngVLA Subarray Efficiency:
+Plains + Fractions of the Core
+Viviana Rosero (NRAO)
+January 15, 2020
+Abstract
+In this memo I present five subarrays that each consist of the entire
+Plains subarray plus different fractions of the Core subarray. For each
+subarray I calculate the taperability, i.e., the change in sensitivity versus
+resolution, and the PSF resulting from a 4-hour simulation at 30 GHz. I
+analyze the taperability curves and compare the efficiencies of these subarrays over a range of representative resolutions. I find that subarrays with
+fewer core antennas are more efficient at certain resolutions, and discuss
+how the consideration of subarray efficiency could be used to construct
+a high-throughput observing program (e.g., one that minimizes the time
+needed to complete all the KSG observations).
+
+1
+
+Introduction
+
+The ngVLA reference design is comprised of three fundamental subsets, the
+Main Array (MA), the long baseline array (LBA) and the short baseline array
+(SBA). Depending on the science requirements, the ngVLA can in principle operate with combinations of different subarrays and/or subsets. In ngVLA memo
+#55 [3] I presented a study of the simulated image noise at different angular
+resolutions, achieved by varying the imaging weights, for six subsets and subarrays of the ngVLA that include the Main, LBA, Main`LBA, Mid´baseline,
+Plains`Core and Core. By studying the change in sensitivity versus resolution
+of different subarrays I concluded that the current ngVLA reference design has
+a high degree of taperability, i.e., it can accommodate a wide range of resolutions without a great loss of sensitivity. In order to account for the change
+in sensitivity due to use of imaging weights (relative to the naturally weighted
+rms defined as σN A ), I used an efficiency factor ηweight 1 such that the expected
+image rms after weighting is σrms “ ηweight σN A .
+1 Or an ‘innefficiency’ factor for this effect.
+
+1
+
+As it has been pointed out in previous memos by C. Carilli (e.g., ngVLA memo
+#12 [1] and ngVLA memo #41 [2]) the centrally condensed antenna distribution of the ngVLA leads to a natural point spread function (PSF) that is not
+well characterized by a Gaussian, and therefore any subarray that contains the
+ngVLA Core will produce a naturally weighted beam (both tapered and untapered) that features a type of PSF non-Gaussianity which is often referred
+to as a beam ‘skirt’ or ‘plateau’. However, ngVLA memo #55 [3] and ngVLA
+memo #65 [4] show that combinations of robustness and tapering allow for a
+beam of much higher quality but at the expense of sensitivity. For example,
+ngVLA memo #55 [3] presented a first approximation of beam sculpting by
+using Briggs weighting with a value of robust R“ ´0.5, which reduced the skirt
+to an acceptable level with a typical loss of sensitivity of less than a factor of
+two (ηweight ă 2) compared to natural weighting.
+The ngVLA notional reference observing program (ROP) [5] presents a systematic quantification of the technical and observing needs of the key science
+goals (KSGs) which are the drivers of the ngVLA reference design. The ROP
+is expressed in terms of the subset or subarray times needed by those KSGs,
+wherein the Plains`Core is a frequently assigned subarray based on the general approach explained in the ROP document [5] Section 3, paragraph 3. The
+fundamental requirements for this assignment are the achievable resolution and
+largest angular scale (LAS) at the frequency specific to each KSG. Additionally,
+the ROP states that “If more than one subset or subarray can meet the use case
+requirements, the one that will minimize Ttarget is generally picked.”
+It is important to point out that if Ttarget is used as a strong criteria in the
+assignment of a subarray then we may be incurring a loss in the overall efficiency of ngVLA operations. For example, a subarray selected in this manner
+may produce too many short baselines and lead to an unacceptable PSF with
+a large skirt. In order to meet the KSG’s specific scientific requirements it may
+then be required to adjust the image parameters to ‘sculpt’ a more appropriate
+synthesized beam, which introduces inefficiency by down-weighting these undesirable short baselines. Instead of using Ttarget to choose the subarray with the
+highest performance, I would like to propose that we could optimize the scientific
+throughput by selecting the subarray that minimizes the inefficiency parameter
+ηweight .
+In this memo I present a taperability study of five subarrays that include the
+Plains subarray plus a fraction of the Core, namely: Plains (alone; no-Core),
+Plains`10th Core, Plains`Quarter Core, Plains`Third Core, Plains`Half Core.
+These results are compared with the simulations of the Plains ` (Full) Core subarray, which was originally presented in ngVLA memo #55 [3]. The primary
+goal of this memo is to study how the taperability, efficiency and quality of
+the synthesized beam changes as a function of the number of Core antennas
+used together with the Plains subarray. Additionally, a taperability study of
+the ngVLA Plains`Mid-baseline subarray is included in the appendix Section
+2
+
+C as a potentially interesting subarray.
+The simulations and imaging presented in this work are described in ngVLA
+memo #55 [3] Section 2. Tables 1, 2, 3, 4, 5 and 11 in Appendix A show the
+simulation parameters for each of the subarrays studied in this memo. For a
+description of each column of these tables please refer to ngVLA memo #55 [3]
+Section 3.
+Figures 2, 5, 8, 11, 14 and 23 show the change in sensitivity with resolution,
+i.e., the taperability, at 30 GHz for each simulations. The plotted resolutions
+(θ1{2 ) correspond to the geometric mean of the minor and major beam FWHM
+reported in the tables of simulation parameters. The taperability results are
+then used to provide tables of key performance metrics for each subarray (Appendix B) at several representative resolutions. The sensitivity calculations in
+the key performance tables include ηweight , estimated using the blue and red
+data series in the taperability figures and by scaling θ1{2 with frequency as
+θ1{2@30GHz “ θ1{2@ν ˆ pν{30 GHzq, where θ1{2 is in mas.
+
+2
+
+Study of Subarrays that Include the
+Plains`Fractions of the Core
+
+2.1
+
+ngVLA Plains Subarray
+Antenna Positions for ngVLA Plains
+20
+15
+10
+
+Y(km)
+
+5
+0
+−5
+−10
+−15
+−20
+
+−20
+
+−15
+
+−10
+
+−5
+
+0
+
+5
+
+10
+
+X(km)
+
+Figure 1: Positions of the 74 18 m antennas for the Plains subarray.
+Figure 1 shows the position of the antennas of the Plains subarray –which excludes the 94 antennas from the Core. The Plains subarray extends over a
+maximum baseline of 36.5 km and a minimum baseline of 250 m. For this subarray, the images have a size of 20480 px.
+3
+
+Natural weighting with no uv-taper, which gives the best sensitivity, produces
+an angular resolution of 96.9 mas. From Figure 2 we see that for natural
+weighting, we can use a uv-taper to vary the angular resolution over a range of
+θ1{2 „ 67 ´ 370 mas for which we pay a penalty in sensitivity of À 2. Likewise,
+for a range of angular resolution of θ1{2 „ 68 ´ 243 mas we pay a penalty in
+sensitivity of À 1.5.
+The features of the resulting taperability curve are similar to the ones from the
+ngVLA Mid-baseline and Core subarrays, i.e., the loss of sensitivity for increasingly large uv-tapers is steep.
+Figure 3 shows examples of 1D East-West cuts through example PSFs.
+Table 6 in Appendix B shows the key performance metrics of the ngVLA Plains
+subarray using 74 antennas, tabulated for a range of selected resolutions between
+100 and 10000 mas. These metrics include the change in sensitivity corresponding to the uv-taper needed to achieve these resolutions (based on Figure 2 and
+the frequency scaling described in Section 1).
+
+4
+
+Plains rms/rmsN A at 30 GHz
+3.5
+
+3.0
+
+ηweight
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+
+Natural, TA=changes
+Robust, TA=0
+Robust=−0.5, TA=changes
+
+0.5
+
+0.0
+2 × 102
+
+102
+
+3 × 102
+
+4 × 102
+
+θ1/2[mas]
+
+Figure 2: Taperability curve for the ngVLA Plains Subarray showing the image standard deviation (σ) at different angular resolutions (FWHM) achieved
+by varying the imaging weights, simulated at 30 GHz. The noise has been
+scaled relative to that of the naturally weighted image (σN A ). The red symbols
+correspond to use of a uv-taper and natural weights, and the blue symbols to
+Briggs robust weighting without a taper. The gray symbols are for Briggs robust
+R“ ´0.5 and a varying uv-taper, which has a large effect on beam quality (see
+Figure 3). The dashed line is the interpolation of the points used to estimate
+ηweight .
+
+5
+
+R = −0.5, TA =0
+Natural, TA =0
+
+1.0
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+R = −0.5, TA =0
+R = −2.0, TA =0
+
+1.0
+
+0.6
+
+0.4
+
+0.2
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.0
+
+0.4
+
+Natural, TA =32
+R = −0.5, TA =32
+
+1.0
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+Natural, TA =512
+R = −0.5, TA =512
+
+1.0
+0.8
+
+Normalized Amplitude
+
+0.8
+
+Normalized Amplitude
+
+0.4
+
+0.6
+
+0.4
+
+0.6
+0.4
+0.2
+
+0.2
+0.0
+0.0
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+arcsec
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+Figure 3: Simulated 30 GHz PSFs for the ngVLA Plains subarray over a range of
+resolutions, showing the effect of different imaging weights (TA: uv-taper in mas, R:
+Briggs robust parameter). The PSFs are a selection of the data presented in Table 1.
+These examples illustrate how combinations of robustness and tapering allow for a
+beam of much higher quality (but at the expense of sensitivity).
+
+6
+
+2.2
+
+ngVLA Plains`Half Core Subarray
+
+Figure 4: Positions of the 121 18 m antennas for the Plains`Half Core subarray
+for the first half (blue dots) and second half (red dots) from the configuration
+file of the ngVLA Core.
+Figure 4 shows the position of the antennas of the Plains`Half Core subarray.
+For these and other simulations where a fraction of the Core is selected, the
+antennas have been chosen in a simple fashion based on the order that they
+appear in the configuration file of the Core subarray. The results for the taperability curve and PSF shape are not expected to change significantly based on
+the selection method, since the selected antennas would still be in approximately
+the same location (i.e., within the compact, 1.3 km diameter core). However,
+7
+
+a more careful selection could better preserve the shortest baselines present in
+the Core subarray and therefore retain the LAS of the full Core.
+The Plains`Second Half subarray extends over a maximum baseline of 36.5
+km and a minimum baseline of 27 m. For this subarray, the images have a
+size of 20480 px.
+Natural weighting with no uv-taper, which gives the best sensitivity, produces
+an angular resolution of 134.56 mas. From Figure 5 we see that for natural
+weighting, we can use a uv-taper to vary the angular resolution over a range of
+θ1{2 „ 73 ´ 1330 mas for which we pay a penalty in sensitivity of À 2. Likewise,
+for a range of angular resolution of θ1{2 „ 79 ´ 590 mas we pay a penalty in
+sensitivity of À 1.5.
+Figure 6 shows examples of 1D East-West cuts through example PSFs.
+Table 7 in Appendix B shows the key performance metrics of the ngVLA
+Plains`Second Half Core subarray using 121 antennas, tabulated for a range
+of selected resolutions between 100 and 10000 mas. These metrics include the
+change in sensitivity corresponding to the uv-taper needed to achieve these resolutions (based on Figure 5 and the frequency scaling described in Section 1).
+
+8
+
+Plains+Half Core rms/rmsN A at 30 GHz
+4.0
+
+3.5
+
+3.0
+
+ηweight
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+
+Natural, TA=changes
+Robust, TA=0
+Robust=−0.5, TA=changes
+
+0.5
+
+0.0
+102
+
+103
+
+θ1/2[mas]
+
+Figure 5: Taperability curve for the ngVLA Plains`Half Core subarray showing
+the image noise (rms) at different angular resolutions (FWHM) achieved by
+varying the imaging weights, simulated at 30 GHz. The noise has been scaled
+relative to that of the naturally weighted image (rmsN A ). Symbols and colors
+are the same as used in Figure 2.
+
+9
+
+R = −0.5, TA =0
+Natural, TA =0
+
+1.0
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+R = −0.5, TA =0
+R = −2.0, TA =0
+
+1.0
+
+0.6
+
+0.4
+
+0.2
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.0
+
+0.4
+
+Natural, TA =32
+R = −0.5, TA =32
+
+1.0
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+Natural, TA =512
+R = −0.5, TA =512
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.3
+
+1.0
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+0.4
+
+0.6
+
+0.4
+
+0.2
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+arcsec
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+0.0
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+arcsec
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+Figure 6: Simulated 30 GHz PSFs for the ngVLA Plains`Second Half Core subarray
+over a range of resolutions, showing the effect of different imaging weights (TA: uvtaper in mas, R: Briggs robust parameter). The PSFs are a selection of the data
+presented in Table 2. These examples illustrate how combinations of robustness and
+tapering allow for a beam of much higher quality (but at the expense of sensitivity).
+
+10
+
+2.3
+
+ngVLA Plains`Third Core Subarray
+
+Figure 7: Positions of the 106 18 m antennas for the Plains`Third Core subarray for the last 32 antennas (green dots) of the core configuration file.
+Figure 7 shows the position of the antennas of the Plains`Third Core subarray.
+The Plains`Third Third Core subarray extends over a maximum baseline of
+36.5 km and a minimum baseline of 37 m. For this subarray, the images have a
+size of 20480 px.
+Natural weighting with no uv-taper, which gives the best sensitivity, produces
+an angular resolution of 124.13 mas. From Figure 8 we see that for natural
+weighting, we can use a uv-taper to vary the angular resolution over a range of
+
+11
+
+θ1{2 „ 71 ´ 900 mas for which we pay a penalty in sensitivity of À 2. Likewise,
+for a range of angular resolution of θ1{2 „ 76 ´ 463 mas we pay a penalty in
+sensitivity of À 1.5.
+Figure 9 shows examples of 1D East-West cuts through example PSFs.
+Table 8 in Appendix B shows the key performance metrics of the ngVLA
+Plains`Third Core subarray using 106 antennas, tabulated for a range of selected resolutions between 100 and 10000 mas. These metrics include the change
+in sensitivity corresponding to the uv-taper needed to achieve these resolutions
+(based on Figure 8 and the frequency scaling described in Section 1).
+
+Plains+Third Core rms/rmsN A at 30 GHz
+3.5
+
+3.0
+
+ηweight
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+
+Natural, TA=changes
+Robust, TA=0
+Robust=−0.5, TA=changes
+
+0.5
+
+0.0
+102
+
+103
+
+θ1/2[mas]
+
+Figure 8: Taperability curve for the ngVLA Plains`Third Core subarray showing the image noise (rms) at different angular resolutions (FWHM) achieved by
+varying the imaging weights, simulated at 30 GHz. The noise has been scaled
+relative to that of the naturally weighted image (rmsN A ). Symbols and colors
+are the same as used in Figure 2.
+
+12
+
+R = −0.5, TA =0
+Natural, TA =0
+
+1.0
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+R = −0.5, TA =0
+R = −2.0, TA =0
+
+1.0
+
+0.6
+
+0.4
+
+0.2
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.0
+
+0.4
+
+Natural, TA =32
+R = −0.5, TA =32
+
+1.0
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+Natural, TA =512
+R = −0.5, TA =512
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.3
+
+1.0
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+0.4
+
+0.6
+
+0.4
+
+0.2
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+arcsec
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+0.0
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+arcsec
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+Figure 9: Simulated 30 GHz PSFs for the ngVLA Plains`Third Core subarray over
+a range of resolutions, showing the effect of different imaging weights (TA: uv-taper
+in mas, R: Briggs robust parameter). The PSFs are a selection of the data presented
+in Table 3. These examples illustrate how combinations of robustness and tapering
+allow for a beam of much higher quality (but at the expense of sensitivity).
+
+13
+
+2.4
+
+ngVLA Plains`Quarter Core Subarray
+
+Figure 10: Positions of the 97 18 m antennas for the Plains`Quarter Core
+subarray for the third quarter of the antennas of the core configuration file (red
+dots).
+Figure 10 shows the position of the antennas of the Plains`Quarter Core subarray. The Plains`Third Quarter Core subarray extends over a maximum baseline
+of 36.5 km and a minimum baseline of 45 m. For this subarray, the images have
+a size of 20480 px.
+Natural weighting with no uv-taper, which gives the best sensitivity, produces
+an angular resolution of 116.95 mas. From Figure 11 we see that for natural
+
+14
+
+weighting, we can use a uv-taper to vary the angular resolution over a range of
+θ1{2 „ 70 ´ 705 mas for which we pay a penalty in sensitivity of À 2. Likewise,
+for a range of angular resolution of θ1{2 „ 73 ´ 380 mas we pay a penalty in
+sensitivity of À 1.5.
+Figure 12 shows examples of 1D East-West cuts through example PSFs.
+Table 9 in Appendix B shows the key performance metrics of the ngVLA
+Plains`Quarter Core subarray using 97 antennas, tabulated for a range of selected resolutions between 100 and 10000 mas. These metrics include the change
+in sensitivity corresponding to the uv-taper needed to achieve these resolutions
+(based on Figure 11 and the frequency scaling described in Section 1).
+
+Plains+Quarter Core Antennas rms/rmsN A at 30 GHz
+4.0
+
+3.5
+
+3.0
+
+ηweight
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+
+Natural, TA=changes
+Robust, TA=0
+Robust=−0.5, TA=changes
+
+0.5
+
+0.0
+102
+
+103
+
+θ1/2[mas]
+
+Figure 11: Taperability curve for the ngVLA Plains`Quarter Core subarray
+showing the image noise (rms) at different angular resolutions (FWHM) achieved
+by varying the imaging weights, simulated at 30 GHz. The noise has been scaled
+relative to that of the naturally weighted image (rmsN A ). Symbols and colors
+are the same as used in Figure 2.
+
+15
+
+R = −0.5, TA =0
+Natural, TA =0
+
+1.0
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+R = −0.5, TA =0
+R = −2.0, TA =0
+
+1.0
+
+0.6
+
+0.4
+
+0.2
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.0
+
+0.4
+
+Natural, TA =32
+R = −0.5, TA =32
+
+1.0
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+Natural, TA =512
+R = −0.5, TA =512
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.3
+
+1.0
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+0.4
+
+0.6
+
+0.4
+
+0.2
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+arcsec
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+0.0
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+arcsec
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+Figure 12: Simulated 30 GHz PSFs for the ngVLA Plains`Quarter Core subarray
+over a range of resolutions, showing the effect of different imaging weights (TA: uvtaper in mas, R: Briggs robust parameter). The PSFs are a selection of the data
+presented in Table 4. These examples illustrate how combinations of robustness and
+tapering allow for a beam of much higher quality (but at the expense of sensitivity).
+
+16
+
+2.5
+
+ngVLA Plains`10th Core Subarray
+
+Figure 13: Positions of the 83 18 m antennas for the Plains`10th Core antennas
+subarray.
+Figure 13 shows the position of the antennas of the (selected) Plains`10th Core
+subarray. The Plains`10th Core subarray extends over a maximum baseline of
+36.5 km and a minimum baseline of 189 m. For this subarray, the images have
+a size of 20480 px.
+Natural weighting with no uv-taper, which gives the best sensitivity, produces
+an angular resolution of 104.65 mas. From Figure 14 we see that for natural
+weighting, we can use a uv-taper to vary the angular resolution over a range of
+
+17
+
+θ1{2 „ 68 ´ 480 mas for which we pay a penalty in sensitivity of À 2. Likewise,
+for a range of angular resolution of θ1{2 „ 70 ´ 290 mas we pay a penalty in
+sensitivity of À 1.5.
+Figure 15 shows examples of 1D East-West cuts through example PSFs.
+Table 10 in Appendix B shows the key performance metrics of the ngVLA
+Plains`10th Core subarray using 83 antennas, tabulated for a range of selected
+resolutions between 100 and 10000 mas. These metrics include the change in
+sensitivity corresponding to the uv-taper needed to achieve these resolutions
+(based on Figure 14 and the frequency scaling described in Section 1).
+
+Plains+10th Core Antennas rms/rmsN A at 30 GHz
+3.5
+
+3.0
+
+ηweight
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+
+Natural, TA=changes
+Robust, TA=0
+Robust=−0.5, TA=changes
+
+0.5
+
+0.0
+102
+
+θ1/2[mas]
+
+Figure 14: Taperability curve for the ngVLA Plains`10th core antennas subarray showing the image noise (rms) at different angular resolutions (FWHM)
+achieved by varying the imaging weights, simulated at 30 GHz. The noise has
+been scaled relative to that of the naturally weighted image (rmsN A ). Symbols
+and colors are the same as used in Figure 2.
+
+18
+
+R = −0.5, TA =0
+Natural, TA =0
+
+1.0
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+R = −0.5, TA =0
+R = −2.0, TA =0
+
+1.0
+
+0.6
+
+0.4
+
+0.2
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.0
+
+0.4
+
+Natural, TA =32
+R = −0.5, TA =32
+
+1.0
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+Natural, TA =512
+R = −0.5, TA =512
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.3
+
+1.0
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+0.4
+
+0.6
+
+0.4
+
+0.2
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+arcsec
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+0.0
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+arcsec
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+Figure 15: Simulated 30 GHz PSFs for the ngVLA Plains`10th Core subarray over
+a range of resolutions, showing the effect of different imaging weights (TA: uv-taper
+in mas, R: Briggs robust parameter). The PSFs are a selection of the data presented
+in Table 5. These examples illustrate how combinations of robustness and tapering
+allow for a beam of much higher quality (but at the expense of sensitivity).
+
+19
+
+3
+
+Analisys
+
+In this analysis I include the taperability results of the Plains`(Full) Core presented in ngVLA memo #55 [3], thus I will compare the features of six subarrays
+that contain the Plains plus fractions of the Core.
+
+Plains Subarrays Natural PSFs
+No−Core: 0.17
+10th−Core: 0.21
+Quarter−Core: 0.28
+Third−Core: 0.31
+Half−Core: 0.36
+Full−Core: 0.47
+
+1.0
+
+PSF level
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+0.00
+
+0.05
+
+0.10
+
+0.15
+
+0.20
+
+0.25
+
+Radial distance (arcsec)
+Figure 16: Radially-averaged PSF profiles of the naturally weighted synthesized beam
+(solid lines) for the six subarrays considered in this work. Spline interpolation is used
+to determine the level of the PSF at a radius of one FWHM as marked by the dashed
+lines.
+The ngVLA memo #65 [4] introduced a set of PSF quality metrics as part of the
+effort to sculpt the synthesized beam in order to meet the science requirements
+of the KSGs. Specifically, “metric 2b” refers to a measure of the level of the
+PSF at a radius of one FWHM, and it is sensitive to the broad skirt seen in
+the naturally weighted beams for several ngVLA subarrays. Figure 16 shows
+20
+
+radially-averaged PSF profiles2 ; spline interpolation is used to determine the
+level of the PSF at a radius of one FWHM (i. e., metric 2b) as marked by the
+dashed lines. It was suggested in ngVLA memo #47 that a skirt which raises
+the PSF to a level of 10% at a radius of one FWHM may be acceptably low
+(for comparison, a Gaussian beam is „6% at a radius of one FWHM). At this
+radius, the naturally weighted beams for our selected subarrays are far above
+10% as we can see in Figure 16. This is the case even for the Plains alone
+subarray where there is no contribution from the Core and the PSF level at one
+FWHM is of about 17%, thus indicating that this configuration is still substantially centrally condensed and contains a considerable amount of short baselines.
+Figure 17 shows a compilation of all the taperability curves for the six subarrays
+studied in this memo and (five of them) presented in Section 2: the figure in
+the left shows the curves that are derived from the red (uv-taper and natural
+weights) and the blue (Briggs robust weighting without a taper) symbols in the
+taperability figures and the figure to the right shows the curves corresponding
+to the gray symbols (Briggs robust R“ ´0.5 and a varying uv-taper). From
+the left figure we can see that the Plains plus fractions of the Core allow a
+range of resolutions of 68 À θ(mas) À 2700 (and for ηweight ă 2), with the
+Plains`Full´Core offering the widest range of resolutions.
+rms/rmsN A at 30 GHz (R= −0.5)
+
+rms/rmsN A at 30 GHz
+
+Plains Subarrays for R= −0.5
+
+2.75
+3.5
+2.50
+
+3.0
+
+2.00
+
+ηweight
+
+ηweight
+
+2.25
+
+1.75
+
+1.50
+
+Plains Subarrays
+
+Full−Core
+Half−Core
+Third−Core
+Quarter−Core
+10th−Core
+No−Core
+
+1.25
+
+1.00
+102
+
+Full−Core
+Half−Core
+Third−Core
+Quarter−Core
+10th−Core
+No−Core
+
+2.5
+
+2.0
+
+1.5
+
+103
+
+102
+
+θ1/2[mas]
+
+103
+
+θ1/2[mas]
+
+Figure 17: Compilation of taperability curves for the six subarrays studied in this
+memo and presented in Section 2: (left) curves composed by the red (uv-taper and
+natural weights) and blue (Briggs robust weighting without a taper) symbols; (right)
+curves composed by the gray symbols (Briggs robust R“ ´0.5 and a varying uv-taper).
+2 Radially-averaged profiles are produced using the 3rd party CASA task iring, obtained
+from the ALMA Nordic Node.
+
+21
+
+Figure 18 shows the same curves as in Figure 17 but now they have been re-scaled
+to take into account the different number of antennas per subarray by dividing each curve by the maximum sensitivity of the Plains`Full´Core (σP `C )3 .
+From 18 we can directly compare the sensitivities of our selected subarrays, for
+instance at a resolution of 200 mas the Plains`Full´Core subarray is about 1.5
+times more sensitive than the Plains`Half of the Core subarray, and thus it will
+take the latter around 2.2 times longer to achieve a similar sensitivity than with
+the full Core. Alternatively, for a resolution of 1 arcsec the Plains`Full´Core
+subarray is about 1.7 times more sensitive than the Plains`Half of the Core
+subarray, and thus it will take the latter around 3 times longer time to achieved
+a similar sensitivity than with the full Core.
+rms/rmsN A at 30 GHz Scaled to Plains+Full−Core
+
+rms/rmsN A at 30 GHz Scaled to Plains+Full−Core (R= −0.5)
+Plains Subarrays for R= −0.5
+
+Plains Subarrays
+
+Full−Core
+Half−Core
+Third−Core
+Quarter−Core
+10th−Core
+No−Core
+
+5
+
+Full−Core
+Half−Core
+Third−Core
+Quarter−Core
+10th−Core
+No−Core
+
+7
+
+6
+
+σ/σP +C
+
+σ/σP +C
+
+4
+
+3
+
+5
+
+4
+
+3
+
+2
+
+2
+1
+102
+
+103
+
+102
+
+θ1/2[mas]
+
+103
+
+θ1/2[mas]
+
+Figure 18: Curves are the same as in Figure 17 but now they have been re-scaled
+to take into account the different number of antennas per subarray by dividing each
+curve by the highest sensitivity of the Plains`Full´Core (σP `C )
+
+An alternative way to summarize the taperability curves is to plot slices at constant resolutions. Figures 19 and 20 show the values of each taperability curve
+at selected resolution values between 75 mas and 1 arcsec for the two different
+weighting schemes described previously. This abscissa is labeled according to
+the number of core antennas in the subarray (bottom axis) and the corresponding name given to the subarray (top axis); linear interpolation is used between
+each simulated subarray.
+Figure 19 makes it clear that different subarrays are more efficient at different
+resolutions. Subarrays with fewer antennas in the core have higher native resolutions and therefore suffer less of a sensitivity penalty when using image weights
+3 For the 4´hour simulations σ
+P `C “ 50 µJy/beam.
+
+22
+
+to achieve a higher resolution PSF. On the other hand, subarrays with more core
+antennas can be tapered to lower resolutions with less of a sensitivity penalty. It
+is important to note that regardless of the inefficiency factor, the Plains + Full
+Core subarray will always yield the highest sensitivity of any of the Plains +
+Core subarrays studied here, at all resolutions, because it has the most antennas.
+
+10th−Core
+Third−Core
+No-Core
+Quarter−Core
+Half−Core
+
+Full−Core
+
+Taperability Curve at 30 GHz
+
+4.0
+
+θ1/2 =75 mas
+θ1/2 =100 mas
+θ1/2 =150 mas
+
+3.5
+
+θ1/2 =200 mas
+θ1/2 =500 mas
+θ1/2 =1000 mas
+
+ηweight
+
+3.0
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+Number of core antennas
+
+Figure 19: Efficiency curves for different selected resolutions and subarrays for uvtaper and natural weights and Briggs robust weighting without a taper (red and blue
+data series in the taperability figures).
+
+Another important factor to consider when comparing these subarrays is the
+loss of sensitivity due to reducing the skirt of the PSF. Figure 21 summarizes
+the height of the skirt using metric 2b (see Figure 16) for all simulated subarrays
+and for both uv-taper and natural weights plus Briggs robust weighting without
+a taper (red solid line) and robust R“ ´0.5 weighting (gray solid line). For the
+
+23
+
+10th−Core
+Third−Core
+No-Core
+Quarter−Core
+Half−Core
+
+Full−Core
+
+Taperability Curve at 30 GHz for R= −0.5
+
+6
+
+θ1/2 =75 mas
+
+θ1/2 =100 mas
+θ1/2 =150 mas
+θ1/2 =200 mas
+
+5
+
+θ1/2 =500 mas
+
+ηweight
+
+θ1/2 =1000 mas
+
+4
+
+3
+
+2
+
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+Number of core antennas
+
+Figure 20: Efficiency curves for different selected resolutions and subarrays for Briggs
+robust R“ ´0.5 and a varying uv-taper.
+
+former weighting scheme, the height of the skirt increases monotonically with an
+increasing number of core antennas. All subarrays have a skirt that exceeds the
+recommended level of 10% at a radius of one FWHM, even the Plains subarray
+alone, which has a level of „ 17%. This indicates that some degree of beam
+sculpting will be required for all of these subarrays. For the other weighting
+scheme studied here, robust ´0.5, all subarrays have a skirt that is well below
+10%.
+It would be interesting to determine the precise value of robust weighting and
+the corresponding penalty in sensitivity needed to produce a skirt at the 10%
+level for each of these subarrays. Presumably, the subarrays for which the
+naturally-weighted skirt is lower would require less severe imaging weights (ro-
+
+24
+
+bust values closer to natural) and therefore suffer less of a sensitivity penalty.
+Demonstrating this quantitatively would involve the creation of many more simulated images and is currently not within the scope of this memo.
+
+10th−Core
+Third−Core
+No-Core
+Quarter−Core
+Half−Core
+
+Full−Core
+
+Natural, TA=changes & Robust, TA=0
+Robust=−0.5, TA=changes
+0.4
+
+PSF level
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+Number of core antennas
+
+Figure 21: PSF level or height of the skirt using metric 2b (see Figure 16) for all
+simulated subarrays and for both uv-taper and natural weights plus Briggs robust
+weighting without a taper (red solid line) and robust R“ ´0.5 weighting and changing
+uv taper (gray solid line).
+
+25
+
+4
+
+Conclusions
+
+We have studied six subarrays including the Plains, Plains`Core, and intermediate subarrays containing the Plains plus different fractions of the Core. The
+Plains`Core subarray has the highest performance (as measured by sensitivity)
+because it has the largest number of antennas out of all the subarrays considered, but it does not always use these antennas efficiently. Specifically, the large
+number of core antennas in this subarray produce a large PSF skirt that must be
+reduced by decreasing the weight of the core antennas. The Plains`Core subarray also requires more extreme imaging weights to achieve resolutions near its
+diffraction limit, further reducing its efficiency.
+We have shown that instead of reducing the weight of all core antennas, we
+can construct alternate subarrays having fewer core antennas, and that these
+subarrays are more efficient at certain resolutions than the full Plains`Core.
+A subarray’s efficiency becomes important when considering the throughput of
+the entire ngVLA, provided that the other antennas can also be grouped into
+efficient subarrays and used simultaneously for other projects.
+
+Appendix A
+
+Tables of the Simulation Parameters and Statistics
+
+Table 1: Plains Simulation Parameters and Statistics.
+rms/rmsN A
+
+σ{σN A
+
+71.184 ˆ 65.063
+
+1.561e+00
+
+1.561e+00
+
+14
+
+71.219 ˆ 65.090
+
+1.554e+00
+
+1.554e+00
+
+0.0
+
+14
+
+73.417 ˆ 66.789
+
+1.306e+00
+
+1.306e+00
+
+`1.0
+
+0.0
+
+14
+
+92.926 ˆ 86.664
+
+1.013e+00
+
+1.013e+00
+
+Natural
+
+0.0
+
+14
+
+100.264 ˆ 93.663
+
+1.000e+00
+
+1.000e+00
+
+Natural
+
+32.0
+
+14
+
+105.913 ˆ 100.957
+
+1.005e+00
+
+1.005e+00
+
+Natural
+
+64.0
+
+14
+
+123.512 ˆ 118.457
+
+1.049e+00
+
+1.049e+00
+
+Natural
+
+128.0
+
+14
+
+175.681 ˆ 173.168
+
+1.254e+00
+
+1.254e+00
+
+Natural
+
+256.0
+
+14
+
+296.997 ˆ 294.755
+
+1.704e+00
+
+1.704e+00
+
+Natural
+
+512.0
+
+14
+
+511.075 ˆ 509.431
+
+2.531e+00
+
+2.531e+00
+
+´0.5
+
+0.0
+
+14
+
+71.642 ˆ 64.846
+
+1.503e+00
+
+1.503e+00
+
+´0.5
+
+32.0
+
+14
+
+75.645 ˆ 69.293
+
+1.447e+00
+
+1.447e+00
+
+Robust
+
+Taper
+
+Cell
+
+Beam
+
+[mas]
+
+[mas]
+
+[mas]ˆ[mas]
+
+´2.0
+
+0.0
+
+14
+
+´1.0
+
+0.0
+
+`0.0
+
+Table 1 – Continued on next page
+
+26
+
+Table 1 – Continued from previous page
+Robust
+
+rms/rmsN A
+
+σ{σN A
+
+87.273 ˆ 81.513
+
+1.402e+00
+
+1.402e+00
+
+14
+
+127.903 ˆ 123.112
+
+1.572e+00
+
+1.572e+00
+
+256.0
+
+14
+
+232.562 ˆ 226.191
+
+2.192e+00
+
+2.192e+00
+
+512.0
+
+14
+
+424.123 ˆ 416.226
+
+3.366e+00
+
+3.366e+00
+
+Taper
+
+Cell
+
+Beam
+
+[mas]
+
+[mas]
+
+[mas]ˆ[mas]
+
+´0.5
+
+64.0
+
+14
+
+´0.5
+
+128.0
+
+´0.5
+´0.5
+
+Table 2: Plains`Half Core Parameters and Statistics.
+rms/rmsN A
+
+σ{σN A
+
+77.376 ˆ 70.379
+
+1.869e+00
+
+1.869e+00
+
+14
+
+77.623 ˆ 70.581
+
+1.821e+00
+
+1.821e+00
+
+0.0
+
+14
+
+86.669 ˆ 79.699
+
+1.318e+00
+
+1.318e+00
+
+`1.0
+
+0.0
+
+14
+
+126.780 ˆ 121.001
+
+1.021e+00
+
+1.021e+00
+
+Natural
+
+0.0
+
+14
+
+137.492 ˆ 131.689
+
+1.000e+00
+
+1.000e+00
+
+Natural
+
+32.0
+
+14
+
+145.478 ˆ 139.917
+
+1.003e+00
+
+1.003e+00
+
+Natural
+
+64.0
+
+14
+
+167.846 ˆ 162.992
+
+1.031e+00
+
+1.031e+00
+
+Natural
+
+128.0
+
+14
+
+245.410 ˆ 242.307
+
+1.154e+00
+
+1.154e+00
+
+Natural
+
+256.0
+
+14
+
+439.342 ˆ 435.500
+
+1.369e+00
+
+1.369e+00
+
+Natural
+
+512.0
+
+14
+
+799.880 ˆ 798.148
+
+1.646e+00
+
+1.646e+00
+
+Natural
+
+1024.0
+
+14
+
+1376.763 ˆ 1357.084
+
+2.022e+00
+
+2.022e+00
+
+Natural
+
+2048.0
+
+14
+
+2238.724 ˆ 2193.899
+
+2.689e+00
+
+2.689e+00
+
+´0.5
+
+0.0
+
+14
+
+79.328 ˆ 72.079
+
+1.611e+00
+
+1.611e+00
+
+´0.5
+
+32.0
+
+14
+
+83.637 ˆ 76.284
+
+1.551e+00
+
+1.551e+00
+
+´0.5
+
+64.0
+
+14
+
+95.164 ˆ 88.636
+
+1.481e+00
+
+1.481e+00
+
+´0.5
+
+128.0
+
+14
+
+139.774 ˆ 134.933
+
+1.559e+00
+
+1.559e+00
+
+´0.5
+
+256.0
+
+14
+
+260.457 ˆ 253.324
+
+1.895e+00
+
+1.895e+00
+
+´0.5
+
+512.0
+
+14
+
+502.665 ˆ 493.444
+
+2.276e+00
+
+2.276e+00
+
+´0.5
+
+1024.0
+
+14
+
+959.225 ˆ 948.250
+
+2.632e+00
+
+2.632e+00
+
+´0.5
+
+2048.0
+
+14
+
+1801.983 ˆ 1786.329
+
+3.484e+00
+
+3.484e+00
+
+Robust
+
+Taper
+
+Cell
+
+Beam
+
+[mas]
+
+[mas]
+
+[mas]ˆ[mas]
+
+´2.0
+
+0.0
+
+14
+
+´1.0
+
+0.0
+
+`0.0
+
+27
+
+Table 3: Plains`Third Core Parameters and Statistics.
+rms/rmsN A
+
+σ{σN A
+
+76.303 ˆ 69.237
+
+1.766e+00
+
+1.766e+00
+
+14
+
+76.399 ˆ 69.293
+
+1.742e+00
+
+1.742e+00
+
+0.0
+
+14
+
+82.619 ˆ 75.046
+
+1.324e+00
+
+1.324e+00
+
+`1.0
+
+0.0
+
+14
+
+116.324 ˆ 110.603
+
+1.020e+00
+
+1.020e+00
+
+Natural
+
+0.0
+
+14
+
+126.957 ˆ 121.369
+
+1.000e+00
+
+1.000e+00
+
+Natural
+
+32.0
+
+14
+
+134.349 ˆ 129.015
+
+1.003e+00
+
+1.003e+00
+
+Natural
+
+64.0
+
+14
+
+154.903 ˆ 150.279
+
+1.035e+00
+
+1.035e+00
+
+Natural
+
+128.0
+
+14
+
+225.141 ˆ 222.198
+
+1.175e+00
+
+1.175e+00
+
+Natural
+
+256.0
+
+14
+
+398.539 ˆ 394.643
+
+1.434e+00
+
+1.434e+00
+
+Natural
+
+512.0
+
+14
+
+718.974 ˆ 714.876
+
+1.792e+00
+
+1.792e+00
+
+Natural
+
+1024.0
+
+14
+
+1238.015 ˆ 1230.062
+
+2.323e+00
+
+2.323e+00
+
+´0.5
+
+0.0
+
+14
+
+77.387 ˆ 70.132
+
+1.601e+00
+
+1.601e+00
+
+´0.5
+
+32.0
+
+14
+
+81.761 ˆ 74.389
+
+1.539e+00
+
+1.539e+00
+
+´0.5
+
+64.0
+
+14
+
+93.453 ˆ 86.773
+
+1.471e+00
+
+1.471e+00
+
+´0.5
+
+128.0
+
+14
+
+137.582 ˆ 132.561
+
+1.563e+00
+
+1.563e+00
+
+´0.5
+
+256.0
+
+14
+
+257.216 ˆ 250.143
+
+1.941e+00
+
+1.941e+00
+
+´0.5
+
+512.0
+
+14
+
+497.811 ˆ 488.184
+
+2.451e+00
+
+2.451e+00
+
+´0.5
+
+1024.0
+
+14
+
+945.926 ˆ 926.359
+
+3.192e+00
+
+3.192e+00
+
+Robust
+
+Taper
+
+Cell
+
+Beam
+
+[mas]
+
+[mas]
+
+[mas]ˆ[mas]
+
+´2.0
+
+0.0
+
+14
+
+´1.0
+
+0.0
+
+`0.0
+
+Table 4: Plains`Quarter Core Parameters and Statistics.
+rms/rmsN A
+
+σ{σN A
+
+75.196 ˆ 68.299
+
+1.704e+00
+
+1.704e+00
+
+14
+
+75.292 ˆ 68.377
+
+1.686e+00
+
+1.686e+00
+
+0.0
+
+14
+
+80.416 ˆ 72.925
+
+1.311e+00
+
+1.311e+00
+
+`1.0
+
+0.0
+
+14
+
+111.045 ˆ 103.708
+
+1.017e+00
+
+1.017e+00
+
+Natural
+
+0.0
+
+14
+
+120.583 ˆ 113.432
+
+1.000e+00
+
+1.000e+00
+
+Natural
+
+32.0
+
+14
+
+127.285 ˆ 122.042
+
+1.004e+00
+
+1.004e+00
+
+Robust
+
+Taper
+
+Cell
+
+Beam
+
+[mas]
+
+[mas]
+
+[mas]ˆ[mas]
+
+´2.0
+
+0.0
+
+14
+
+´1.0
+
+0.0
+
+`0.0
+
+Table 4 – Continued on next page
+
+28
+
+Table 4 – Continued from previous page
+rms/rmsN A
+
+σ{σN A
+
+146.707 ˆ 142.189
+
+1.038e+00
+
+1.038e+00
+
+14
+
+212.329 ˆ 209.543
+
+1.194e+00
+
+1.194e+00
+
+256.0
+
+14
+
+372.891 ˆ 369.982
+
+1.495e+00
+
+1.495e+00
+
+Natural
+
+TA512.0
+
+14
+
+673.166 ˆ 670.207
+
+1.940e+00
+
+1.940e+00
+
+Natural
+
+1024.0
+
+14
+
+1219.309 ˆ 1175.590
+
+2.649e+00
+
+2.649e+00
+
+´0.5
+
+0.0
+
+14
+
+76.043 ˆ 69.001
+
+1.572e+00
+
+1.572e+00
+
+´0.5
+
+32.0
+
+14
+
+80.426 ˆ 73.258
+
+1.512e+00
+
+1.512e+00
+
+´0.5
+
+64.0
+
+14
+
+92.188 ˆ 85.692
+
+1.449e+00
+
+1.449e+00
+
+´0.5
+
+128.0
+
+14
+
+135.750 ˆ 130.869
+
+1.558e+00
+
+1.558e+00
+
+´0.5
+
+256.0
+
+14
+
+253.158 ˆ 245.855
+
+1.991e+00
+
+1.991e+00
+
+´0.5
+
+512.0
+
+14
+
+485.706 ˆ 475.574
+
+2.648e+00
+
+2.648e+00
+
+´0.5
+
+1024.0
+
+14
+
+917.550 ˆ 912.197
+
+3.697e+00
+
+3.697e+00
+
+Robust
+
+Taper
+
+Cell
+
+Beam
+
+[mas]
+
+[mas]
+
+[mas]ˆ[mas]
+
+Natural
+
+64.0
+
+14
+
+Natural
+
+128.0
+
+Natural
+
+Table 5: Plains`10th Core Parameters and Statistics.
+rms/rmsN A
+
+σ{σN A
+
+72.942 ˆ 66.486
+
+1.619e+00
+
+1.619e+00
+
+14
+
+72.991 ˆ 66.526
+
+1.609e+00
+
+1.609e+00
+
+0.0
+
+14
+
+76.122 ˆ 69.188
+
+1.316e+00
+
+1.316e+00
+
+`1.0
+
+0.0
+
+14
+
+99.991 ˆ 93.553
+
+1.015e+00
+
+1.015e+00
+
+Natural
+
+0.0
+
+14
+
+107.388 ˆ 101.974
+
+1.000e+00
+
+1.000e+00
+
+Natural
+
+32.0
+
+14
+
+114.679 ˆ 109.628
+
+1.005e+00
+
+1.005e+00
+
+Natural
+
+64.0
+
+14
+
+132.912 ˆ 128.643
+
+1.044e+00
+
+1.044e+00
+
+Natural
+
+128.0
+
+14
+
+190.700 ˆ 188.064
+
+1.226e+00
+
+1.226e+00
+
+Natural
+
+256.0
+
+14
+
+328.253 ˆ 325.573
+
+1.606e+00
+
+1.606e+00
+
+Natural
+
+512.0
+
+14
+
+576.897 ˆ 575.087
+
+2.236e+00
+
+2.236e+00
+
+´0.5
+
+0.0
+
+14
+
+73.404 ˆ 66.865
+
+1.541e+00
+
+1.541e+00
+
+´0.5
+
+32.0
+
+14
+
+77.679 ˆ 71.216
+
+1.482e+00
+
+1.482e+00
+
+´0.5
+
+64.0
+
+14
+
+89.516 ˆ 83.380
+
+1.429e+00
+
+1.429e+00
+
+Robust
+
+Taper
+
+Cell
+
+Beam
+
+[mas]
+
+[mas]
+
+[mas]ˆ[mas]
+
+´2.0
+
+0.0
+
+14
+
+´1.0
+
+0.0
+
+`0.0
+
+Table 5 – Continued on next page
+
+29
+
+Table 5 – Continued from previous page
+Robust
+
+rms/rmsN A
+
+σ{σN A
+
+131.520 ˆ 127.117
+
+1.570e+00
+
+1.570e+00
+
+14
+
+242.855 ˆ 236.727
+
+2.094e+00
+
+2.094e+00
+
+14
+
+456.642 ˆ 447.575
+
+3.007e+00
+
+3.007e+00
+
+Taper
+
+Cell
+
+Beam
+
+[mas]
+
+[mas]
+
+[mas]ˆ[mas]
+
+´0.5
+
+128.0
+
+14
+
+´0.5
+
+256.0
+
+´0.5
+
+512.0
+
+30
+
+Appendix B
+
+Key Performance Metrics
+
+Table 6: Next Generation VLA Plains Subarray Key Perform Metrics
+Parameters [units]
+
+2.4 GHz
+
+8 GHz
+
+16 GHz
+
+27 GHz
+
+41 GHz
+
+93 GHz
+
+Notes
+
+Band Lower Frequency, fL [GHz]
+
+1.2
+
+3.5
+
+12.3
+
+20.5
+
+30.5
+
+70.0
+
+a
+
+Band Upper Frequency, fU [GHz]
+
+3.5
+
+12.3
+
+20.5
+
+34.0
+
+50.5
+
+116.0
+
+a
+
+Field of view [arcmin]
+
+24.3
+
+7.3
+
+3.6
+
+2.2
+
+1.4
+
+0.6
+
+b
+
+Aperture efficiency [%]
+
+0.77
+
+0.76
+
+0.87
+
+0.85
+
+0.81
+
+0.58
+
+b
+
+Total effective area, Aef f [103 m2 ]
+
+14.5
+
+14.3
+
+16.3
+
+15.9
+
+15.3
+
+10.9
+
+b
+
+System temperature, Tsys [K]
+
+25
+
+27
+
+28
+
+35
+
+56
+
+103
+
+a,f
+
+Max. inst. bandwidth [GHz]
+
+2.3
+
+8.8
+
+8.2
+
+13.5
+
+20.0
+
+20.0
+
+a
+
+Antenna SEFD [Jy]
+
+372.3
+
+419.1
+
+372.1
+
+485.1
+
+809.0
+
+2080.5
+
+a, b
+
+Resolution of max. baseline (θmax )
+[mas]
+
+715.70
+
+214.71
+
+107.36
+
+63.62
+
+41.90
+
+18.47
+
+c
+
+Continuum rms, 1 hr [µJy/beam]
+
+1.27
+
+0.73
+
+0.67
+
+0.68
+
+0.94
+
+2.41
+
+d
+
+Line width, 10 km/s [kHz]
+
+80.1
+
+266.9
+
+533.7
+
+900.6
+
+1367.6
+
+3102.1
+
+Line rms, 1 hr, 10 km/s [µJy/beam]
+
+215.3
+
+132.8
+
+83.3
+
+83.6
+
+113.2
+
+193.3
+
+Natural Resolution
+
+Table 6 – Continued on next page
+
+31
+
+d
+
+Table 6 – Continued from previous page
+10000 mas Resolution (θ1{2 )
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+4.39
+
+5.17
+
+6.66
+
+8.47
+
+13.68
+
+47.01
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+744.4
+
+939.0
+
+825.0
+
+1036.7
+
+1653.8
+
+3774.3
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.00927
+
+0.00098
+
+0.00032
+
+0.00014
+
+0.00010
+
+0.00007
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+1.5716
+
+0.1784
+
+0.0392
+
+0.0173
+
+0.0120
+
+0.0053
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+1.38
+
+1.16
+
+1.75
+
+2.55
+
+4.55
+
+18.39
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+233.53
+
+211.54
+
+217.53
+
+312.71
+
+550.46
+
+1476.83
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.2909
+
+0.0221
+
+0.0083
+
+0.0043
+
+0.0033
+
+0.0026
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+49.30
+
+4.02
+
+1.03
+
+0.52
+
+0.40
+
+0.21
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+–
+
+–
+
+–
+
+0.68
+
+1.04
+
+4.26
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+–
+
+–
+
+–
+
+83.85
+
+125.94
+
+341.73
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+–
+
+–
+
+–
+
+0.11
+
+0.08
+
+0.06
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+–
+
+–
+
+–
+
+13.99
+
+9.11
+
+4.80
+
+e
+
+1000 mas Resolution (θ1{2 )
+
+100 mas Resolution (θ1{2 )
+
+Table 6 – Continued on next page
+
+32
+
+Table 6 – Continued from previous page
+a – 6-band ’baseline’ receiver configuration.
+b – Reference design concept of 74 18m aperture antennas. Unblocked aperture with
+160 µm surface.
+c – Current reference design configuration. Resolution in EW axis.
+d – Point source sensitivity using natural imaging weights, dual polarization.
+e – Using Weights as described in the text, scaled by frequency.
+f – Average over band. Assumes 1 mm PWV at 93 GHz, 6 mm
+PWV for other bands, 45 deg elevation on sky.
+For the latest performance estimates please visit the ngVLA website:
+ngvla.nrao.edu/page/refdesign
+
+33
+
+Table 7: Next Generation VLA Plains`Half Core Subarray Key Perform Metrics
+Parameters [units]
+
+2.4 GHz
+
+8 GHz
+
+16 GHz
+
+27 GHz
+
+41 GHz
+
+93 GHz
+
+Notes
+
+Band Lower Frequency, fL [GHz]
+
+1.2
+
+3.5
+
+12.3
+
+20.5
+
+30.5
+
+70.0
+
+a
+
+Band Upper Frequency, fU [GHz]
+
+3.5
+
+12.3
+
+20.5
+
+34.0
+
+50.5
+
+116.0
+
+a
+
+Field of view [arcmin]
+
+24.3
+
+7.3
+
+3.6
+
+2.2
+
+1.4
+
+0.6
+
+b
+
+Aperture efficiency [%]
+
+0.77
+
+0.76
+
+0.87
+
+0.85
+
+0.81
+
+0.58
+
+b
+
+Total effective area, Aef f [103 m2 ]
+
+23.7
+
+23.3
+
+26.7
+
+26.1
+
+25.0
+
+17.8
+
+b
+
+System temperature, Tsys [K]
+
+25
+
+27
+
+28
+
+35
+
+56
+
+103
+
+a,f
+
+Max. inst. bandwidth [GHz]
+
+2.3
+
+8.8
+
+8.2
+
+13.5
+
+20.0
+
+20.0
+
+a
+
+Antenna SEFD [Jy]
+
+372.3
+
+419.1
+
+372.1
+
+485.1
+
+809.0
+
+2080.5
+
+a, b
+
+Resolution of max. baseline (θmax )
+[mas]
+
+715.70
+
+214.71
+
+107.36
+
+63.62
+
+41.90
+
+18.47
+
+c
+
+Continuum rms, 1 hr [µJy/beam]
+
+0.77
+
+0.45
+
+0.41
+
+0.42
+
+0.57
+
+1.47
+
+d
+
+Line width, 10 km/s [kHz]
+
+80.1
+
+266.9
+
+533.7
+
+900.6
+
+1367.6
+
+3102.1
+
+Line rms, 1 hr, 10 km/s [µJy/beam]
+
+131.3
+
+81.0
+
+50.8
+
+51.0
+
+69.0
+
+117.9
+
+Natural Resolution
+
+Table 7 – Continued on next page
+
+34
+
+d
+
+Table 7 – Continued from previous page
+10000 mas Resolution (θ1{2 )
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+1.26
+
+1.34
+
+1.87
+
+2.53
+
+4.30
+
+16.09
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+214.0
+
+243.3
+
+231.3
+
+310.3
+
+520.1
+
+1291.6
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.00267
+
+0.00025
+
+0.00009
+
+0.00004
+
+0.00003
+
+0.00002
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+0.4518
+
+0.0462
+
+0.0110
+
+0.0052
+
+0.0038
+
+0.0018
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+1.10
+
+0.53
+
+0.60
+
+0.70
+
+1.16
+
+4.84
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+185.81
+
+96.28
+
+73.94
+
+86.25
+
+140.56
+
+388.28
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.2314
+
+0.0101
+
+0.0028
+
+0.0012
+
+0.0008
+
+0.0007
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+39.23
+
+1.83
+
+0.35
+
+0.14
+
+0.10
+
+0.05
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+–
+
+–
+
+–
+
+0.51
+
+0.57
+
+1.83
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+–
+
+–
+
+–
+
+62.43
+
+69.22
+
+146.55
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+–
+
+–
+
+–
+
+0.09
+
+0.04
+
+0.03
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+–
+
+–
+
+–
+
+10.41
+
+5.01
+
+2.06
+
+e
+
+1000 mas Resolution (θ1{2 )
+
+100 mas Resolution (θ1{2 )
+
+Table 7 – Continued on next page
+
+35
+
+Table 7 – Continued from previous page
+a – 6-band ’baseline’ receiver configuration.
+b – Reference design concept of 121 18m aperture antennas. Unblocked aperture with
+160 µm surface.
+c – Current reference design configuration. Resolution in EW axis.
+d – Point source sensitivity using natural imaging weights, dual polarization.
+e – Using Weights as described in the text, scaled by frequency.
+f – Average over band. Assumes 1 mm PWV at 93 GHz, 6 mm
+PWV for other bands, 45 deg elevation on sky.
+For the latest performance estimates please visit the ngVLA website:
+ngvla.nrao.edu/page/refdesign
+
+36
+
+Table 8: Next Generation VLA Plains`Third Core Subarray Key Perform Metrics
+Parameters [units]
+
+2.4 GHz
+
+8 GHz
+
+16 GHz
+
+27 GHz
+
+41 GHz
+
+93 GHz
+
+Notes
+
+Band Lower Frequency, fL [GHz]
+
+1.2
+
+3.5
+
+12.3
+
+20.5
+
+30.5
+
+70.0
+
+a
+
+Band Upper Frequency, fU [GHz]
+
+3.5
+
+12.3
+
+20.5
+
+34.0
+
+50.5
+
+116.0
+
+a
+
+Field of view [arcmin]
+
+24.3
+
+7.3
+
+3.6
+
+2.2
+
+1.4
+
+0.6
+
+b
+
+Aperture efficiency [%]
+
+0.77
+
+0.76
+
+0.87
+
+0.85
+
+0.81
+
+0.58
+
+b
+
+Total effective area, Aef f [103 m2 ]
+
+20.8
+
+20.4
+
+23.4
+
+22.8
+
+21.9
+
+15.6
+
+b
+
+System temperature, Tsys [K]
+
+25
+
+27
+
+28
+
+35
+
+56
+
+103
+
+a,f
+
+Max. inst. bandwidth [GHz]
+
+2.3
+
+8.8
+
+8.2
+
+13.5
+
+20.0
+
+20.0
+
+a
+
+Antenna SEFD [Jy]
+
+372.3
+
+419.1
+
+372.1
+
+485.1
+
+809.0
+
+2080.5
+
+a, b
+
+Resolution of max. baseline (θmax )
+[mas]
+
+715.70
+
+214.71
+
+107.36
+
+63.62
+
+41.90
+
+18.47
+
+c
+
+Continuum rms, 1 hr [µJy/beam]
+
+0.88
+
+0.51
+
+0.47
+
+0.48
+
+0.65
+
+1.68
+
+d
+
+Line width, 10 km/s [kHz]
+
+80.1
+
+266.9
+
+533.7
+
+900.6
+
+1367.6
+
+3102.1
+
+Line rms, 1 hr, 10 km/s [µJy/beam]
+
+150.0
+
+92.5
+
+58.0
+
+58.3
+
+78.9
+
+134.7
+
+Natural Resolution
+
+Table 8 – Continued on next page
+
+37
+
+d
+
+Table 8 – Continued from previous page
+10000 mas Resolution (θ1{2 )
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+1.68
+
+1.70
+
+2.11
+
+2.66
+
+4.27
+
+14.59
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+284.1
+
+308.0
+
+262.1
+
+325.3
+
+515.9
+
+1171.3
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.00354
+
+0.00032
+
+0.00010
+
+0.00004
+
+0.00003
+
+0.00002
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+0.5997
+
+0.0585
+
+0.0125
+
+0.0054
+
+0.0037
+
+0.0016
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+1.16
+
+0.63
+
+0.74
+
+0.95
+
+1.59
+
+5.98
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+196.74
+
+115.07
+
+92.18
+
+116.51
+
+192.06
+
+480.10
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.2450
+
+0.0120
+
+0.0035
+
+0.0016
+
+0.0011
+
+0.0008
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+41.53
+
+2.19
+
+0.44
+
+0.19
+
+0.14
+
+0.07
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+–
+
+–
+
+–
+
+0.55
+
+0.66
+
+2.19
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+–
+
+–
+
+–
+
+67.54
+
+80.22
+
+176.06
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+–
+
+–
+
+–
+
+0.09
+
+0.05
+
+0.03
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+–
+
+–
+
+–
+
+11.27
+
+5.80
+
+2.48
+
+e
+
+1000 mas Resolution (θ1{2 )
+
+100 mas Resolution (θ1{2 )
+
+Table 8 – Continued on next page
+
+38
+
+Table 8 – Continued from previous page
+a – 6-band ’baseline’ receiver configuration.
+b – Reference design concept of 106 18m aperture antennas. Unblocked aperture with
+160 µm surface.
+c – Current reference design configuration. Resolution in EW axis.
+d – Point source sensitivity using natural imaging weights, dual polarization.
+e – Using Weights as described in the text, scaled by frequency.
+f – Average over band. Assumes 1 mm PWV at 93 GHz, 6 mm
+PWV for other bands, 45 deg elevation on sky.
+For the latest performance estimates please visit the ngVLA website:
+ngvla.nrao.edu/page/refdesign
+
+39
+
+Table 9: Next Generation VLA Plains`Quarter Core Subarray Key Perform
+Metrics
+Parameters [units]
+
+2.4 GHz
+
+8 GHz
+
+16 GHz
+
+27 GHz
+
+41 GHz
+
+93 GHz
+
+Notes
+
+Band Lower Frequency, fL [GHz]
+
+1.2
+
+3.5
+
+12.3
+
+20.5
+
+30.5
+
+70.0
+
+a
+
+Band Upper Frequency, fU [GHz]
+
+3.5
+
+12.3
+
+20.5
+
+34.0
+
+50.5
+
+116.0
+
+a
+
+Field of view [arcmin]
+
+24.3
+
+7.3
+
+3.6
+
+2.2
+
+1.4
+
+0.6
+
+b
+
+Aperture efficiency [%]
+
+0.77
+
+0.76
+
+0.87
+
+0.85
+
+0.81
+
+0.58
+
+b
+
+Total effective area, Aef f [103 m2 ]
+
+19.0
+
+18.7
+
+21.4
+
+20.9
+
+20.0
+
+14.3
+
+b
+
+System temperature, Tsys [K]
+
+25
+
+27
+
+28
+
+35
+
+56
+
+103
+
+a,f
+
+Max. inst. bandwidth [GHz]
+
+2.3
+
+8.8
+
+8.2
+
+13.5
+
+20.0
+
+20.0
+
+a
+
+Antenna SEFD [Jy]
+
+372.3
+
+419.1
+
+372.1
+
+485.1
+
+809.0
+
+2080.5
+
+a, b
+
+Resolution of max. baseline (θmax )
+[mas]
+
+715.70
+
+214.71
+
+107.36
+
+63.62
+
+41.90
+
+18.47
+
+c
+
+Continuum rms, 1 hr [µJy/beam]
+
+0.97
+
+0.56
+
+0.51
+
+0.52
+
+0.71
+
+1.83
+
+d
+
+Line width, 10 km/s [kHz]
+
+80.1
+
+266.9
+
+533.7
+
+900.6
+
+1367.6
+
+3102.1
+
+Line rms, 1 hr, 10 km/s [µJy/beam]
+
+164.0
+
+101.1
+
+63.5
+
+63.7
+
+86.2
+
+147.2
+
+Natural Resolution
+
+Table 9 – Continued on next page
+
+40
+
+d
+
+Table 9 – Continued from previous page
+10000 mas Resolution (θ1{2 )
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+2.07
+
+2.23
+
+2.83
+
+3.60
+
+5.82
+
+20.08
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+350.3
+
+404.4
+
+351.3
+
+440.7
+
+703.6
+
+1612.6
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.00436
+
+0.00042
+
+0.00013
+
+0.00006
+
+0.00004
+
+0.00003
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+0.7394
+
+0.0768
+
+0.0167
+
+0.0074
+
+0.0051
+
+0.0023
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+1.21
+
+0.73
+
+0.89
+
+1.18
+
+2.02
+
+7.89
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+205.86
+
+131.74
+
+110.33
+
+144.81
+
+244.74
+
+633.61
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.2564
+
+0.0138
+
+0.0042
+
+0.0020
+
+0.0015
+
+0.0011
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+43.46
+
+2.50
+
+0.52
+
+0.24
+
+0.18
+
+0.09
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+–
+
+–
+
+–
+
+0.58
+
+0.74
+
+2.53
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+–
+
+–
+
+–
+
+70.67
+
+89.23
+
+203.18
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+–
+
+–
+
+–
+
+0.10
+
+0.05
+
+0.04
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+–
+
+–
+
+–
+
+11.79
+
+6.46
+
+2.86
+
+e
+
+1000 mas Resolution (θ1{2 )
+
+100 mas Resolution (θ1{2 )
+
+Table 9 – Continued on next page
+
+41
+
+Table 9 – Continued from previous page
+a – 6-band ’baseline’ receiver configuration.
+b – Reference design concept of 97 18m aperture antennas. Unblocked aperture with
+160 µm surface.
+c – Current reference design configuration. Resolution in EW axis.
+d – Point source sensitivity using natural imaging weights, dual polarization.
+e – Using Weights as described in the text, scaled by frequency.
+f – Average over band. Assumes 1 mm PWV at 93 GHz, 6 mm
+PWV for other bands, 45 deg elevation on sky.
+For the latest performance estimates please visit the ngVLA website:
+ngvla.nrao.edu/page/refdesign
+
+42
+
+Table 10: Next Generation VLA Plains`10th Core Subarray Key Perform Metrics
+Parameters [units]
+
+2.4 GHz
+
+8 GHz
+
+16 GHz
+
+27 GHz
+
+41 GHz
+
+93 GHz
+
+Notes
+
+Band Lower Frequency, fL [GHz]
+
+1.2
+
+3.5
+
+12.3
+
+20.5
+
+30.5
+
+70.0
+
+a
+
+Band Upper Frequency, fU [GHz]
+
+3.5
+
+12.3
+
+20.5
+
+34.0
+
+50.5
+
+116.0
+
+a
+
+Field of view [arcmin]
+
+24.3
+
+7.3
+
+3.6
+
+2.2
+
+1.4
+
+0.6
+
+b
+
+Aperture efficiency [%]
+
+0.77
+
+0.76
+
+0.87
+
+0.85
+
+0.81
+
+0.58
+
+b
+
+Total effective area, Aef f [103 m2 ]
+
+16.3
+
+16.0
+
+18.3
+
+17.9
+
+17.1
+
+12.2
+
+b
+
+System temperature, Tsys [K]
+
+25
+
+27
+
+28
+
+35
+
+56
+
+103
+
+a,f
+
+Max. inst. bandwidth [GHz]
+
+2.3
+
+8.8
+
+8.2
+
+13.5
+
+20.0
+
+20.0
+
+a
+
+Antenna SEFD [Jy]
+
+372.3
+
+419.1
+
+372.1
+
+485.1
+
+809.0
+
+2080.5
+
+a, b
+
+Resolution of max. baseline (θmax )
+[mas]
+
+715.70
+
+214.71
+
+107.36
+
+63.62
+
+41.90
+
+18.47
+
+c
+
+Continuum rms, 1 hr [µJy/beam]
+
+1.13
+
+0.65
+
+0.60
+
+0.61
+
+0.83
+
+2.14
+
+d
+
+Line width, 10 km/s [kHz]
+
+80.1
+
+266.9
+
+533.7
+
+900.6
+
+1367.6
+
+3102.1
+
+Line rms, 1 hr, 10 km/s [µJy/beam]
+
+191.8
+
+118.3
+
+74.2
+
+74.5
+
+100.8
+
+172.2
+
+Natural Resolution
+
+Table 10 – Continued on next page
+
+43
+
+d
+
+Table 10 – Continued from previous page
+10000 mas Resolution (θ1{2 )
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+3.04
+
+3.23
+
+4.01
+
+5.00
+
+7.97
+
+26.83
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+515.9
+
+586.7
+
+497.2
+
+612.1
+
+963.6
+
+2154.6
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.00643
+
+0.00061
+
+0.00019
+
+0.00008
+
+0.00006
+
+0.00004
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+1.0891
+
+0.1115
+
+0.0236
+
+0.0102
+
+0.0070
+
+0.0030
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+1.30
+
+0.94
+
+1.28
+
+1.75
+
+2.99
+
+11.39
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+220.81
+
+170.47
+
+158.68
+
+213.86
+
+361.37
+
+914.63
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.2750
+
+0.0178
+
+0.0061
+
+0.0029
+
+0.0022
+
+0.0016
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+46.62
+
+3.24
+
+0.75
+
+0.36
+
+0.26
+
+0.13
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+–
+
+–
+
+–
+
+0.62
+
+0.89
+
+3.36
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+–
+
+–
+
+–
+
+76.43
+
+107.58
+
+269.65
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+–
+
+–
+
+–
+
+0.10
+
+0.06
+
+0.05
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+–
+
+–
+
+–
+
+12.75
+
+7.78
+
+3.79
+
+e
+
+1000 mas Resolution (θ1{2 )
+
+100 mas Resolution (θ1{2 )
+
+Table 10 – Continued on next page
+
+44
+
+Table 10 – Continued from previous page
+a – 6-band ’baseline’ receiver configuration.
+b – Reference design concept of 83 18m aperture antennas. Unblocked aperture with
+160 µm surface.
+c – Current reference design configuration. Resolution in EW axis.
+d – Point source sensitivity using natural imaging weights, dual polarization.
+e – Using Weights as described in the text, scaled by frequency.
+f – Average over band. Assumes 1 mm PWV at 93 GHz, 6 mm
+PWV for other bands, 45 deg elevation on sky.
+For the latest performance estimates please visit the ngVLA website:
+ngvla.nrao.edu/page/refdesign
+
+Appendix C
+
+ngVLA Plains`Mid-baseline
+Subarray
+
+Figure 22 shows the position of the antennas of the Plains`Mid-baseline subarray, which extends over a maximum baseline of 1005.4 km (minimum baseline
+250 m). For this subarray, the images have a size of 40000 px.
+Natural weighting with no uv-taper, which gives the best sensitivity, produces
+an angular resolution of 6.17 mas. From Figure 23 we see that for natural
+weighting, we can use a uv-taper to vary the angular resolution over a range of
+θ1{2 „ 2.8 ´ 160 mas for which we pay a penalty in sensitivity of À 2. Likewise,
+for a range of angular resolution of θ1{2 „ 3.2 ´ 70 mas we pay a penalty in
+sensitivity of À 1.5.
+The features of the resulting taperability curve are similar to the ones from the
+ngVLA Main subarray, likely due to their similar ratios of short versus long
+baselines (i.e., many more short baselines than long baselines).
+Figure 24 shows examples of 1D East-West cuts through example PSFs.
+Table 12 in Appendix B shows the key performance metrics of the ngVLA
+Plains`Mid-baseline subarray using 120 antennas, tabulated for a range of selected resolutions between 10 and 10000 mas. These metrics include the change
+in sensitivity corresponding to the uv-taper needed to achieve these resolutions
+(based on Figure 23 and the frequency scaling described in Section 1).
+
+45
+
+Figure 22:
+subarray.
+
+Positions of the 120 18 m antennas for the Plains`Mid-baseline
+
+Table 11: Plains`Mid Simulation Parameters and Statistics.
+Robust
+
+rms/rmsN A
+
+σ{σN A
+
+3.398 ˆ 2.283
+
+2.041e+00
+
+2.041e+00
+
+0.52
+
+3.421 ˆ 2.315
+
+1.931e+00
+
+1.931e+00
+
+0.52
+
+4.218 ˆ 3.114
+
+1.318e+00
+
+1.318e+00
+
+Taper
+
+Cell
+
+Beam
+
+[mas]
+
+[mas]
+
+[mas]ˆ[mas]
+
+´2.0
+
+0.0
+
+0.52
+
+´1.0
+
+0.0
+
+`0.0
+
+0.0
+
+Table 11 – Continued on next page
+
+46
+
+Table 11 – Continued from previous page
+rms/rmsN A
+
+σ{σN A
+
+6.328 ˆ 5.122
+
+1.022e+00
+
+1.022e+00
+
+0.52
+
+6.844 ˆ 5.563
+
+1.000e+00
+
+1.000e+00
+
+1.0
+
+0.52
+
+7.162 ˆ 5.865
+
+1.002e+00
+
+1.002e+00
+
+Natural
+
+2.0
+
+0.52
+
+8.090 ˆ 6.711
+
+1.017e+00
+
+1.017e+00
+
+Natural
+
+4.0
+
+0.52
+
+11.731 ˆ 9.529
+
+1.085e+00
+
+1.085e+00
+
+Natural
+
+8.0
+
+0.52
+
+21.871 ˆ 15.912
+
+1.196e+00
+
+1.196e+00
+
+Natural
+
+16.0
+
+0.52
+
+39.409 ˆ 30.739
+
+1.336e+00
+
+1.336e+00
+
+Natural
+
+32.0
+
+0.52
+
+71.005 ˆ 60.829
+
+1.504e+00
+
+1.504e+00
+
+Natural
+
+64.0
+
+0.52
+
+110.067 ˆ 105.623
+
+1.683e+00
+
+1.683e+00
+
+Natural
+
+128.0
+
+0.52
+
+169.729 ˆ 166.845
+
+2.055e+00
+
+2.055e+00
+
+Natural
+
+256.0
+
+0.52
+
+294.927 ˆ 292.689
+
+2.823e+00
+
+2.823e+00
+
+´0.5
+
+0.0
+
+0.52
+
+3.563 ˆ 2.494
+
+1.623e+00
+
+1.623e+00
+
+´0.5
+
+1.0
+
+0.52
+
+3.651 ˆ 2.619
+
+1.581e+00
+
+1.581e+00
+
+´0.5
+
+2.0
+
+0.52
+
+3.963 ˆ 3.096
+
+1.517e+00
+
+1.517e+00
+
+´0.5
+
+4.0
+
+0.52
+
+5.593 ˆ 4.732
+
+1.556e+00
+
+1.556e+00
+
+´0.5
+
+8.0
+
+0.52
+
+10.745 ˆ 8.047
+
+1.760e+00
+
+1.760e+00
+
+´0.5
+
+16.0
+
+0.52
+
+20.032 ˆ 15.598
+
+2.034e+00
+
+2.034e+00
+
+´0.5
+
+32.0
+
+0.52
+
+37.683 ˆ 31.539
+
+2.306e+00
+
+2.306e+00
+
+´0.5
+
+64.0
+
+0.52
+
+68.584 ˆ 65.191
+
+2.357e+00
+
+2.357e+00
+
+´0.5
+
+128.0
+
+0.52
+
+117.336 ˆ 115.905
+
+2.427e+00
+
+2.427e+00
+
+´0.5
+
+256.0
+
+0.52
+
+226.887 ˆ 226.198
+
+3.120e+00
+
+3.120e+00
+
+Robust
+
+Taper
+
+Cell
+
+Beam
+
+[mas]
+
+[mas]
+
+[mas]ˆ[mas]
+
+`1.0
+
+0.0
+
+0.52
+
+Natural
+
+0.0
+
+Natural
+
+47
+
+Plains+Mid-baseline rms/rmsN A at 30 GHz
+3.5
+
+3.0
+
+ηweight
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+
+Natural, TA=changes
+Robust, TA=0
+Robust=−0.5, TA=changes
+
+0.5
+
+0.0
+101
+
+102
+
+θ1/2[mas]
+
+Figure 23: Taperability curve for the ngVLA Plains`Mid-baseline subarray
+showing the image noise (rms) at different angular resolutions (FWHM) achieved
+by varying the imaging weights, simulated at 30 GHz. The noise has been scaled
+relative to that of the naturally weighted image (rmsN A ). Symbols and colors
+are the same as used in Figure 2.
+
+48
+
+R = −0.5, TA =0
+Natural, TA =0
+
+1.0
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+R = −0.5, TA =0
+R = −2.0, TA =0
+
+1.0
+
+0.6
+
+0.4
+
+0.2
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.0
+0.04
+
+0.4
+
+Natural, TA =32
+R = −0.5, TA =32
+
+1.0
+
+0.01 0.00
+
+arcsec
+
+0.01
+
+0.02
+
+0.03
+
+0.04
+
+Natural, TA =512
+R = −0.5, TA =512
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.02
+
+1.0
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+0.03
+
+0.6
+
+0.4
+
+0.2
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0.0
+
+arcsec
+
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+0.0
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+arcsec
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+Figure 24: Simulated 30 GHz PSFs for the ngVLA Plains`Mid-baseline subarray
+over a range of resolutions, showing the effect of different imaging weights (TA: uvtaper in mas, R: Briggs robust parameter). The PSFs are a selection of the data
+presented in Table 11. These examples illustrate how combinations of robustness and
+tapering allow for a beam of much higher quality (but at the expense of sensitivity).
+
+49
+
+Table 12: Next Generation VLA Plains`Mid Subarray Key Perform Metrics
+Parameters [units]
+
+2.4 GHz
+
+8 GHz
+
+16 GHz
+
+27 GHz
+
+41 GHz
+
+93 GHz
+
+Notes
+
+Band Lower Frequency, fL [GHz]
+
+1.2
+
+3.5
+
+12.3
+
+20.5
+
+30.5
+
+70.0
+
+a
+
+Band Upper Frequency, fU [GHz]
+
+3.5
+
+12.3
+
+20.5
+
+34.0
+
+50.5
+
+116.0
+
+a
+
+Field of view [arcmin]
+
+24.3
+
+7.3
+
+3.6
+
+2.2
+
+1.4
+
+0.6
+
+b
+
+Aperture efficiency [%]
+
+0.77
+
+0.76
+
+0.87
+
+0.85
+
+0.81
+
+0.58
+
+b
+
+Total effective area, Aef f [103 m2 ]
+
+23.5
+
+23.1
+
+26.5
+
+25.9
+
+24.8
+
+17.7
+
+b
+
+System temperature, Tsys [K]
+
+25
+
+27
+
+28
+
+35
+
+56
+
+103
+
+a,f
+
+Max. inst. bandwidth [GHz]
+
+2.3
+
+8.8
+
+8.2
+
+13.5
+
+20.0
+
+20.0
+
+a
+
+Antenna SEFD [Jy]
+
+372.3
+
+419.1
+
+372.1
+
+485.1
+
+809.0
+
+2080.5
+
+a, b
+
+Resolution of max. baseline (θmax )
+[mas]
+
+25.64
+
+7.69
+
+3.85
+
+2.28
+
+1.50
+
+0.66
+
+c
+
+Continuum rms, 1 hr [µJy/beam]
+
+0.78
+
+0.45
+
+0.41
+
+0.42
+
+0.58
+
+1.48
+
+d
+
+Line width, 10 km/s [kHz]
+
+80.1
+
+266.9
+
+533.7
+
+900.6
+
+1367.6
+
+3102.1
+
+Line rms, 1 hr, 10 km/s [µJy/beam]
+
+132.4
+
+81.7
+
+51.2
+
+51.4
+
+69.6
+
+118.9
+
+d
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+4.20
+
+4.68
+
+5.91
+
+7.44
+
+11.93
+
+40.54
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+711.6
+
+850.7
+
+733.1
+
+911.0
+
+1442.7
+
+3255.2
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.00886
+
+0.00089
+
+0.00028
+
+0.00012
+
+0.00009
+
+0.00006
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+1.502
+
+0.162
+
+0.035
+
+0.015
+
+0.010
+
+0.005
+
+e
+
+Natural Resolution
+
+10000 mas Resolution (θ1{2 )
+
+Table 12 – Continued on next page
+
+50
+
+Table 12 – Continued from previous page
+1000 mas Resolution (θ1{2 )
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+1.21
+
+1.19
+
+1.72
+
+2.43
+
+4.23
+
+16.58
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+204.90
+
+216.81
+
+213.28
+
+296.93
+
+511.81
+
+1331.64
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+0.2552
+
+0.0227
+
+0.0082
+
+0.0040
+
+0.0031
+
+0.0023
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+43.26
+
+4.12
+
+1.01
+
+0.50
+
+0.37
+
+0.19
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+0.80
+
+0.58
+
+0.60
+
+0.67
+
+1.07
+
+4.33
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+136.04
+
+104.65
+
+73.76
+
+82.21
+
+129.93
+
+347.32
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+16.94
+
+1.09
+
+0.28
+
+0.11
+
+0.08
+
+0.06
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+2871.90
+
+198.83
+
+35.03
+
+13.71
+
+9.40
+
+4.88
+
+e
+
+Continuum rms, 1 hr, Robust
+[µJy/beam]
+
+–
+
+1.64
+
+0.42
+
+0.44
+
+0.65
+
+1.95
+
+e
+
+Line rms, 1 hr, 10 km/s, Robust
+[µJy/beam]
+
+–
+
+297.71
+
+52.62
+
+53.72
+
+78.82
+
+156.40
+
+e
+
+TB rms continuum, 1 hr, Robust [K]
+
+–
+
+311.4834
+
+20.1637
+
+7.3191
+
+4.7151
+
+2.7385
+
+e
+
+TB rms line, 1 hr, 10 km/s, Robust [K]
+
+–
+
+56564.19
+
+2499.36
+
+896.09
+
+570.20
+
+219.89
+
+e
+
+100 mas Resolution (θ1{2 )
+
+10 mas Resolution (θ1{2 )
+
+Table 12 – Continued on next page
+
+51
+
+Table 12 – Continued from previous page
+a – 6-band ’baseline’ receiver configuration.
+b – Reference design concept of 120 18m aperture antennas. Unblocked aperture with
+160 µm surface.
+c – Current reference design configuration. Resolution in EW axis.
+d – Point source sensitivity using natural imaging weights, dual polarization.
+e – Using Weights as described in the text, scaled by frequency.
+f – Average over band. Assumes 1 mm PWV at 93 GHz, 6 mm
+PWV for other bands, 45 deg elevation on sky.
+For the latest performance estimates please visit the ngVLA website:
+ngvla.nrao.edu/page/refdesign
+
+Acknowledgments
+Many thanks to Joan Wrobel and Brian Mason for providing important information for the development of this work. This study made use of the CASA
+task iring, an open-source tool from the Nordic ALMA regional center. The
+National Radio Astronomy Observatory is a facility of the National Science
+Foundation operated under cooperative agreement by Associated Universities,
+Inc.
+
+References
+[1] Chris Carilli, Next Generation Very Large Array Memo No. 12 The Strength
+of the Core.
+[2] Chris Carilli, Alan Erickson, Next Generation VLA Memo. 41 Initial Imaging Tests of the Spiral Configuration.
+[3] Viviana Rosero, Next Generation Very Large Array Memo No. 55 Taperability Study for the ngVLA and Performance Estimates (v2).
+[4] Viviana Rosero, Next Generation Very Large Array Memo No. 65 Sculpting
+of the Synthesized Beam and
+Image Fidelity Study of KSG 1: Imaging of Protoplanetary Disks.
+[5] Joan Wrobel, A Notional Reference Observing Program document
+020.10.15.05.10–0001–REP (v1).
+
+52
+
+The National Radio Astronomy Observatory and Green Bank Observatory are facilities of the U.S.
+National Science Foundation operated under cooperative agreement by Associated Universities, Inc.
+This work was supported by awards AST-2034328 (MSIP Prototype Antenna) and AST-2334267 (ngVLA
+Design Activities); NRAO related activities are funded under award AST-1647378 (NRAO
+Operations/Development).
+
+

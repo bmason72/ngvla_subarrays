@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python --version)",
+      "Read(//Applications/CASA.app/**)",
+      "Bash(.venv/bin/python -c \"import pickle; d=pickle.load\\(open\\('ngvla-sensitivity-calculator/subarray_data.pkl','rb'\\)\\); print\\(type\\(d\\)\\); print\\(list\\(d.keys\\(\\)\\)[:20] if hasattr\\(d,'keys'\\) else d\\)\")",
+      "Bash(.venv/bin/pip list *)",
+      "Bash(claude --version)",
+      "Bash(npm view *)",
+      "WebFetch(domain:platform.claude.com)",
+      "WebFetch(domain:code.claude.com)",
+      "WebFetch(domain:www.anthropic.com)",
+      "Bash(/Applications/CASA.app/Contents/MacOS/python3 *)",
+      "Bash(python3 *)",
+      "Bash(grep -n -E '\"[0-9,]+\\\\.[0-9]+\"|[0-9],[0-9]{3}' MainCln.csv EfficientPlusPerformanceCln.csv PerformanceCln.csv)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

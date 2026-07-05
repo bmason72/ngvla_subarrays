@@ -1,0 +1,2883 @@
+Next Generation Very Large Array Memo #106
+
+ngVLA Imaging Science Performance Reference
+Document
+Viviana Rosero (NRAO), Chris Carilli (NRAO)
+November 28, 2022
+
+Contents
+1 Introduction
+1.1 Purpose . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.2 Abbreviations & Acronyms . . . . . . . . . . . . . . . . . . . . .
+1.3 Overview: The ngVLA Configuration . . . . . . . . . . . . . . . .
+
+3
+3
+3
+3
+
+2 Performance of the ngVLA
+2.1 Taperability . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+2.2 Subarrays . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+2.3 Simulated Resolution and PSF . . . . . . . . . . . . . . . . . . .
+2.4 Beam Sculpting . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+2.4.1 Combination of Imaging Parameters . . . . . . . . . . . .
+2.4.2 Selection of Subarrays . . . . . . . . . . . . . . . . . . . .
+2.5 Sensitivity of the ngVLA . . . . . . . . . . . . . . . . . . . . . . .
+2.5.1 Continuum Point Source Sensitivity . . . . . . . . . . . .
+2.5.2 Line Sensitivity . . . . . . . . . . . . . . . . . . . . . . . .
+2.5.3 Continuum Brightness Sensitivity . . . . . . . . . . . . . .
+2.5.4 Line Brightness Sensitivity . . . . . . . . . . . . . . . . .
+
+7
+7
+9
+11
+12
+13
+15
+18
+18
+21
+23
+25
+
+3 Image Fidelity
+27
+3.1 KSG 1: Protoplanetary Disks . . . . . . . . . . . . . . . . . . . . 27
+3.1.1 Model and Simulations . . . . . . . . . . . . . . . . . . . . 27
+3.1.2 Determination of Imaging Parameters . . . . . . . . . . . 29
+3.1.3 Images with the Desired Resolution . . . . . . . . . . . . 30
+3.1.4 Results . . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+3.2 KSG 3 (NGA8): Imaging Molecular Gas in Nearby Galaxies . . . 34
+3.2.1 Model and Simulations . . . . . . . . . . . . . . . . . . . . 34
+3.2.2 Imaging . . . . . . . . . . . . . . . . . . . . . . . . . . . . 36
+3.2.3 Results . . . . . . . . . . . . . . . . . . . . . . . . . . . . 36
+1
+
+3.2.4
+
+Comparison Study of image Fidelity using ngVLA RevC
+and RevD . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+39
+
+4 High Dynamic Range Imaging
+40
+4.1 Model, Configuration, and Processing . . . . . . . . . . . . . . . 40
+4.2 Results . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 41
+4.3 Summary . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 43
+5 On the Fly Mapping
+
+45
+
+List of Figures
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+
+The ngVLA Configuration (RevD) . . . . . . . . . . . . . . . . .
+5
+ngVLA naturally weigthed PSF (RevD) . . . . . . . . . . . . . .
+7
+Taperability Curve for the ngVLA Main`LBA components . . .
+8
+Taperability Curves for the ngVLA Components and Selected
+Subarrays . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+PSF combination examples of robust and uv-taper values producing the same angular resolution. . . . . . . . . . . . . . . . . . 11
+Change of sensitivity with Briggs robust at the same angular
+resolution . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+Simulated 30 GHz PSFs for the ngVLA Reference Array . . . . . 13
+PSF level at one FWHM (i.e., metric 2b) . . . . . . . . . . . . . 14
+Results of metric 2b for a resulting angular resolution of 5 mas . 15
+PSF profiles of the naturally weighted synthesized beam for subarrays that includes the Spiral plus different fractions of the Core. 16
+Efficiency curves for selected resolutions and subarrays . . . . . . 17
+Continuum Point Source Sensitivity of the ngVLA Main`LBA
+Components . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+Continuum Sensitivity Over a Range of Resolutions for the ngVLA
+Main`LBA Components . . . . . . . . . . . . . . . . . . . . . . . 20
+Line source sensitivity of the ngVLA Main`LBA subarray . . . . 21
+Line sensitivity over a range of resolutions for the ngVLA Main`LBA
+subarray . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+Continuum brightness sensitivity of the ngVLA Main`LBA subarray . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+Continuum brightness sensitivity over a range of resolutions for
+the ngVLA Main`LBA subarray . . . . . . . . . . . . . . . . . . 24
+Line brightness sensitivity of the ngVLA for the Main`LBA subarray . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 25
+Line brightness sensitivity over a range of resolutions for the
+ngVLA Main`LBA subarray . . . . . . . . . . . . . . . . . . . . 26
+Synthetic model image for a planetary disk at 3 mm from KSG 1 28
+Robust as a function of uv-taper for KSG 1 . . . . . . . . . . . . 29
+Fidelity vs robust . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+
+2
+
+23
+24
+25
+26
+27
+28
+29
+30
+
+Fidelity example R“ ´1.6 . . . . . . . . . . . . . . . . . . . . . .
+Residuals (noise-free) R“ ´1.6 . . . . . . . . . . . . . . . . . . .
+Residuals (noisy) R“ ´1.6 . . . . . . . . . . . . . . . . . . . . . .
+Model image for KSG 3 NGA8 . . . . . . . . . . . . . . . . . . .
+Feathered Image . . . . . . . . . . . . . . . . . . . . . . . . . . .
+Image of the convolved model subtracted from the final image . .
+Image of the relative residuals . . . . . . . . . . . . . . . . . . . .
+Median fraction of spatially integrated flux density recovered as
+a function of aperture diameter . . . . . . . . . . . . . . . . . . .
+Simulated images of Cygnus A . . . . . . . . . . . . . . . . . . .
+Fidelity image of Cygnus A . . . . . . . . . . . . . . . . . . . . .
+Images of the synthesized beam . . . . . . . . . . . . . . . . . . .
+
+31
+32
+33
+
+1
+
+Introduction
+
+1.1
+
+Purpose
+
+32
+33
+33
+35
+37
+38
+38
+39
+42
+43
+44
+
+To have an understanding of the performance of the ngVLA in terms of the
+sensitivity, and how it changes with resolution and frequency. Additionally, developing studies of beam sculpting and imaging fidelity for selected key science
+goals.
+
+1.2
+
+Abbreviations & Acronyms
+
+KSG
+LAS
+LBA
+MFS
+ngVLA
+SBA
+PSF
+
+1.3
+
+. . . . . . . . . Key Science Goals
+. . . . . . . . . Largest Angular Scale
+. . . . . . . . . Long Baseline Array
+. . . . . . . . . Multi-Frequency Synthesis
+. . . . . . . . . next generation Very Large Array
+. . . . . . . . . Short Baseline Array
+. . . . . . . . . Point Spread Function
+
+Overview: The ngVLA Configuration
+
+The ngVLA antenna locations have been chosen to accommodate a wide variety
+of scientific observations, aiming to deliver high sensitivity over a wide range of
+resolutions with a non-reconfigurable array. The key science requirements are
+the main drivers of the array design. The science requirements are a result of
+the science use cases identified by the ngVLA Science Working Groups and the
+ngVLA Science Advisory Council (see ngVLA Science Requirements document
+[13]). The five key science goals (KSGs) of the ngVLA are the following:
+• KSG1 – Unveiling the Formation of Solar System Analogues
+3
+
+• KSG2 – Probing the Initial Conditions for Planetary Systems and Life
+with Astrochemistry
+• KSG3 – Charting the Assembly, Structure, and Evolution of Galaxies
+from the First Billion Years to the Present
+• KSG4 – Using Pulsars in the Galactic Center to Make a Fundamental
+Test of Gravity
+• KSG5 – Understanding the Formation and Evolution of Stellar and Supermassive Black Holes in the Era of Multi-Messenger Astronomy
+The ngVLA configuration (RevD – ngVLA memo #92 [9] ; see Figure 1) includes
+three fundamental components:
+• A Main Array (MA) of 214 x 18 m antennas
+• A Long Baseline Array (LBA) of 30 x 18 m antennas
+• A Short Baseline Array (SBA) of 19 x 6 m antennas
+Depending on the science requirements, the ngVLA can in principle operate with
+combinations of different subarrays (see Table 1 for a list of selected subarrays).
+The Main array can be characterized by three sub-components or scales: the
+Core, the Spiral and the Mid-baselines. The Core consists of 114 18 m antennas
+in a dense semi-random distribution within a region of „4 km diameter, providing high surface brightness sensitivity at „1,000 mas resolution needed for
+KSG 3. The five-armed Spiral is composed of 54 18 m antennas, extending from
+the edge of the Core out to „39 km baselines within the Plains of San Agustin,
+and capable of high-fidelity imaging at „100 mas scales important for KSGs 2
+and 3. The Mid sub-component consists of 46 18 m antennas, distributed in a
+roughly longer multi-arm spiral pattern, expanding into parts of Texas, Arizona,
+and Northern Mexico, providing baselines for imaging at „10 mas required for
+KSGs 1 and 2.
+The Main array will be augmented by a very compact array of smaller antennas
+(SBA) which will provide sensitivity on larger angular scales, and four antennas
+of the main array will be equipped to measure total power in order to fill in the
+center of the (u,v)-plane.
+Additionally, the Long Baseline Array (LBA) consists of 10 continental-scale
+stations of 3 18 m antennas each that will provide baselines for achieving resolutions of „0.1 mas needed for KSGs 4 and 5. Long baseline stations are located
+in Hawaii, Washington, California, Iowa, West Virginia, New Hampshire, Puerto
+Rico, the US. Virgin Islands, and Canada.
+
+4
+
+Figure 1: (Top) ngVLA Main array (i.e., Spiral and Core sub-components represented by the blue dots and Mid sub-component represented by the red dots)
+and LBA stations (represented by the purple dots) consisting of 244 18 m antennas total. (Bottom left) Spiral and Core sub-components represented by the
+blue and small red dots, respectively. (Bottom right) Core subcomponent and
+zoom-in of the SBA.
+
+5
+
+6
+
+30
+214
+46
+168
+114
+
+LBA
+
+Main
+
+Mid
+
+Spiral+Core
+
+Core
+39.3
+
+4.3
+
+39.3
+
+1068.3
+
+1068.3
+
+8857.2
+
+8857.2
+
+[km]
+
+Bmax
+
+811.0
+
+39.4
+
+39.4
+
+17147.1
+
+39.4
+
+36.4
+
+36.4
+
+[m]
+
+Bmin
+
+951.85
+
+9069.77
+
+1846.24
+
+36.43
+
+81.83
+
+3.77
+
+11.71
+
+[mas]
+
+θN at
+
+15.93
+
+327.83
+
+327.83
+
+0.75
+
+327.83
+
+354.85
+
+354.85
+
+[arcsec]
+
+LAS
+
+285.56
+
+2720.93
+
+553.87
+
+10.93
+
+24.55
+
+1.13
+
+3.51
+
+[mas]
+
+θN at
+
+4.78
+
+98.35
+
+98.35
+
+0.23
+
+98.35
+
+106.46
+
+106.46
+
+[arcsec]
+
+LAS
+
+8 GHz
+
+142.78
+
+1360.47
+
+276.94
+
+5.46
+
+12.27
+
+0.57
+
+1.76
+
+[mas]
+
+θN at
+
+2.39
+
+49.18
+
+49.18
+
+0.11
+
+49.18
+
+53.23
+
+53.23
+
+[arcsec]
+
+LAS
+
+16 GHz
+
+84.61
+
+806.20
+
+164.11
+
+3.24
+
+7.27
+
+0.34
+
+1.04
+
+[mas]
+
+θN at
+
+1.42
+
+29.14
+
+29.14
+
+0.07
+
+29.14
+
+31.54
+
+31.54
+
+[arcsec]
+
+LAS
+
+27 GHz
+
+55.72
+
+530.91
+
+108.07
+
+2.13
+
+4.79
+
+0.22
+
+0.69
+
+[mas]
+
+θN at
+
+0.93
+
+19.19
+
+19.19
+
+0.04
+
+19.19
+
+20.77
+
+20.77
+
+[arcsec]
+
+LAS
+
+41 GHz
+
+Note: Bmax and Bmin are the unprojected maximum and minimum baseline lengths, respectively. The naturally-weighted resolution is defined
+as θN at « λ{Bmax [rad].
+The reported LAS is based on the minimum baseline resolution divided by two, the same approach used for estimating the LAS of the VLA.
+Thus, minimum baseline resolution„ 6.2 ˆ 104 {pνrGHzs ˚ Bmin rmsq[arcsec]. Detailed simulations are needed to find more accurate results for
+the ngVLA.
+
+54
+
+244
+
+Main+LBA
+
+Spiral
+
+Ant.
+
+#
+
+Subarray
+
+Component/
+
+2.4 GHz
+
+Table 1: Selected ngVLA components/subarrays, their naturally-weighted resolution (θN at ) and LAS
+
+24.56
+
+234.06
+
+47.64
+
+0.94
+
+2.11
+
+0.10
+
+0.30
+
+[mas]
+
+θN at
+
+0.41
+
+8.46
+
+8.46
+
+0.02
+
+8.46
+
+9.16
+
+9.16
+
+[arcsec]
+
+LAS
+
+93 GHz
+
+2
+
+Performance of the ngVLA
+
+The centrally condensed antenna distribution of the ngVLA leads to a naturally
+weighted beam that is not well characterized by a Gaussian function (see e.g.,
+ngVLA memo #12 [3] and ngVLA memo #41 [6]). Specifically, the long baselines produce a very narrow peak in the point spread function (PSF) and the
+core contributes a broad skirt (as seen in Figure 2).
+
+ngVLA Natural PSF
+1.0
+
+Normalized Amplitude
+
+0.8
+0.6
+0.4
+0.2
+0.0
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+arcsec
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+Figure 2: 1D East-West cuts through ngVLA natural PSF for RevD
+Specific science applications may need to adjust the uv-weighting and other
+image parameters to ‘sculpt’ a synthesized beam that is suitable for the particular science goal being considered and also to change the resolution. In ngVLA
+memo #55 [17], V. Rosero performed a taperability study as a metric to compare different subarrays from the ngVLA configuration and their performance
+at different resolutions as measured in terms of their relative sensitivity (see
+Section 2.1).
+
+2.1
+
+Taperability
+
+Taperability is being used as a metric to compare different ngVLA components
+and subarrays. Taperability curves show the change in sensitivity versus resolution as parameterized by an inefficiency factor, ηweigth , such that the expected
+image rms after weighting increases as σrms “ ηweight σN A . Each taperability
+7
+
+curve has a minimum, refered to as the native resolution (natural weight and
+no taper) which gives the highest sensitivity and smallest inefficiency (i.e., by
+definition an inefficiency ηweight “ 1).
+
+Figure 3: Taperability curve for the Main`LBA components of the ngVLA RevD
+configuration showing the image standard deviation (σ) at different angular resolutions
+(FWHM) achieved by varying the imaging weights, simulated at 30 GHz. The noise
+has been scaled relative to that of the naturally weighted image (σN A ). The red
+symbols correspond to use of a uv-taper and natural weights, and the blue symbols
+to Briggs robust weighting without a taper. The gray symbols are for Briggs robust
+R“ ´0.5 and a varying uv-taper, which has a large effect on beam quality (see section
+2.4.1). The dashed line is the interpolation of the points used to estimate ηweigth .
+
+Figure 3 shows as an example the taperability curve of the Main`LBA components of the ngVLA RevD configuration, at 30 GHz. An example description of
+the simulations and the imaging parameters are presented in ngVLA memo #55
+[17] and a taperability Python pipeline is available in https://gitlab.nrao.
+edu/vrosero/ngvla-taperability-pipeline/. For the results shown in this
+8
+
+document the visibilities were made with the CASA sm toolkit using a 4 hr
+synthesis centered on the transit of a single field at `24 declination. The simulations have a center frequency at 30 GHz and are composed of an integration
+time of 1 second and a single channel1 . No source visibilities were predicted, i.e.,
+each simulation is of a blank field. An arbitrary amount of thermal noise was
+added to the visibilities using the sm.setnoise function of the CASA simulation toolkit. The plotted resolutions (θ1{2 ) correspond to the geometric mean of
+the minor and major beam FWHM for each simulation. The inefficiency factor
+(ηweigth ) can be estimated at any frequency by scaling θ1{2 with frequency as
+θ1{2@30GHz “ θ1{2@ν ˆ pν{30 GHzq, where θ1{2 is in mas.
+A high degree of taperability (i.e., a shallow curve, thus a low penalty in sensitivity) is desirable because it means the array can accommodate a wide range
+of science cases. In this example, when using natural weighting with uv-taper
+it appears that the variation in sensitivity is small and smooth over a range of
+angular resolutions: one can move to the right of native by 2 orders of magnitude in resolution while in the left direction only around a factor of 2 before
+paying a penalty in sensitivity Á2. The reason of the curve’s shallowness is related to the array having a large ratio of short baselines to long baselines, thus
+applying a taper does not down-weight a considerable amount of data. This
+makes sense since the LBA provides less long baselines when compared with the
+shortest baselines from the inner subarrays, thus when using small uv-tapers we
+are not losing much sensitivity. Additionally, when using robust values close to
+uniform without uv-taper the lost in sensitivity is very high and steep since we
+are downgrading the shortest baselines which make most of the total amount
+of baselines. From Figure 4 we can see that the full complement of ngVLA 18
+meter antennas (Main`LBA; pink curve) has a very high degree of taperability, i.e., it can be used over a large range of resolutions without a great loss of
+sensitivity (ηweight ď 2; e.g., ngVLA memo #55 [17]).
+
+2.2
+
+Subarrays
+
+Figure 4 shows a compilation of the taperability curves for all the ngVLA components and some selected subarrays (as listed in Table 1). This figure shows
+that the ngVLA configuration covers an impressive range of resolutions spanning „4 orders of magnitude. Also, it demonstrates the advantage of subarrays
+at extreme resolutions or to obtain greater efficiency at specific intermediate
+resolutions (i.e., each subarray is efficient over a narrow resolution range).
+As previously presented, values at resolutions lower than the native resolution
+(i.e., to the right of the curve’s minimum) are the results from simulations using
+natural weighting plus a uv-taper; values at resolutions higher than native used
+robust weighting and no taper. Note that some of these arrays, when used with
+1 MFS simulations for the ngVLA are currently under study.
+
+9
+
+rms/rmsN A at 30 GHz
+4.0
+
+3.5
+
+LBA
+Mid
+Spiral
+Core
+
+Main
+Spiral+Core
+Main+LBA
+
+ηweight
+
+3.0
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+100
+
+101
+
+102
+
+103
+
+104
+
+θ1/2[mas]
+Figure 4:
+
+Taperability curves for the ngVLA components and selected subarrays
+showing the relative sensitivity (image rms compared with the naturally weighted
+image) vs. 30 GHz resolution. Note that some of these arrays, when used with
+natural weighting, have non-Gaussian PSF features (e.g., broad PSF skirt) that may
+be unsuitable for some science cases (see ngVLA memos #55 [17] and #72 [19] about
+PSF details of these specific arrays).
+
+natural weighting, have non-Gaussian PSF features (e.g., broad PSF skirt) that
+may be unsuitable for some science cases (see ngVLA memos #55 [17] and #72
+[19] about PSF details of these specific arrays). Therefore, beam sculpting will
+also be necessary and will introduce another source of inefficiency in addition
+to the taperability that has been discussed this far.
+
+10
+
+2.3
+
+Simulated Resolution and PSF
+
+The physical placement of the antennas is important to achieve a good uvcoverage, which is directly related to the PSF or the “dirty beam”. The PSF
+is a good measure of the performance of an imaging system, providing an insight of the type of errors and artifacts that will appear in the raw images (e.g.,
+[22]). One desirable is the minimization of image-domain sidelobes arising from
+incomplete sampling. Deconvolution imaging techniques, in principle, enable
+the removal of the effect of the dirty beam (i.e., sidelobes, skirts, etc), but the
+current algorithms are limited by the features of poor PSFs.
+
+1.0
+
+0.6
+0.4
+0.2
+
+R = −2.0; TA =5.536
+R = −1.0; TA =4.213
+R =0.0; TA =2.363
+R =1.0; TA =1.649
+R =2.0; TA =1.489
+
+0.8
+
+Normalized Amplitude
+
+Normalized Amplitude
+
+0.8
+
+0.0
+
+1.0
+
+R = −2.0; TA =5.536
+R = −1.0; TA =4.213
+R =0.0; TA =2.363
+R =1.0; TA =1.649
+R =2.0; TA =1.489
+
+0.6
+0.4
+0.2
+
+0.10
+
+0.05
+
+0.00
+
+arcsec
+
+0.05
+
+0.0
+
+0.10
+
+0.010
+
+0.005
+
+0.000
+
+arcsec
+
+0.005
+
+Figure 5:
+
+Examples of simulated 100 GHz PSFs, and the effect of different combinations of robust and uv-taper values producing a clean beam size of 5 mas. The
+PSFs are a selection of the data presented in ngVLA memo #65 [18]. The right panel
+corresponds to a zoom in of the same PSFs shown in the left panel. Units of taper
+and resolution are mas.
+
+In the previous section 2.1 it was established that the array configuration of the
+ngVLA has a high degree of taperability. Unfortunately, arrays with a large
+ratio of short baselines do not produce desirable PSFs (see Figure 2). Additionally, ngVLA memo #65 [18] shows that different combinations of robust and
+uv-taper will formally result in PSFs with the same resolution, although the
+PSF quality may be very different thus affecting the image sensitivity. Figure 5
+shows 1D East-West cuts through example PSFs to demonstrate the effect of
+different imaging weights. All these PSFs have a resolution of „5 mas as parameterized by Gaussian fitting in the CASA tclean task (see more details about
+how the algorithm used by tclean determines the resolution). However, we
+11
+
+0.010
+
+can see how combinations of robust and uv-taper values will allow for beams of
+much higher quality (i.e., more Gaussian), but at the expense of sensitivity as
+described below.
+Figure 6 shows the change in sensitivity with Briggs robust for all the images
+that have a resolution of „5 mas presented in ngVLA memo #65 [18], where
+ηweight is an inefficiency factor defined as σ{σN A . As we can see, from the
+examples shown in Figure 5 that have more Gaussian-like beams the image
+noise increases as much as by a factor of „3.7 for combinations of robust and
+uv-taper, but some combinations yield beams with a more reasonable penalty in
+sensitivity of the order of „2 that could have a suitable quality for the scientific
+requirements.
+
+σ/σN A at 100 GHz
+
+3.5
+
+ηweight
+
+3.0
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+−2.0
+
+−1.5
+
+−1.0
+
+−0.5
+
+0.0
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+Briggs Robust
+
+Figure 6: Change of sensitivity with Briggs robust for images with clean beam size
+of „5 mas achieved by varying the imaging weights, simulated at 100 GHz. The data
+is presented in ngVLA memo #65 [18] .
+
+2.4
+
+Beam Sculpting
+
+Here we explore two options for beam sculpting: i) through combinations of
+imaging parameters (i.e., robust and uv-taper) and ii) by selection of efficient
+12
+
+subarrays. It is important to point out that the need for beam sculpting may
+vary depending of the scientific requirements and should be studied carefully for
+each case.
+2.4.1
+
+Combination of Imaging Parameters
+
+Specific scientific cases may need to adjust the uv-weighting and other image
+parameters to sculpt a synthesized beam in order to meet specific science requirements, e.g., image fidelity. As previously presented, the red symbols in the
+taperability curve shown in Figure 3 are simulations using natural weighting
++ TA values which enables one to achieve a desired resolution while paying a
+penalty in sensitivity. Figure 7 shows examples of 1D East-West cuts through
+selected example PSFs from the simulations performed for that specific curve
+(i.e., using the ngVLA Main`LBA components). Such figure shows that the
+resulting PSF for simulations using natural weighting + TA values may not be
+acceptable2 (e.g., broad skirt as seen in Figure 7 gray PSFs) for several scientific
+requirements. With that in mind, a value of Briggs robust R“ ´ 0.5 (represented by the gray symbols in the taperability curve shown in Figure 3) is used
+as an approximation example of beam sculpting. As we can seen in Figure 3 an
+additional penalty in sensitivity is added when doing so. However, when using
+Briggs robust values approaching to uniform the resulting PSFs start to appear
+more Gaussian-like (see blue PSFs in Figure 7).
+
+Figure 7:
+
+Simulated 30 GHz PSFs for the present ngVLA reference array over a
+range of resolutions, showing the effect of different imaging weights (TA: uv-taper in
+mas, R: Briggs robust parameter). These examples illustrate how combinations of
+robustness and tapering allow for a beam of much higher quality (but at the expense
+of sensitivity). Units of taper and resolution are mas.
+
+PSF metrics are useful to quantify the quality of the beams and can be used
+to inform decisions about how to ‘sculpt’ the synthesized beam to something
+suitable to a specific science goal. Several PSF quality metrics were studied in
+ngVLA memo #65 [18]. Specifically, we have been extensively using a metric
+2 Although this may change depending of the selected subarray (see ngVLA memo #55
+[17]).
+
+13
+
+that measures the level of the PSF at a radius of one FWHM (defined in ngVLA
+memo #65 [18] as ‘metric 2b’). Figure 8 shows an example of two radialaveraged PSF profiles for R “ ´1 and R “ 0 with the same reported angular
+resolution (i.e., 5 mas) and their resulting values for metric 2b (i.e., 12% and
+45% for R “ ´1 and R “ 0, respectively). It was suggested in ngVLA memo
+#47 [7] that a skirt which raises the PSF to a level of 10% at a radius of one
+FWHM (i.e., metric 2b) may be acceptably low (for comparison, a Gaussian
+beam is „6% at a radius of one FWHM).
+
+Robust= 0.0; metric 2b=0.45
+Robust=−1.0; metric 2b=0.12
+
+1.0
+
+PSF level
+
+0.8
+
+0.6
+
+metric 2b
+
+0.4
+
+0.2
+
+0.0
+0.000
+
+0.002
+
+0.004
+
+0.006
+
+0.008
+
+0.010
+
+Radial distance (arcsec)
+Figure 8: Radial-averaged PSF profile for R “ ´1 and R “ 0 showing examples
+for the same angular resolution (i.e., 5 mas). Metric 2b calculates the PSF level at a
+radial distance of one FWHM.
+Figure 9 shows the values of metric 2b as a function of Briggs robust values for
+PSFs with the same reported angular resolution (i.e., 5 mas; see ngVLA memo
+#65 [18] for details). Metric 2b is sensitive to a type of PSF non-Gaussianity
+which is often referred to as a beam ‘skirt’ or ‘plateau’. The gray solid line
+represents the level value of a Gaussian beam at a radius of one FWHM, i.e.,
+„6%. At this radius, for the examples shown in Figure 5 the beams with Briggs
+14
+
+Level at HWHM
+
+0.72
+
+0.64
+
+0.56
+
+robust values R Á 0 are far above 10%, but drop to below or about 10% when
+a robust 0.48
+value of R À ´1 is used (also seen in Figure 8). This ‘sculpting’ of a
+more Gaussian beam comes at a cost of sensitivity as shown in Figure 6. The
+complete data set is presented in ngVLA memo #65 [18].
+
+−2
+
+−1
+
+0
+
+1
+
+2
+
+−2
+
+−1
+
+0
+
+1
+
+2
+
+Level at FWHM
+
+0.60
+
+0.45
+
+0.30
+
+0.15
+
+Briggs Robust
+
+Figure 9:
+
+Metric 2b as a function of Briggs robust values of PSFs with angular
+resolution of 5 mas. The gray solid line represents the level value of a Gaussian beam
+at a radius of one FWHM, i.e., „6%. The complete data set is presented in ngVLA
+memo #65 [18].
+
+2.4.2
+
+Selection of Subarrays
+
+An alternative method to reduce the level of the PSF skirt is to select a subarray
+where the number of short baselines is not as large when compared with the
+amount of longer baselines. A study presented in ngVLA memo #72 [19] shows
+how different subarrays (specifically, subarrays including different fractions of
+the Core) can be more efficient at certain resolutions. Figure 10 shows radiallyaveraged PSF profiles3 ; spline interpolation is used to determine the level of the
+PSF at a radius of one FWHM (i. e., metric 2b) as marked by the dashed lines.
+This figure demonstrates the reduction of the skirt depending on the selected
+subarray.
+3 Radially-averaged profiles are produced using the 3rd party CASA task iring, obtained
+from the ALMA Nordic Node.
+
+15
+
+Plains Subarrays Natural PSFs
+No−Core: 0.17
+10th−Core: 0.21
+Quarter−Core: 0.28
+Third−Core: 0.31
+Half−Core: 0.36
+Full−Core: 0.47
+
+1.0
+
+PSF level
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+0.00
+
+0.05
+
+0.10
+
+0.15
+
+0.20
+
+0.25
+
+Radial distance (arcsec)
+Figure 10: Radially-averaged PSF profiles of the naturally weighted synthesized beam
+(solid lines) for six subarrays that includes the Spiral subcomponent plus different
+fractions of the Core. Spline interpolation is used to determine the level of the PSF
+at a radius of one FWHM as marked by the dashed lines.
+Figures 11 shows the values of each taperability curve (when using fractions of
+the Core; see ngVLA memo #72 [19]) at selected constant resolution values between 75 mas and 1 arcsec. This abscissa is labeled according to the number of
+core antennas in the subarray (bottom axis) and the corresponding name given
+to the subarray (top axis); linear interpolation is used between each simulated
+subarray. Figure 11 makes it clear that different subarrays are more efficient
+at different resolutions. Subarrays with fewer antennas in the core have higher
+native resolutions and therefore suffer less of a sensitivity penalty when using
+image weights to achieve a higher resolution PSF. On the other hand, subarrays with more core antennas can be tapered to lower resolutions with less of a
+sensitivity penalty.
+In ngVLA memo #76 [20] we explored the option of selecting subarrays for each
+driving case of the ngVLA based on the target resolution, LAS requirements and
+16
+
+10th−Core
+Third−Core
+No-Core
+Quarter−Core
+Half−Core
+
+Full−Core
+
+Taperability Curve at 30 GHz
+
+4.0
+
+θ1/2 =75 mas
+θ1/2 =100 mas
+θ1/2 =150 mas
+
+3.5
+
+θ1/2 =200 mas
+θ1/2 =500 mas
+θ1/2 =1000 mas
+
+ηweight
+
+3.0
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+Number of core antennas
+Figure 11: Efficiency curves for different selected resolutions and subarrays for uvtaper and natural weights and Briggs robust weighting without a taper (red and blue
+data series in the taperability figures).
+
+with the ability to be used within a factor of 2 of its naturally-weighted sensitivity. This is achieved by removing the antennas that would otherwise be heavily
+down-weighted by either robust or uv-taper (i.e., antennas located within the
+Core or the mid-baseline subarrays, respectively) with the additional advantage
+of freeing up antennas to use by other projects observing simultaneously.
+In conclusion, subarrays that ‘naturally’ produce a more Gaussian
+PSF will require less extreme imaging weights and therefore will incur a less severe sensitivity penalty.
+
+17
+
+2.5
+
+Sensitivity of the ngVLA
+
+The ngVLA is designed to operate in a frequency coverage of „1.2 – 116 GHz
+in 6 receiver bands. All the values presented in this section account for predictions for the receiver temperature, aperture efficiency, atmospheric conditions
+and spillover as a function of frequency (see https://ngvla.nrao.edu/page/
+performance for the specific values at each band). Therefore, these values do
+not account for atmospheric variation (see more in ngVLA memo #21 [2]) and
+confusion noise, which would need to be independently considered for some of
+the combinations of frequency, resolution and sensitivity and will be presented
+in a coming version of the ngVLA sensitivity calculator. Figures of merit are
+presented per 1 hour of observation time and intended to be scaled to other
+observing times.
+A key performance table for the Main`LBA ngVLA configuration is presented
+and remains up to date in the ngVLA website, for all the 6 receiver bands
+and representative resolutions. A web interface next generation Exposure Calculator Tool (ngECT) is currently being developed based on such investigations and will eventually supersede the values included in the performance
+metric tables. In the meantime, a sensitivity calculator Python script located
+at https://gitlab.nrao.edu/vrosero/ngvla-sensitivity-calculator can
+be used to estimate the performance sensitivity including point source and surface brightness sensitivities for lines and continuum. This calculator makes use
+of the taperability curves for many representative subarrays of the ngVLA and
+allows the calculation of the sensitivity at different resolutions.
+
+2.5.1
+
+Continuum Point Source Sensitivity
+
+Figure 12 shows the continuum point source sensitivity for 1 hour of observation
+time, using the maximum continuum bandwidth at the natural resolution (i.e.,
+for untapered, naturally weighted images) for the Main`LBA components. The
+gray dots show the 1-hour continuum sensitivity using the maximum available
+bandwidth and the colored lines show the relative change in sensitivity across
+each band. The maximum instantaneous correlator bandwidth of 20 GHz exceeds the receiver bandwidth at all bands except at band 6. Thus for band
+6 we present the continuum sensitivity for three possible settings with central
+frequencies centered at 80, 93 and 106 GHz. From Figure 12 we can see that at
+every ngVLA band it will be possible to make a continuum image with a sensitivity below 1 µJy/beam in under 1 hour of observation.
+In Figure 13 we present the continuum sensitivity over a range of resolutions,
+where we have incorporated the taperability and the point source sensitivity
+curves (Figures 3 and 12, respectively) together to show how the sensitivity
+varies as a function of both frequency and resolution. This is shown here for the
+Main`LBA subarray, for which the taperability curve is fairly flat over a few
+
+18
+
+Point Source Sensitivity (µJy/beam)
+
+Continuum Point Source Sensitivity: 1-hour
+Band 1
+Band 2
+Band 3
+
+1.00
+0.9
+0.8
+
+Band 4
+Band 5
+Band 6
+
+0.7
+0.6
+0.5
+0.4
+0.3
+
+0.2
+
+1
+
+10
+
+100
+
+Frequency (GHz)
+Figure 12: Continuum point source sensitivity of the ngVLA Main`LBA components
+at the natural resolution. The gray dots show the 1-hour continuum sensitivity using
+the maximum available bandwidth and the colored lines show the relative change in
+sensitivity across each band. The maximum instantaneous correlator bandwidth of 20
+GHz exceeds the receiver bandwidth at all bands except at band 6.
+
+orders of magnitude in resolution. The white contours are all about or below
+1 µJy/beam in the 1-hour point source sensitivity, and we can see that they
+not only extend across the frequency range of each receiver but also over a large
+range of resolutions. Overall, we can see that the ngVLA will be able to produce
+sensitive images at angular resolutions almost as small as 0.1 mas at the highest
+frequency and as large as about 100 arcseconds at the lowest frequency.
+
+19
+
+100
+
+2.5
+
+2.0
+
+1.5
+
+≥2
+
+12
+
+1-hour point
+source (GHz)
+sensitivity (µJy)
+Frequency
+
+3.0
+Frequency (GHz)
+
+Band 2: [0.15, 0.2, 0.25, 0.3] µJy/beam
+
+≥2
+
+100
+
+10
+
+8
+
+6
+
+1-hour point source sensitivity (µJy)
+
+Band 1: [0.25, 0.3, 0.4, 0.7] µJy/beam
+
+3.5
+
+4
+102
+
+10−1
+
+10−4 10−3 10−2 10−1 10−0 101
+
+Resolution (arcsec)
+
+10−1
+
+Resolution (arcsec)
+
+Band 3: [0.2, 0.25, 0.3, 0.4] µJy/beam
+
+Band 4: [0.2, 0.25, 0.3, 0.4] µJy/beam
+
+≥2
+
+1-hour point
+source (GHz)
+sensitivity (µJy)
+Frequency
+
+100
+
+18
+
+16
+
+14
+
+≥2
+
+34
+
+20
+
+Frequency (GHz)
+
+102
+
+32
+100
+
+30
+28
+26
+24
+
+1-hour point source sensitivity (µJy)
+
+10−4 10−3 10−2 10−1 10−0 101
+
+22
+102
+
+10−4 10−3 10−2 10−1 10−0 101
+
+Resolution (arcsec)
+Band 5: [0.2, 0.25, 0.3, 0.4] µJy/beam
+
+45
+
+40
+
+35
+
+102
+
+Resolution (arcsec)
+
+Frequency
+(GHz) (µJy)
+1-hour point
+source sensitivity
+
+Frequency (GHz)
+
+Band 6: [0.5, 0.65, 0.9, 1.35] µJy/beam
+
+≥2
+
+100
+
+10−1
+
+10−1
+
+Resolution (arcsec)
+
+50
+
+10−4 10−3 10−2 10−1 10−0 101
+
+102
+
+10−1
+
+≥2
+
+110
+100
+
+100
+90
+80
+70
+
+10−4 10−3 10−2 10−1 10−0 101
+
+102
+
+Resolution (arcsec)
+
+100
+1-hour point source sensitivity (µJy/beam)
+
+≥2
+
+Figure 13: Continuum sensitivity over a range of resolutions incorporating both the
+taperability and continuum point source sensitivity curves for the Main`LBA components.
+
+20
+
+10−1
+
+1-hour point source sensitivity (µJy)
+
+10−4 10−3 10−2 10−1 10−0 101
+
+10−1
+
+2.5.2
+
+Line Sensitivity
+
+Similarly, Figure 14 shows the line sensitivity for 1 hour of observation time
+using a bandwidth of 10 km/s at the natural resolution (i.e., for untapered, naturally weighted images) for the main`LBA subarray. Figure 15 shows the line
+sensitivity over a range of resolutions, where we have incorporated the taperability and the line sensitivity curves (Figures 3 and 14, respectively) together
+to show how the sensitivity varies as a function of both frequency and resolution.
+
+Point Source Sensitivity (µJy/beam)
+
+Line Sensitivity: 1 hour, 10 km/s
+Band 1
+Band 2
+Band 3
+
+100
+90
+
+Band 4
+Band 5
+Band 6
+
+80
+70
+60
+50
+40
+
+30
+
+20
+1
+
+10
+
+100
+
+Frequency (GHz)
+Figure 14: Line sensitivity at the natural resolution for 1 hour of observation and 10
+km/s of bandwidth.
+
+21
+
+102
+
+≥2
+
+6 × 101
+
+2.0
+
+4 × 101
+3 × 101
+
+1.5
+
+12
+
+Frequency (GHz)
+
+Frequency (GHz)
+
+3.0
+
+2.5
+
+Band 2 Line levels: [40, 60, 80, 110] µJy/beam
+
+2 × 102
+
+1-hour point source sensitivity (µJy/beam)
+
+Band 1 Line levels: [60, 80, 100, 130] µJy/beam
+
+3.5
+
+≥2
+
+10
+
+2 × 102
+
+102
+≥2
+
+8
+
+6 × 101
+
+4 × 101
+
+6
+
+3 × 101
+
+1-hour point source sensitivity (µJy/beam)
+
+≥2
+
+4
+102
+
+2 × 101
+
+10−4 10−3 10−2 10−1 10−0 101
+
+2 × 101
+
+Resolution (arcsec)
+Band 4 Line levels: [35, 45, 60, 90] µJy/beam
+
+2 × 102
+
+20
+
+34
+1-hour point source sensitivity (µJy/beam)
+
+Band 3 Line levels: [30, 40, 55, 70] µJy/beam
+
+2 × 102
+
+102
+
+18
+
+Frequency (GHz)
+
+Frequency (GHz)
+
+32
+
+≥2
+
+6 × 101
+
+16
+
+4 × 101
+
+14
+
+3 × 101
+
+10−4 10−3 10−2 10−1 10−0 101
+
+102
+
+102
+
+30
+
+≥2
+
+28
+
+6 × 101
+
+26
+
+4 × 101
+
+24
+
+3 × 101
+
+22
+
+2 × 101
+
+10−4 10−3 10−2 10−1 10−0 101
+
+Resolution (arcsec)
+
+102
+
+2 × 101
+
+Resolution (arcsec)
+Band 6 Line levels: [60, 75, 100, 150] µJy/beam
+
+2 × 102
+
+1-hour point source sensitivity (µJy/beam)
+
+Band 5 Line levels: [40, 60, 80, 110] µJy/beam
+
+50
+
+2 × 102
+
+45
+
+102
+
+Frequency (GHz)
+
+Frequency (GHz)
+
+110
+
+6 × 101
+
+40
+
+4 × 101
+
+35
+
+3 × 101
+
+10−4 10−3 10−2 10−1 10−0 101
+
+102
+
+2 × 101
+
+102
+
+100
+6 × 101
+
+90
+
+4 × 101
+
+80
+70
+
+3 × 101
+
+10−4 10−3 10−2 10−1 10−0 101
+
+Resolution (arcsec)
+
+2 × 101
+
+1-hour point source sensitivity (µJy/beam)
+
+Resolution (arcsec)
+
+102
+
+102
+
+Resolution (arcsec)
+
+102
+3 × 101 4 × 101
+6 × 101
+1-hour line sensitivity (µJy/beam)
+
+2 × 102
+
+Figure 15: Line sensitivity over a range of resolutions incorporating both the taperability and line sensitivity curves for the main`LBA subarray.
+
+22
+
+2 × 101
+
+1-hour point source sensitivity (µJy/beam)
+
+10−4 10−3 10−2 10−1 10−0 101
+
+2.5.3
+
+Continuum Brightness Sensitivity
+
+Additionally, Figure 16 shows the continuum brightness sensitivity for 1 hour of
+observation time, using the maximum continuum bandwidth at a resolution of 1
+arcsec for the main`LBA subarray. We can see how the sensitivity changes with
+frequency as a factor of „ ν ´2 , with band 6 achieving a brightness sensitivity of
+„0.3 mK in 1 hour observation. Figure 17 shows the continuum brightness sensitivity over a range of resolutions, where we have incorporated the taperability
+and the continuum brightness sensitivity curves (Figures 3 and 16, respectively)
+together to show how the sensitivity varies as a function of both frequency and
+resolution.
+
+Continuum Brightness Sensitivity: 1-hour, 1 arcsec
+
+Brightness Temperature Sensitivity (K)
+
+Band 1
+Band 2
+Band 3
+
+Band 4
+Band 5
+Band 6
+
+10−1
+
+10−2
+
+10−3
+
+100
+
+101
+
+102
+
+Frequency (GHz)
+Figure 16: Continuum brightness sensitivity for 1 hour of observation and 1 arcsec
+resolution.
+
+23
+
+Band 1 levels: [0.001, 0.01, 0.1, 1.0, 10.0] K
+
+Band 2 levels: [0.001, 0.01, 0.1, 1.0, 10.0] K
+
+101
+
+3.0
+100
+
+1-hour brightness
+temperature
+sensitivity (K)
+Frequency
+(GHz)
+
+102
+
+3.5
+
+≥2
+
+2.5
+
+10−1
+
+2.0
+
+10−2
+
+10−3
+
+1.5
+100
+
+101
+
+102
+
+10−4
+
+101
+
+10
+100
+
+10−2
+
+10−3
+
+4
+10−4 10−3 10−2 10−1
+
+102
+
+18
+
+100
+
+1-hour brightness
+temperature
+sensitivity (K)
+Frequency
+(GHz)
+
+34
+
+101
+
+Frequency (GHz)
+
+101
+
+Band 4 levels: [0.001, 0.01, 0.1, 1.0, 10.0] K
+
+102
+
+20
+
+≥2
+10−1
+
+16
+10−2
+
+14
+
+10−3
+
+101
+
+102
+
+10−4
+
+Band 5 levels: [0.001, 0.01, 0.1, 1.0, 10.0] K
+
+101
+
+30
+
+100
+
+≥2
+
+28
+
+10−1
+
+26
+10−2
+
+24
+10−3
+
+22
+10−4 10−3 10−2 10−1
+
+100
+
+101
+
+102
+
+Band 6 levels: [0.001, 0.01, 0.1, 1.0, 10.0] K
+
+45
+
+100
+
+Frequency
+(GHz)
+1-hour brightness
+temperature
+sensitivity (K)
+
+102
+
+101
+
+110
+
+35
+
+10−3
+
+101
+
+102
+
+Resolution (arcsec)
+
+10−4
+
+10−1
+
+90
+10−2
+
+80
+
+10−3
+
+70
+10−4 10−3 10−2 10−1
+
+100
+
+101
+
+102
+
+Resolution (arcsec)
+
+10 3
+10 2
+10 1
+100
+101
+1-hour brightness temperature sensitivity (K)
+
+102
+
+Figure 17: Continuum brightness sensitivity over a range of resolutions incorporating
+both the taperability and continuum brightness sensitivity curves for the main`LBA
+subarray.
+24
+
+102
+
+100
+
+100
+
+10−2
+
+10 4
+
+10−4
+
+101
+
+10−1
+
+40
+
+100
+
+102
+
+Resolution (arcsec)
+
+50
+
+10−4 10−3 10−2 10−1
+
+10−4
+
+32
+
+Resolution (arcsec)
+
+Frequency (GHz)
+
+100
+
+Resolution (arcsec)
+
+Band 3 levels: [0.001, 0.01, 0.1, 1.0, 10.0] K
+
+100
+
+10−1
+
+6
+
+Resolution (arcsec)
+
+10−4 10−3 10−2 10−1
+
+≥2
+
+8
+
+1-hour brightness temperature sensitivity (K)
+
+10−4 10−3 10−2 10−1
+
+102
+
+12
+
+10−4
+
+1-hour brightness temperature sensitivity (K)
+
+Frequency (GHz)
+
+≥2
+
+1-hour brightness temperature sensitivity (K)
+
+≥2
+
+2.5.4
+
+Line Brightness Sensitivity
+
+Figure 18 shows the line brightness sensitivity for 1 hour of observation time
+and using a bandwidth of 10 km/s at a resolution of 1 arcsec for the main`LBA
+subarray. Figure 19 shows the line brightness sensitivity over a range of resolutions, where we have incorporated the taperability and the line brightness
+sensitivity curves (Figures 3 and 18, respectively) together to show how the
+sensitivity varies as a function of both frequency and resolution.
+For all the figures that show the contours of the change of sensitivity with frequency and resolution we can see the resolution range shift with frequency, from
+the higher resolutions (band 6) to the lower resolutions (band 1). This is due to
+the natural resolution (i.e., the untapered, naturally-weighted resolution) scaling with wavelength.
+
+Line Brightness Sensitivity: 1-hour, 10 km/s, 1 arcsec
+Band 1
+Band 2
+Band 3
+
+Brightness Temperature Sensitivity (K)
+
+102
+
+Band 4
+Band 5
+Band 6
+
+101
+
+100
+
+10−1
+
+10−2
+100
+
+101
+
+102
+
+Frequency (GHz)
+Figure 18:
+
+Line brightness sensitivity for 1 hour of observation and 10 km/s and
+1 arcsec resolution.
+
+25
+
+Band 2 Line levels: [0.1, 1.0, 10.0, 100.0, 1000.0] K
+
+104
+
+103
+
+102
+
+≥2
+
+2.5
+
+101
+
+2.0
+
+100
+
+10−1
+
+1.5
+100
+
+101
+
+102
+
+10−2
+
+103
+
+10
+102
+
+100
+
+10−1
+
+4
+10−4 10−3 10−2 10−1
+
+102
+
+1-hour brightness
+temperature
+sensitivity (K)
+Frequency
+(GHz)
+
+Frequency (GHz)
+
+18
+
+≥2
+101
+
+16
+100
+
+14
+
+10−1
+
+101
+
+102
+
+10−2
+
+104
+
+103
+
+30
+
+102
+
+≥2
+
+28
+
+101
+
+26
+100
+
+24
+10−1
+
+22
+10−4 10−3 10−2 10−1
+
+100
+
+101
+
+102
+
+10−2
+
+Resolution (arcsec)
+
+103
+
+45
+
+102
+
+101
+
+40
+
+100
+
+35
+
+Band 6 Line levels: [0.1, 1.0, 10.0, 100.0, 1000.0] K
+
+104
+
+50
+
+Frequency
+(GHz)
+1-hour brightness
+temperature
+sensitivity (K)
+
+Band 5 Line levels: [0.1, 1.0, 10.0, 100.0, 1000.0] K
+
+Frequency (GHz)
+
+10−2
+
+32
+
+Resolution (arcsec)
+
+10−1
+
+101
+
+102
+
+Resolution (arcsec)
+
+10−2
+
+102
+
+34
+
+103
+
+100
+
+101
+
+Band 4 Line levels: [0.1, 1.0, 10.0, 100.0, 1000.0] K
+
+104
+
+20
+
+10−4 10−3 10−2 10−1
+
+100
+
+Resolution (arcsec)
+
+Band 3 Line levels: [0.1, 1.0, 10.0, 100.0, 1000.0] K
+
+100
+
+101
+
+6
+
+Resolution (arcsec)
+
+10−4 10−3 10−2 10−1
+
+≥2
+
+8
+
+1-hour brightness temperature sensitivity (K)
+
+10−4 10−3 10−2 10−1
+
+104
+
+12
+
+10−2
+
+110
+
+103
+
+102
+
+100
+
+101
+
+90
+100
+
+80
+
+10−1
+
+70
+10−4 10−3 10−2 10−1
+
+100
+
+101
+
+102
+
+Resolution (arcsec)
+
+10−1
+100
+101
+102
+103
+1-hour brightness temperature sensitivity (K)
+
+104
+
+Figure 19: Line brightness sensitivity over a range of resolutions incorporating both
+the taperability and line brightness sensitivity curves for the main`LBA subarray.
+
+26
+
+104
+
+10−2
+
+1-hour brightness temperature sensitivity (K)
+
+Frequency (GHz)
+
+3.0
+
+1-hour brightness
+temperature
+sensitivity (K)
+Frequency
+(GHz)
+
+Band 1 Line levels: [0.1, 1.0, 10.0, 100.0, 1000.0] K
+
+3.5
+
+≥2
+
+1-hour brightness temperature sensitivity (K)
+
+≥2
+
+3
+
+Image Fidelity
+
+Image fidelity is used as a measure of image correctness and is defined here as
+the comparison of the model (or the ‘correct image’) with the resulting image
+(or the ‘produced image’), such that a high fidelity image has smaller residuals
+after subtracting the model from the image.
+In this work we use the definition of fidelity given in equation 1, as defined in
+ngVLA memo #67 [12] and also presented in the ngVLA Science Requirements
+document [13]:
+F “1´
+
+Σi rβi Wi ˚ p|Ii ´ Mi |qs
+Σi βi2 Wi
+
+(1)
+
+where I is the resulting image and M is the model. Additionally, βi is defined to
+be maxp|Ii |, |Mi |q and Wi is a ‘window function’ which defines the region where
+the fidelity is evaluated (Wi “ 0 outside and Wi “ 1 inside). For more details
+about this image fidelity definition see ngVLA memo #67 [12].
+One of the main challenges to measure image fidelity is related with the scarcity
+of a representative model of the correct image for the majority of real scientific
+observations. Following, we present simulated images and examples of image
+fidelity calculations for two of the ngVLA KSGs, i.e., KSG 1 Protoplanetary
+Disks and KSG 3 Imaging Molecular Gas in Nearby Galaxies, as presented in
+ngVLA memos #65 [18] and #89 [21], respectively.
+
+3.1
+
+KSG 1: Protoplanetary Disks
+
+ngVLA memo #65 [18] presents a systematic study on image fidelity analysis
+for imaging of protoplanetary disks to determine the combination of imaging
+parameters that provides the optimal balance between PSF quality and sensitivity. Following, we summarize the procedure and results.
+
+3.1.1
+
+Model and Simulations
+
+For the simulations of the ngVLA observations, we employ the ngVLA Main
+interferometric subarray (ngvla-main-revC.cfg)4 , which is composed of 214 18
+m antennas. We adopt the same model used in ngVLA Memo #33 [14], namely,
+‘Imaging Planetary Systems in the Act of Forming with the ngVLA’ by Ricci
+et al. 2018a [15] and Ricci et al. 2018b [16]. The model image, shown in Figure
+20, is at 3 mm and the disk is at `24˝ Declination, which corresponds to the
+declination of the nearby Taurus star forming region. Ricci et al. 2018b [16]
+presents in detail information about the creation of the synthetic image of the
+model for the continuum emission and all the physical parameters that they
+4 Note that ngVLA memo #65 [18] uses RevC array configuration.
+
+27
+
+Figure 20: Synthetic model image for a planetary disk at 3 mm from KSG 1. Model
+credit: Ricci et al. 2018a [15] and Ricci et al. 2018b [16].
+
+adopted.
+For the simulations, we generated the visibilities with CASA task simobserve
+and using 8 hr synthesis centered on transit. The simulations have a center
+frequency of 100 GHz and are composed of 1 channel with a bandwidth of
+10 GHz and an integration time of 60 s5 . Thermal noise was added using
+the sm.setnoise function of the sm toolkit with a ‘simplenoise’ parameter6 of
+0.9 mJy which corresponds to an rms level of „ 0.2 µJy/beam in the final natural and untapered continuum image. From ngVLA memo #55 [17], we find that
+the untapered, naturally weighted point source sensitivity of the Main interferometric array at 93 GHz is 0.83 µJy/beam for a 1 hour observation7 . Therefore,
+5 We choose this integration time in order to keep the measurement set files small. Time
+smearing is not an issue for simulated observations, but this value would need to be reconsidered before scheduling actual observations.
+6 For more on estimating the expected rms noise in an untapered, naturally-weighted Stokes
+I image and adding thermal noise to a MS see https://casaguides.nrao.edu/index.php/
+Simulating_ngVLA_Data-CASA5.4.1
+7 Since the system temperature have been averaged at each band, we assume that the
+continuum rms of the images at 93 GHz and 100 GHz are the same.
+
+28
+
+an rms value of „ 0.2 µJy/beam corresponds to on-time integrations of about
+„ 17 hr with the ngVLA.
+
+3.1.2
+
+Determination of Imaging Parameters
+
+A fundamental requirement of KSG 1 is to achieve a spatial resolution of 5 mas
+at 100 GHz. Therefore, in order to investigate what combination of imaging
+parameters will produce such resolution, we made a grid of PSFs using a range
+of Briggs weighting and UV-tapers. We vary the robust value from uniform
+(R “ ´2) to natural (R “ 2) in steps of 0.4 (for a total of 11 values of robust)
+and use values of uv-taper from 0 to 6 mas in steps of 0.5 mas (for a total of
+13 values of uv-taper) resulting in a grid of 143 images. The imaging was done
+using CASA task tclean and all the simulated images have an image size of
+
+Figure 21: Resolution as a function of the robust and uv-taper values. The color
+scale shows the size of the clean beam as fit with the CASA tclean task. The solid
+white line are the combination of robust and uv-taper values that will result on a
+resolution of 5 mas, and the dashed lines delimit the resolutions from 4 to 6 mas.
+
+29
+
+5120 px. Figure 21 is a color contour representing the achieved resolutions8 of
+the resulting PSFs from our grid using different Briggs robust values and uvtapers. The combinations of Briggs robust and uv-taper values that result in a
+resolution of 5 mas is represented by the white solid line.
+
+3.1.3
+
+Images with the Desired Resolution
+
+The results from Section 3.1.2 show that there are many combinations of robust and UV-taper that will produce a 5 mas clean beam. Although different
+combinations will formally result in the same resolution, other properties of
+the resulting PSFs may be very different. Different combinations of robust and
+UV-taper will also affect the image sensitivity (for more details see section 2.3).
+For this study, we create new simulated images using only combinations of
+Briggs weighting and UV-taper which will give 5 mas resolution. We vary the
+robust value from uniform (R “ ´2) to natural (R “ 2) in steps of 0.2 in order
+to have a suite of 21 equally spaced values. We pair each robust value with a
+uv-taper based on interpolation of the white solid line shown in Figure 21.
+3.1.4
+
+Results
+
+We calculate the fidelity for all the images that have a clean beam size of „5 mas.
+Furthermore, we made simulations and images for noisy and noise-free cases.
+Figure 22, shows the image fidelity as a function of robust value, demostrating
+how the image fidelity starts decreasing for robust values Rą 0 and Rą 0.8,
+respectively. At that point, clean is failing to converge due to the broad skirt
+of the PSF. Note that we used typical, conservative clean parameters that were
+held constant across the set of images we analyzed. Additional tuning of clean
+parameters may improve this issue with convergence (e.g., loop gain, cycle niter,
+multiscale).
+For the noise-free and noisy cases we obtain image fidelities of „ 95% and
+„ 60%, respectively. We find that the fidelity is maximized when using robust
+R“ ´1.4 for the noisy case and R» ´1.9 for the noise-free case. Therefore,
+we conclude that R“ ´1.4 provides the natural balance between PSF quality
+and sensitivity for this use case. Specifically, for more positive robust values the
+fidelity decreases due to poor PSF quality (leading to increased deconvolution
+errors) and for more negative robust values the fidelity decreases because the
+noise increases.
+Figure 23 shows an example of one of the images with high image fidelity corresponding to a R“ ´1.6. The upper panel shows the model image smoothed
+to a resolution of 5 mas and the lower panel shows the resulting image with
+R“ ´1.6. Figures 24 and 25 show the magnitude of the residual image, |Image–
+Model|, for the noise-free and noisy cases, respectively. The contours on the
+8 The plotted resolutions correspond to the geometric mean of the minor and major beam
+FWHM of the synthesized beam, as parameterized by Gaussian fitting inside the CASA tclean
+task.
+
+30
+
+residual images trace the main features of the smoothed model image. We can
+see how the residuals are an order of magnitude smaller for the noise-free case
+compared to the noisy one and that the residuals in the noisy case are noise-like
+and do not appear related with the model flux. This indicates that the fidelity in
+the noisy case is noise limited and not strongly affected by deconvolution errors,
+and therefore not strongly dependent on the exact choice of cleaning parameters.
+Such an image appears to satisfy each of the requirements of KSG 1.
+
+Fidelity Equation 2
+
+1.0
+
+Noisy
+Noise-free
+
+0.8
+
+Image Fidelity
+
+0.6
+0.4
+0.2
+0.0
+0.2
+0.4
+0.62.0
+
+1.5
+
+1.0
+
+0.5 0.0
+
+0.5
+
+Briggs Robust
+
+Figure 22: Fidelity vs robust.
+
+31
+
+1.0
+
+1.5
+
+2.0
+
+Figure 23: (Upper panel) Smooth model to a 5 mas resolution. (Lower panel) Clean
+image for R“ ´1.6.
+
+32
+
+Figure 24: Residuals noise-free image for R“ ´1.6.
+
+Figure 25: Residuals noisy image for R“ ´1.6.
+
+33
+
+3.2
+
+KSG 3 (NGA8): Imaging Molecular Gas in Nearby
+Galaxies
+
+ngVLA memo #89 [21] (and its addendum) presents a study on image fidelity
+analysis for imaging molecular gas in nearby galaxies. We created a representative simulation that combines observations with several components of the
+ngVLA, i.e., the Spiral`Core subarray of the Main configuration, the Short
+Baseline Array, and the Total Power antennas. The simulations use mosaicking to cover a detailed model of a spiral galaxy that is nearly 2 arcminutes in
+diameter and an appropriate amount of thermal noise was added to the model
+visibilities. The results demonstrates the capabilities of the ngVLA to achieve
+high-fidelity imaging for extended and complex sources.
+Additionally, an image fidelity pipeline has been developed and can be found
+in https://gitlab.nrao.edu/vrosero/ngvla-fidelity-pipeline (for more
+details about the pipeline see the addendum of ngVLA memo #89 [21]). Additionally, comparisons of the ngVLA RevC and RevD array configurations are
+presented in the addendum of ngVLA memo #89 [21]. Following, we summarize
+the procedure and results of this memo.
+
+3.2.1
+
+Model and Simulations
+
+For the model we adopt an observation from the PHANGS-ALMA9 survey of
+the spiral galaxy NGC 4321 using ALMA at 230.538 GHz. The image used is a
+moment map with an image size of 474 X 422 pixels, cell size of 0.5 arcsec, and
+restoring beam of „1.7arcsec. The diameter of the NGC 4321 galaxy is „230
+arcsec, thus nearly filling up the entire image (field of view „3.95 arcmin). In
+order to use this observation as our model we made several changes to the image
+file as reported in ngVLA memo #89 [21].
+For the simulated observations and given the requirements of the NGA8 use
+case (i.e., 100mas resolution, LAS=120arcsec), three components of the ngVLA
+have been adopted: the Spiral+Core subarray of the Main configuration, the
+Short Baseline Array, and the Total Power antennas (all configurations from the
+ngVLA RevC array configuration). A mosaic pattern is implemented for the
+Spiral+Core and SBA configurations to cover the large angular size of nearby
+galaxies. Thermal noise is also added, based on the science requirements of KSG
+3 (NGA8). The simulations used one channel with a center frequency of 115 GHz
+as a proxy for a single channel of a spectral line cube. simobserve alters the
+original frequency of the observations to the desired one in this case, changing
+the frequency of the PHANGS image from 230 GHz to 115 GHz. Additionally,
+the model has been scaled to a representative value of the expected peak flux
+of the line emission in a (2 km/s channel), in this case in simobserve we set
+9 The Physics at High Angular resolution in Nearby GalaxieS (PHANGS) using the Atacama Large Millimeter/Submillimeter Array (co-PI: A. Leroy)
+
+34
+
+Figure 26: Image of NGC 4321 from the PHANGS-ALMA survey used for making
+the model image for our study.
+nbright=“0.019Jy/pixel”. This value is estimated from scaling an image of M31
+to the distance of Virgo to approximate a typical spiral galaxy for this KSG.
+• Spiral`Core: visibilities generated with CASA task simobserve using
+a 3.9 hr synthesis centered on transit10 . We used a mosaic of 67 pointings (fields) and an integration time of 10 s11 , which corresponds to 21
+scans/field.
+• SBA: visibilities generated with CASA task simobserve using a 8.6 hr12
+synthesis centered on transit. We used a mosaic of 7 pointings (fields) and
+an integration time of 10 s, which corresponds to 442 scans/fields.
+• Total Power : In this case, we directly made the simulated image by
+10 The actual observations would need to be longer to meet the target sensitivity. We selected
+
+3.9 hrs to simplify the simulations, e.g., to avoid a simulation that spans multiple days. The
+amount of noise is scaled such that the final image will have the target sensitivity.
+11 This is the default value in simobserve that we choose for convenience to keep the measurement set files small. Time smearing is not an issue for simulated observations, but this
+value would need to be reconsidered before scheduling actual observations.
+12 This is equivalent to an integration time ratio t
+sba {tcore “ 2.2 which was used in ngVLA
+memo #67 [12].
+
+35
+
+running the CASA task imsmooth on the model image. The resolution
+of the simulated image is 38.64 arcsecs, which is close to the expected
+primary beam size of one of the 18m total power antennas (and takes into
+account other parameters such as blockage diameter, etc).
+In order to concatenate the Spiral`Core with the SBA measurement sets we
+run the concat task and scale the relative weights based on the diameter of the
+dishes, thus reflecting the sensitivity of the visibilities.
+3.2.2
+
+Imaging
+
+The imaging was done using the CASA task tclean on the MS produced by
+concat (i.e., the concatenation of the Plains`Core and the SBA datasets). The
+input model was spatially correlated on scales of 1.72 13 and so the resulting
+image at 100 mas resolution will have a high degree of smoothness. Due to the
+amount of extended emission, cleaning required a very large number of minor
+cycle iterations in order that the residuals approached the thermal noise level
+(ą 500,000 iterations).
+The imaging parameters that we used are the following:
+• multiscale imaging with a range of scales to improve the speed and
+quality of the deconvolution (which also helps with the smoothness of the
+input model)
+• robust=0 together with a taper=83.85 mas; combination that yields a
+beam of 100 mas, a PSF level 14% and a loss in sensitivity of „ 1.6
+• Interactive masking; to adjust the mask each major cycle, largely to avoid
+cleaning negative regions created by PSF sidelobes
+• Image size of 12288 pixels; to achieve a field of view that includes the entire
+primary beam of the outer mosaic pointings, which minimizes aliasing
+• Cell size of 20 mas; to oversample the restoring beam by a factor of 5
+Then, the resulting mosaic is combined with the Total Power image using the
+CASA task feather (see ngVLA #89 [21] for more details in the procedure).
+The resulting image is shown in Figure 27.
+3.2.3
+
+Results
+
+The final fidelity calculated using Equation 1 is 0.9898, representing the weighted
+average of the difference between the final image and the input model. Figure 28 shows an image of the fundamental term in the fidelity calculation prior
+to weighting and averaging, i.e., image minus model. The image area corresponds to the size of the cutout region. The residuals over most of the galaxy
+13 This scale corresponds to the pixel size of the PHANGS model; thus there is no detail on
+any smaller scales except for the added thermal noise.
+
+36
+
+Figure 27: The final image after feathering.
+are characteristic of the residuals created by multi-scale clean, and are of the
+same order of magnitude as the thermal noise. Larger magnitude residuals are
+present at the position of the galaxy’s core and the bright, inner portions of the
+spiral arms. At these locations the intensity of the final image is À 1% higher
+than that of the convolved model, so while the absolute error causes these regions to stand out, the relative error does not seem unusual. Figure 29 shows
+an image of the fundamental term in the fidelity calculation prior to weighting
+and averaging, i.e., image minus model divided by model. You can think about
+this image as the fidelity per pixel. The unmasked pixels in Figure 29 have a
+standard deviation of 0.032 and a median value of ´0.01.
+Figure 30 shows the accuracy with which flux is recovered as a function of angular scale in each simulated image (see ngVLA memo #67 [12] for more details
+about the used heuristic), and calculating the median fraction of integrated
+flux recovered in a circular aperture compared to the simulation input image
+as a function of aperture radius. The final image after feathering using all the
+
+37
+
+Figure 28: Image of the convolved model subtracted from the final image.
+
+Figure 29: Image of the relative residuals, i.e., (model-image)/model. The image is
+masked where the convolved model is fainter that 5 mJy/beam.
+
+38
+
+considered arrays recover the input flux to better than 5% at all scales.
+
+Figure 30: Median fraction of spatially integrated flux density recovered as a function
+of aperture diameter for the image made from the concatenated data set (Plains`Core
+plus SBA) and from the same image after feathering with total power.
+
+3.2.4
+
+Comparison Study of image Fidelity using ngVLA RevC and
+RevD
+
+The addendum of ngVLA memo #89 [21] presents a systematic comparison
+study of the RevC and RevD array configurations for the image fidelity using
+the same model from above. For this comparison, we adopt the auto-multithresh
+option that implements an automated masking algorithm (instead of the careful
+interactive masking used in the results presented before). We also choose a
+common threshold of 1 mJy and 500,000 iterations to ensure that this limit is
+reached, which allows us to clean down to the same peak residual and perform a
+more direct comparison between the images obtained from the RevC and RevD
+configurations. Using ngVLA mock observations of an NGC 4321 galaxy, we
+find that both the RevD and RevC configurations lead to an imaging fidelity of
+« 0.994.
+
+39
+
+4
+
+High Dynamic Range Imaging
+
+ngVLA memo #64 [8] explores the capability of the ngVLA to produce a high
+dynamic range, high fidelity image of an extended source with complex morphology. This requirement is delineated in:
+• SCI0108: The ngVLA should produce high fidelity imaging (ą 90%) over
+a wide range of scales, spanning from a few arcmin to a few mas.
+• SCI0113: The system brightness dynamic range shall be better than 50
+dB to support deep field studies at 10 GHz.
+We consider two definitions of image fidelity. The first is the ALMA usage, as
+given in Equation 1. The second is defined as:
+F “ pData ´ M odelq{M odel
+In this definition, a 90% value as employed in SCI0108, corresponds to a fidelity
+factor, F ă 10%, in absolute value.
+While SCI0113 is designed more for continuum deep fields, the desire to obtain
+50 dB dynamic range on complex extended objects is implicit in numerous
+science programs being envisioned in the Design Reference Science Mission.
+
+4.1
+
+Model, Configuration, and Processing
+
+The input model we employ is a high dynamic range image of Cygnus A made
+with the VLA at 8 GHz. In the original image, the resolution is 0.35”, and the
+source maximum extent is „ 21 . The total flux density of Cygnus A at 8 GHz
+is 241 Jy.
+We then modified the model to obtain a smaller source at higher resolution, by
+adjusting the pixel scale down. This scaling leads to an input model resolution
+of 0.1”, and source maximum size of 40”.
+The input model image was then blanked in a few ways. First, all negative
+pixels were set to zero, since the true continuum sky has no ’negative emission’.
+Second, a fairly tight window was set around the radio lobes and jets, and zeroed
+outside the window. Lastly, the compact radio core source was blanked in the
+initial input model, then re-added as a point source model in the final image.
+Choosing a real source for the model image is useful in terms of having astrophysically relevant quantities as the target. However, such a choice leads to
+two limitations. First, the input model itself has a dynamic range of only a few
+ˆ104 . Through the blanking process, we have removed the noise in regions off
+the radio source. Still, there are residuals within the radio lobes that are not
+real structure. In this case, the goal becomes to reproduce the model surface
+brightness, both real and noise. And second, the input model has an intrinsic resolution of 0.1”, comparable to the target resolution of the simulation.
+In essence, the sky has been ‘pre-convolved’ before imaging (besides the core,
+which was set to be a point source). Most of the radio lobe structure appears
+40
+
+to be well resolved at this resolution, as seen on the highest resolution images
+made at 43 GHz with the VLA (Carilli et al. 1999 [10]), except perhaps the
+sharpest features in the radio hot spots.
+Hence, the goal is not to obtain a better image of the source than the input
+model (that would be impossible). The goal is to reproduce the input model as
+best as possible, errors and all.
+We employ a single channel of 50 MHz at 8.0 GHz to set the noise per visibility, and a 6 hour synthesis. This channel width would be adequate to avoid
+significant bandwidth smearing on scales relevant to the model source. The
+theoretical noise is then 0.62 uJy beam´1 (ngVLA ETC).
+For the configuration, we use the RevD Main array (ngVLA memo # 92 [9]).
+We run SIMOBSERVE for a six hour synthesis, with 30s records. We target a
+resolution comparable to the HST, or 0.12”. The time resolution would be
+adequate to mitigate temporal smearing on the relevant scales of the source14 .
+We then add noise to each visibility at the level appropriate for the record length
+and channel width.
+We explored numerous CLEAN options. We found a multiscale clean was necessary, and that Uniform weighting with a Gaussian taper was preferred to reach
+the nominal specifications of „ 0.1” resolution and a 50 dB dynamic range. The
+following CLEAN inputs were employed: Uniform weighting, cell size of 0.02”,
+outer taper = 0.12”, multiscale = [0,7,25], clean threshold of 0.2 mJy. A tight
+box was set around the radio source for CLEANing.
+
+4.2
+
+Results
+
+The final CLEAN image is shown in Figure 31. This image has an off-source
+rms noise of 26 µJy beam´1 , a peak surface brightness of 2.8 Jy beam´1 (on
+the southern hot spot), and a beam FWHM “ 0.129” ˆ 0.122”. Hence, the
+dynamic range (peak/rms), is „ 1.1 ˆ 105 . The total flux density in both the
+input model, and the CLEANed image, is 241 Jy. The radio core in both cases
+is 1 Jy.
+Figure 31a shows a saturated version of the CLEAN image to emphasize the
+noise characteristics. Very low level sidelobes can be seen emanating primarily
+from the hot spot regions, indicating that the image is dynamic range limited.
+Again, the NA weighted theoretical noise is a factor 40 below the measured rms.
+We then created a fidelity image, F , by convolving the model with the CLEAN
+beam, and calculating the F factor as defined above. The fidelity image is shown
+in Figure 32. In the division process, we blank the model image at 10 times the
+rms noise, to avoid taking ratios in regions where noise itself will limit fidelity
+to ă 0.9, and to avoid division by zero.
+Across the brighter parts of the lobes and hot spots, the fidelity has an rms of
+0.46% in the brighter regions of the lobes, 0.9% in the tails, increasing to 4% in
+14 Neither time smearing or bandwidth smearing will occur using SIMOBSERVE since the
+calculations of geometry per visibility assume discrete values of time and frequency.
+
+41
+
+Figure 31: Simulated images of the Cygnus A scaled model for the ngVLA Main
+array tapered to 0.12” resolution. Three color scales are shown, emphasizing bright
+and faint emission, and the noise.
+
+42
+
+Figure 32: Fidelity image of Cygnus A as defined in Section 32. The image has been
+blanked at 10σ surface brightness on the input model.
+
+the faintest regions of the source. There is no tendency for a bias, and we easily
+reach the F ă 10% fidelity target across the source, in both the bright hot spot
+regions and across the fainter radio lobes of Cygnus A.
+For comparison, the final fidelity calculated using Equation 1 is 99.5%, representing the weighted average of the difference between the final image and the
+input model. Figure 33 shows the PSF for this simulation. The peak negative
+sidelobes are -5.4%, and the PSF drops to „ 10% at a radius of „ 0.12”.
+
+4.3
+
+Summary
+
+We have performed high dynamic range imaging simulations of a complex extended object at 8 GHz. Even for a monochromatic simulation, the ngVLA
+main array was able to reach a dynamic range of „ 1.1 ˆ 105 at a resolution of
+0.12”.
+The rms image fidelity, Frms „ 0.46% in the brighter regions, and even in the
+faintest parts of the lobes, the rms fidelity remains high: Frms „ 4%. There is
+no positive or negative bias of the data relative to the model.
+The next step in the simulations process will be to incorporate multifrequency
+synthesis. The imaging and deconvolution process then becomes computing
+intensive, when including both MFS and a multiscale clean.
+
+43
+
+Figure 33: Images of the synthesized beam. Contour levels are a geometric progression
+in square root two starting at 1%, such that each two levels is a factor two increase in
+surface brightness. Negative contours levels are dashed.
+
+44
+
+5
+
+On the Fly Mapping
+
+We briefly consider the capabilities of the ngVLA for on-the-fly mapping. This
+is a multi-dimensional problem, with survey requirements that include area,
+depth, and total time available. For illustrative purposes, we make a very simple comparison to the parameters as used for the VLA Sky Survey (VLASS),
+and ignore issues such as overhead.
+For the VLASS, the frequency range was 2 GHz to 4 GHz, with a scan speed
+of 3.31 sec´1 . The primary beam of the VLA F W HM “ 0.23o “ 141 . The rows
+for the VLASS are separated by the HW HM „ 71 , to provide roughly uniform
+sensitivity over the area. The time to cross the F W HM of the primary beam
+at the scan rate is „ 4 seconds, which is approximately the effective integration
+time for each position in the field15 . The expected rms is 120µJy beam´1 per
+epoch of the VLASS.
+As an example, assume a survey area of 10o ˆ5o . To scan over 10o at 3.3o min´1
+will take 3min. To cover 5o in a series of rows separated by the HW HM {2 “
+0.12o requires 42 rows. Hence, the total time required is 126 minutes.
+Next, consider the ngVLA main array at 3 GHz with a 2 GHz bandwidth.
+To simplify this multidimensional problem, we fix the total area covered, and
+the total integration time, and determine the sensitivity. The primary beam
+F W HM “ 191 “ 0.32o . Hence, 31 rows are required to cover 5o at the HW HM
+spacing. Assuming a total integration time of 126 min then leads to „ 4 min
+per row, or a scan rate of 2.5o min´1 . The crossing time of the primary beam
+F W HM is then 7.7 sec, which, again corresponds roughly to the effective integration time per position. According to the latest ngVLA sensitivity calculator,
+the naturally weighted sensitivity of the ngVLA at 3 GHz is 0.24 µJy hour´1 ,
+so in 7.7 sec the sensitivity would be „ 5.2 µJy beam´1 . However, obtaining
+a reasonable synthesized beam shape through visibility weighting will increase
+the noise by roughly a factor 1.5 to 2, for target resolutions ranging from 0.1”
+to 5” at 3 GHz (ngVLA memo #55 [17]). Hence, the expected noise for tapered
+images will be within 30% of „ 9 µJy beam´1 , over this broad resolution range.
+In summary, for a fixed survey area and integration time, an ngVLA OTF survey
+would be about 13 times more sensitive than the current VLASS. The example
+above is not necessarily an optimal approach for an OTF survey by the ngVLA,
+just an illustration of the capabilities in a specific situation.
+15 The fall-off of the primary beam during transit is off-set by adding the contribution of the
+neighboring rows
+
+45
+
+Acknowledgments
+We thank Brian Mason for providing the ALMA fidelity calculations for Section 4. The National Radio Astronomy Observatory is a facility of the National
+Science Foundation operated under cooperative agreement by Associated Universities, Inc. This study made use of the CASA task iring, an open-source
+tool from the Nordic ALMA regional center.
+
+References
+[1] Bolatto A., Chatterjee S., et. al., Next Generation Very Large Array Memo
+No. 19 Key Science Goals For The Next Generation Very Large Array
+(Ngvla): Report From The Ngvla Science Advisory Council.
+[2] Butler B., et. al., Next Generation Very Large Array Memo No. 21 ngVLA
+Sensitivity.
+[3] Carilli C., Next Generation Very Large Array Memo No. 12 The Strength of
+the Core.
+[4] Carilli C., Shao Y., Next Generation Very Large Array Memo No. 13 Imaging
+Capabilities: High Redshift CO.
+[5] Carilli C., Next Generation Very Large Array Memo No. 16 More on Synthesized Beams and Sensitivity.
+[6] Carilli C., Erickson E., Next Generation VLA Memo. 41 Initial Imaging
+Tests of the Spiral Configuration.
+[7] Carilli C., Next Generation Very Large Array Memo No. 47 Resolution and
+Sensitivity of ngvla-revB.
+[8] Carilli C., Next Generation Very Large Array Memo No. 64 High Dynamic
+Range Imaging.
+[9] Carilli C., et. al., Next Generation Very Large Array Memo No. 92 Configuration: Reference Design Rev D Description.
+[10] Carilli, C., et al. 1999, AJ, 118, 2581
+[11] Clark B., Brisken W., Next Generation Very Large Array Memo No. 3
+Possible Configurations for the ngVLA.
+[12] Mason, B., Next Generation Very Large Array Memo No. 67 Demonstration & Analysis of ngVLA core ` Short Baseline Array Extended Structure
+Imaging.
+[13] Murphy E., Selina R., ngVLA SAC, ngVLA Science Requirements document 020.10.15.05.00–0001–REQ.
+
+46
+
+[14] Ricci L., et. al., Next Generation Very Large Array Memo No. 33 Investigating The Early Evolution Of Planetary Systems With Alma And The Next
+Generation Very Large Array.
+[15] Ricci, L., Isella, A., Liu, S., & Li, H. 2018, in Astronomical Society of the
+Pacific Conference Series, Vol. 517, Science with a Next Generation Very
+Large Array, ed. E. Murphy, 147
+[16] Ricci, L., Liu, S.-F., Isella, A., & Li, H. 2018b, ApJ, 853, 110
+[17] Rosero, V., Next Generation Very Large Array Memo No. 55 Taperability
+Study for the ngVLA and Performance Estimates.
+[18] Rosero, V., Next Generation Very Large Array Memo No. 65 Sculpting
+of the Synthesized Beam and Image Fidelity Study of KSG 1: Imaging of
+Protoplanetary Disks.
+[19] Rosero, V., Next Generation Very Large Array Memo No. 72 A Study of
+ngVLA Subarray Efficiency: Plains ` Fractions of the Core.
+[20] Rosero, V., Next Generation Very Large Array Memo No. 76 Subarray
+Selection for the Reference Observing Program.
+[21] Rosero, V., Next Generation Very Large Array Memo No. 89 Image Fidelity
+Study of KSG 3 (NGA8): Imaging Molecular Gas in Nearby Galaxies.
+[22] Woody, D., ALMA Memo No. 389 Radio Interferometer Array Point
+Spread Functions. I. Theory and Statistics
+
+47
+
+The National Radio Astronomy Observatory and Green Bank Observatory are facilities of the U.S.
+National Science Foundation operated under cooperative agreement by Associated Universities, Inc.
+This work was supported by awards AST-2034328 (MSIP Prototype Antenna) and AST-2334267 (ngVLA
+Design Activities); NRAO related activities are funded under award AST-1647378 (NRAO
+Operations/Development).
+
+

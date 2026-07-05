@@ -1,0 +1,8 @@
+
+May2024
+
+{Main,Efficient,Performance}.csv are assignment data files from viviana as documented in memo 121
+
+various other versions here are reformatted for machine consumption - eliminating failed assignments;
+adding missing columns (to MAIN); making the use case IDs unique
+

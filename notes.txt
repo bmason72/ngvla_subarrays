@@ -1,0 +1,127 @@
+
+28apr23
+
+working on my laptop in 
+/Users/bmason/Mimas/ngvla/cfgImgDev/subarrays
+which should be synchable with linux
+
+playing around in mimas:/export/data_1/bmason/ngvla
+since sims don't work on mac ;/
+
+need to run casa there (or /lustre/cv/users/bmason/ngvla)
+make a pkl file per cfg.
+keep same tree structure
+
+================
+
+17may24
+
+Now with Viviana's simulations in hand (main, efficient, performance)
+
+To Do:
+
+1 - post-process her EOP assignments and compare to my results
+     pressure by array component etc.
+
+1b - ask her in parallel to do beam scuplting for the 5core cases i got that she
+     didn't
+
+2 - simulate MS's for cases i'm missing, notably inner/outer 50core ones
+
+   2b - explore a heuristic description of her assignments and time tracking metrics
+
+3 - attempt, by hand or heuristically, to construct an actually balanced and executable program
+   3b - e.g. start by assigning merit grades
+   if done heuristically we could monte carlo the grades.
+   example: look at obs involving the lowest 1/3 merit-wise of the most over-subscribed component.
+     randomly assign these to the min matching.
+     repeat until this is no longer the most oversubscribed; so long as you don't overbook another
+       component (if so back up); until you reach the end of the list.
+     go up to 1/2 if needed.
+     randomize over grades and the random selections (if applicable)
+     stringency should also factor in: avoid reassigning more stringent obs.
+
+4 - add in SBA and TP components.
+   4b - figure out how to handle time ratios when significant beam sculpting is done.
+        one approach: assign based on un-weighted time.
+   4c - before any of this - recompute all relevant time ratios. 
+        Go ahead and include GBT time ratios in the process.
+
+i can do 1-3 before we consider the need for moving 5 more core antennas to capture more science cases.
+
+Should we also consider splitting SA's up TM1/TM2 style?
+
+ALSO
+
+1- make a plot of eta vs beam size (natural but w taper), at a ref freq (30 GHz).
+     superpose each SA's LAS (same color vertical line). x axis is theta (FWHM or LAS)
+2- make smae plot with skirts accounted for (robust wt)
+  --> can this make a simple LUT for SA selection. analog of fig1 memo 76
+  --> we want such a thing for all SA's
+3- Or maybe we want other versions: Hrs on y axis, antHrs on y axis [TO A FIXED JY/BM SENS]
+   --> can we make such a plot of the goal is a fixed K sensitivity
+
+We should consider SB sens goal, and allow for AR ranges.
+
+The achievable resolution should be higher with robust ie not the same for natural and robust.
+maybe i'm looking at the wrong column?
+Actually the only columns are "Resolution" (presumably the SG input) and "res_nat" - what is res_robust?
+
+Solutions to the core problem:
+-extend the spirals inwards
+-TM2
+ -along those lines: inner half core snapshots would well
+   complement very modestly extended core (just one more set of 5 ants say)
+
+New paradigm for science SA selection:
+-pre-tabulate (in)efficiency curves for the set of SAs at a reference freq
+ -do this for natural; sculplted; and perhaps a couple in between 'acceptable skirt' levels.
+ -wrinkle: that will depend on fractional bandwidth for continuum SGs (NEEDS INVESTIGATING)
+-ask PI AR or AR range; and whether it is a Jy/bm or K SG effectively
+-look within that range and pick a SA+resolution that also satisfieds LAS
+  -first look based on total time curve (minimize)
+  -later (based on science rank? stage in the queue building process?) prioritize ant hrs
+
+=======
+
+2jul25 notes from recent discussion (M.stroh, EM)
+
+*basic path forward now: MS will work within the paradigm of
+   memo 121 and update it to revF. as feasible, use already
+   determined imaging parameters as starting point at least.
+
+*we need to consider FOV - VR assumed fixed. in fact will be 
+   observation specific.
+ -relates to HLDP: what are defaults. probably: full PB (eg 1% level)
+   for up to spiral; a smaller portion beyond. At low freq (cont.)
+   skew larger.
+ -smaller FOV increases the effectivness of robust weighting
+   (*probably* this just impacts the parameter choice not the
+    actual inefficiency parameter that results, for a given
+    PSF quality aimed for? TBC).
+   Larger FOV makes robust weighting less effective.
+ -could mitigate somewhat with superuniform parameter in clean
+   (compute density over multiple uv cells). why didn't this work
+   for ccarilli? (memo 78)
+
+   --> could impact subarray selection. very large FOV
+   will need better PSF out of the box (ie without weighting)
+
+ --> highlights the importance of more fundamental explorations
+  (heirarchical component imaging + feather for instance)
+   -observe in one go
+   -split MS into components
+   -optimize imaging parameters for each component
+      (we expect greater sensitivity with this approach)
+   -image
+   -combine images after the fact (eg feather)
+   -if this were adopted, likely the EOP would look quite different.
+     it could also open up relaxing the assumption of one refSA
+     per observation. (stop observing core part early and use them
+     for something else - since core will be imaged on its own)
+
+ - ccarilli adds: small FOV can also be an issue, insofar as it
+  gives *large* uv cells, which put the whole core inside one cell.
+  Also a constraint on HLDPs + SA selection.
+
+

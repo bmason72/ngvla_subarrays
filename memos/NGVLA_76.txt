@@ -1,0 +1,3620 @@
+Next Generation Very Large Array Memo #76
+
+Subarray Selection for the Reference Observing
+Program
+Viviana Rosero (NRAO)
+June 1, 2020
+Abstract
+I study 18 driving use case - band combinations in the Reference Observing Program
+and identify a ngVLA subarray that meets the resolution requirements. I use two
+methods to achieve the desired resolution: 1) using natural weighting plus an uv-taper,
+and 2) using robust weighting plus an uv-taper to also improve the quality of the beam.
+The target integration time for each use case is estimated for both methods. In some
+cases where the use of beam sculpting comes with a large penalty in sensitivity, an
+alternate subarray is identified and values are presented for both subarrays.
+
+1
+
+Introduction
+
+The ngVLA antenna locations have been chosen to accommodate a wide variety of scientific
+observations, aiming to deliver high sensitivity over a wide range of resolutions with a nonreconfigurable array. The ngVLA can in principle operate with combinations of different
+subsets (i.e., Main, LBA, SBA) and/or subarrays (e.g., Core, Plains, Mid, Plains`Core).
+Table 1 contains a complete list of the antenna combinations that have been considered to
+date. Specifically, for each ngVLA band, Table 1 shows the naturally-weighted resolution
+(θN at ) and a rough estimate of the largest angular scale1 (LAS) of the subarrays that I
+studied in ngVLA memos #55 [5] and #72 [7].
+In ngVLA memos #55 [5] and #72 [7] I also presented taperability curves for many subarrays
+and combination of subarrays. These taperability curves, or the change in sensitivity versus
+resolution, can be used to compare arrays and to understand how efficiently an array can perform at both high and low resolutions. To generate these curves, I tabulated the simulated
+image noise from 4-hour simulations at 30 GHz over a range of angular scales, θ1{2 , achieved
+by varying the imaging weights (Briggs robust parameter and outer uv-taper). These results
+can also be interpreted at other frequencies by scaling θ1{2 (ngVLA memo #55 [5]).
+1 This is based on the minimum baseline resolution divided by two, the same approach used for estimating
+the LAS of the VLA. Detailed simulations are needed to find more accurate results for the ngVLA.
+
+1
+
+2
+36.7
+36.7
+36.7
+
+Plains+25Core
+
+Plains+33Core
+
+Plains+50Core
+
+30.6
+
+39.6
+
+46.1
+
+210.7
+
+275.12
+
+275.12
+
+30.6
+
+30.6
+
+7857.7
+
+30.6
+
+32.6
+
+30.6
+
+[m]
+
+Bmin
+
+1681.99
+
+1551.64
+
+1461.91
+
+1308.06
+
+77.12
+
+1211.34
+
+25517.64
+
+2038.08
+
+43.60
+
+105.79
+
+3.59
+
+11.99
+
+[mas]
+
+θN at
+
+422.11
+
+326.18
+
+280.19
+
+61.30
+
+46.95
+
+46.95
+
+422.11
+
+422.11
+
+1.64
+
+422.11
+
+396.22
+
+422.11
+
+[arcsec]
+
+LAS
+
+504.59
+
+465.49
+
+438.57
+
+392.42
+
+23.14
+
+363.40
+
+7655.29
+
+611.42
+
+13.08
+
+31.74
+
+1.08
+
+3.59
+
+[mas]
+
+θN at
+
+126.63
+
+97.85
+
+84.06
+
+18.39
+
+14.08
+
+14.08
+
+126.63
+
+126.63
+
+0.49
+
+126.63
+
+118.86
+
+126.63
+
+[arcsec]
+
+LAS
+
+8 GHz
+
+252.29
+
+232.75
+
+219.29
+
+196.21
+
+11.57
+
+181.70
+
+3827.65
+
+305.71
+
+6.54
+
+15.87
+
+0.54
+
+1.79
+
+[mas]
+
+θN at
+
+63.32
+
+48.93
+
+42.03
+
+9.19
+
+7.04
+
+7.04
+
+63.32
+
+63.32
+
+0.25
+
+63.32
+
+59.43
+
+63.32
+
+[arcsec]
+
+LAS
+
+16 GHz
+
+Note: Bmax and Bmin are the unprojected maximum and minimum baseline lengths, respectively.
+
+36.7
+
+1005.4
+
+Plains+10Core
+
+Plains+Mid
+
+36.7
+
+1005.4
+
+Mid
+
+Plains
+
+1005.4
+
+Main
+
+1.3
+
+8856.4
+
+LBA
+
+Core
+
+8856.4
+
+Main+LBA
+
+36.7
+
+[km]
+
+Subarray
+
+Plains+Core
+
+Bmax
+
+Subset/
+
+2.4 GHz
+
+149.51
+
+137.92
+
+129.95
+
+116.27
+
+6.86
+
+107.67
+
+2268.23
+
+181.16
+
+3.88
+
+9.40
+
+0.32
+
+1.07
+
+[mas]
+
+θN at
+
+37.52
+
+28.99
+
+24.91
+
+5.45
+
+4.17
+
+4.17
+
+37.52
+
+37.52
+
+0.15
+
+37.52
+
+35.22
+
+37.52
+
+[arcsec]
+
+LAS
+
+27 GHz
+
+Table 1: Considered ngVLA subset/subarrays, their natural resolution and LAS
+
+98.46
+
+90.83
+
+85.58
+
+76.57
+
+4.52
+
+70.91
+
+1493.72
+
+119.30
+
+2.55
+
+6.19
+
+0.21
+
+0.70
+
+[mas]
+
+θN at
+
+24.71
+
+19.09
+
+16.40
+
+3.59
+
+2.75
+
+2.75
+
+24.71
+
+24.71
+
+0.10
+
+24.71
+
+23.19
+
+24.71
+
+[arcsec]
+
+LAS
+
+41 GHz
+
+43.41
+
+40.04
+
+37.73
+
+33.76
+
+1.99
+
+31.26
+
+658.52
+
+52.59
+
+1.12
+
+2.73
+
+0.09
+
+0.31
+
+[mas]
+
+θN at
+
+10.89
+
+8.42
+
+7.23
+
+1.58
+
+1.21
+
+1.21
+
+10.89
+
+10.89
+
+0.042
+
+10.89
+
+10.22
+
+10.89
+
+[arcsec]
+
+LAS
+
+93 GHz
+
+Figure 1 shows a compilation of the taperability curves for the arrays studied in my previous memos (except for arrays which use only a fraction of the core, for which taperability
+curves can be found in ngVLA memo #72 [7] Figure 17). Each curve is normalized by the
+naturally weighted rms, σN A , and we have defined an inefficiency, ηweight , such that the
+expected image rms after weighting increases as σrms “ ηweight σN A .
+Each taperability curve has a minimum at what I refer to as the native resolution (natural and no taper) which gives the highest sensitivity and thus by definition an inefficiency
+ηweight “ 1. Values at resolutions lower than the native resolution (i.e., to the right of the
+curve’s minimum) are the results from simulations using natural weighting plus a uv-taper;
+values at resolutions higher than native used robust weighting and no taper.
+
+rms/rmsN A at 30 GHz
+5
+
+LBA
+Main+LBA
+Main
+
+Mid
+Plains
+Plains+Core
+
+Plains+Mid
+Core
+
+ηweight
+
+4
+
+3
+
+2
+
+1
+100
+
+101
+
+102
+
+103
+
+104
+
+θ1/2[mas]
+Figure 1: Relative sensitivity (image rms compared with the naturally weighted image) vs. 30
+GHz resolution for ngVLA subarrays and selected array combinations. Note that some of these
+arrays, when used with natural weighting, have non-Gaussian PSF features (e.g., broad PSF skirt)
+that may be unsuitable for some science cases (see ngVLA memos #55 [5] and #72 [7] about PSF
+details of these specific arrays).
+
+3
+
+From Figure 1 we can see that the full complement of ngVLA 18 meter antennas (Main+LBA;
+orange curve) has a very high degree of taperability, i.e., it can be used over a large range of
+resolutions without a great loss of sensitivity (ηweight ď 2). This feature is desirable because
+it means that the array can accommodate the resolution requirements for a wide variety of
+science cases. Figure 1 also demonstrates the advantage of subarrays at extreme resolutions
+or to obtain greater efficiency at specific intermediate resolutions.
+In previous memos, these taperability results were used to provide tables of key performance
+metrics for each subarray at several representative resolutions and the values correspond to
+the use of natural ` TA and not robust weights. However, many of the natural ` TA PSFs
+have non-Gaussian features that are unsuitable for some projects. Therefore, beam sculpting
+(i.e., the use of robust ` TA) will also be necessary and will introduce another source of
+inefficiency in addition to the taperability that has been discussed this far.
+
+2
+
+KSG Requirements
+
+The Reference Observing Program (ROP) [8] aims to quantify the technical and observing
+needs of the key science goals (KSGs) and to make sure that the ngVLA reference design
+can meet those requirements. The ROP presents 13 driving use cases that are part of the
+5 KSGs of the ngVLA. In this memo, I identify driving use cases by their section number
+as appearing in the ROP (e.g., case 3.3.1 is a blind search for CO galaxies at high redshift).
+The ROP pairs the driving cases with an antenna subset or subarray, taking into account
+the required resolution at the desired frequency as well as minimizing the target integration
+time (TT arget ). In this memo I describe simulations, imaging and analysis for 11 of these
+ngVLA driving cases, excluding only the non-imaging cases (i.e., pulsar timing).
+Table 2 (and several subsequent tables with the same format) show the requirements for each
+of the driving cases. Columns 1 and 2 are the ngVLA band name and the central frequency
+(in GHz) used for the simulation, respectively. Column 3 is the target resolution in mas and
+column 4 is the target sensitivity either in µJy/beam or in K. Column 5 is the observation
+mode, i.e., either continuum or line, and column 6 shows the corresponding bandwidth (BW)
+in GHz or km/s. Column 7 shows the required largest angular scale (LAS) in mas. These
+tables of requirements are used to inform the antenna selection and frequency setting of each
+simulation.
+
+3
+
+A More Efficient Subarray
+
+As documented in several memos (e.g., ngVLA memos #12 [2], #41 [3] #55 [5], #72 [7] )
+the ngVLA reference design has a large ratio of short to long baselines which is what allows
+it to accommodate a wide range of resolutions without losing too much sensitivity. However, these types of centrally-condensed arrays produce a naturally-weighted PSF that has
+an undesirable, broad skirt. Specific scientific cases may need to adjust the uv-weighting
+and other image parameters to sculpt a synthesized beam in order to meet specific science
+
+4
+
+requirements, e.g., image fidelity.
+An alternative method to reduce the level of the PSF skirt is to select a subarray where the
+number of short baselines is not as large when compared with the amount of longer baselines.
+In ngVLA memo #72 [7] I show how different subarrays (specifically, subarrays including
+different fractions of the Core) can be more efficient at certain resolutions. Furthermore,
+subarrays that ‘naturally’ produce a more Gaussian PSF will require less extreme imaging
+weights and therefore will incur a less severe sensitivity penalty. Based on this work I propose that we could improve the observational throughput and reduce the total data volume
+of the ROP by selecting subarrays which minimize the inefficiency parameter ηweight .
+The selection of the subarray for each driving case is mainly based on the target resolution
+and LAS requirements (see Table 1). Ideally, we also want to assign a subarray that can
+be used within a factor of 2 of its naturally-weighted sensitivity. If the subarray has not
+been defined previously in either ngVLA memos #55 [5] or #72 [7], I try to construct a
+more efficient one here. This is achieved by removing the antennas that would otherwise be
+heavily down-weighted by either robust or uv-taper (i.e., antennas located within the Core
+or the mid-baseline subarrays, respectively) and frees up antennas for use by other projects
+observing simultaneously.
+
+4
+
+Simulations
+
+For the simulations, I generated visibilities with the CASA sm toolkit using an 8 hr synthesis
+centered on the transit of a single field at +30 declination. The simulations have a center
+frequency given by the requirements of each KSG and are composed of a single channel and
+an integration time of 60 seconds2 . No source visibilities were predicted, i.e., each simulation
+is of a blank field. An arbitrary amount of thermal noise was added to the visibilities using
+the sm.setnoise function of the CASA simulation toolkit.3 .
+I made simulations for all the driving cases for which the observations are to be recorded in
+either continuum or line mode; this is a total of 11 of these 13 cases. Driving cases KSG4 and
+KSG 5 3.3.5 are pulsar timing mode and thus I assumed that they do not need imaging or
+sculpting of the beam. Since several of these driving cases require multi-band observations
+I generated a total of 18 simulations to cover each KSG at each required band, using the
+ROP’s assigned subarray. Also, for many of these diving cases I constructed a more efficient
+subarray than the one assigned in the ROP and generated an additional 11 simulations, for
+a total of 29 simulations.
+2 We choose this integration time in order to keep the measurement set files small. Time smearing is not
+an issue for simulated observations, but this value would need to be reconsidered before scheduling actual
+observations.
+3 For more on generating measurement sets (MSs) using the sm toolkit, estimating the expected rms
+noise in an untapered, naturally-weighted Stokes I image and adding thermal noise to a MS see https:
+//casaguides.nrao.edu/index.php/Simulating_ngVLA_Data-CASA5.4.1
+
+5
+
+5
+
+Determination of Imaging Parameters
+
+The first step is to investigate what combination of imaging parameters will produce the
+desired resolution at each requested frequency for each of the driving use cases. Therefore,
+I made a grid of PSFs over a range of Briggs robust weighting and uv-tapers. I vary the
+robust value from uniform (R “ ´2) to natural (R “ 2) in steps of 0.4 (for a total of 11
+values of robust) and use 25 linearly spaced values of uv-taper from zero to twice the target
+resolution, resulting in a grid of 275 images. The imaging was done using the CASA task
+tclean and all the simulated images have an image size of 10240 pixels in each spatial dimension. The chosen cell size is 0.4 times the value supplied by im.advise4 , such that the
+resolution of the longest baseline is oversampled by a factor of 5. This ensures that all the
+data is used during imaging so that the sensitivity can be correctly measured, and provides
+sufficient oversampling to analyze detailed PSF features.
+Figure 3 and all others having the same format5 show a color scale representing the achieved
+resolutions6 of the resulting PSFs from the robust - taper grid. One figure was produced for
+each KSG for each requested band and assigned subarray. Interpolation is used to determine
+pairs of Briggs robust and uv-taper values that result in the target resolution, as represented
+by the white solid line; the white dashed lines indicate the combination of parameters that
+yields ˘20% of the target resolution.
+
+5.1
+
+Images with the Desired Resolution
+
+The results from the above procedure show that there are many combinations of robust
+and uv-taper that will achieve the target resolution. As presented in ngVLA memo #72
+[7], although these different combinations will formally result in the same resolution, other
+properties of the resulting PSFs and images may be very different. One important parameter
+that I focus on is the level of the PSF skirt which can vary dramatically, typically improving
+with Briggs weighting more towards uniform. However, the image sensitivity will suffer as
+the robust parameter is adjusted away from natural since a larger fraction of data will be
+used at reduced weight.
+For the next portion of this study, I create new simulated images using only the combinations
+of Briggs weighting and uv-taper which will produce the target resolution. I vary the robust
+value from uniform (R “ ´2) to natural (R “ 2) in steps of 0.2 in order to have a suite of
+21 equally spaced values. I pair each robust value with a uv-taper based on interpolation of
+the PSF grid (i.e., the white solid line shown in Figure 3 and similar figures throughout the
+memo). As in the previous section, all simulated images have an image size of 10240 px and
+4 im.advise is a helper function in CASA which suggests recommended values of certain imaging parameters. The third value returned by im.advise is the maximum cell size, which is based on the longest baseline
+length. We want to avoid using a cell size larger than this maximum value to ensure that all the data is
+gridded.
+5 A complete list of these figures is as follows: 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35,
+37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57
+6 The plotted resolutions correspond to the geometric mean of the minor and major beam FWHM of the
+synthesized beam, as parameterized by Gaussian fitting inside the CASA tclean task.
+
+6
+
+the PSF is oversampled by a factor of at least 5; the exact amount of oversampling depends
+on the size of the uv-taper.
+
+5.2
+
+Analysis of the Constant Resolution Images
+
+We have found that combinations of robustness and tapering allow for a higher quality
+beam (i.e., more Gaussian than the natural beam) at the expense of sensitivity (e.g., ngVLA
+memo #65 [6]), but it is important to select a combination of image parameters that will
+reduce the skirt to an acceptable level without losing too much sensitivity compared with
+natural weighting. Each of the 21 new, constant resolution images is analyzed to measure
+this tradeoff between PSF improvement and sensitivity penalty.
+As an initial approach we have defined the PSF quality “metric 2b” as part of the effort
+to sculpt the synthesized beam. This metric refers to a measure of the level of the PSF at
+a radius of one FWHM, and specifically assuming that a level of 10% at a radius of one
+FWHM is acceptably low (see ngVLA memo #47 [4] , #65 [6] and #72 [7]).
+The PSF is analyzed after using the 3rd party CASA task casairing7 which uses concentric
+rings to compute a radially-averaged profile. The PSF level at a radius of one FWHM (i.e.,
+quality metric 2b; hereafter referred to as simply the ‘PSF level’) is then calculated from
+each average profile.
+Next I use the CASA task imstat to compute the RMS of each of the restored images for
+the 21 robust-taper combinations. I also compute the RMS of a restored image made with
+natural weighting and no taper (i.e., native resolution) from the same simulated MS. The
+sensitivity penalty, ηweight , is then defined as the ratio of the image RMS for a robust-taper
+combination to the RMS of the native resolution image.
+Figure 6 (left) and all the figures with the same format throughout the document8 show 1D
+East-West cuts through a natural plus taper PSF (dashed black line) and the robust plus
+taper PSF closest to the actual combination that satisfies metric 2b9 (solid black line). Each
+of these PSFs have a resolution that matches the target resolution of the KSG driving case,
+as parameterized by Gaussian fitting in the CASA tclean task. Because the PSF fitting
+algorithm uses a limited fitting area the results can depend strongly on the oversampling
+factor, especially for highly non-Gaussian PSFs. For the PSFs presented here, this typically
+means that only pixels near the peak of the PSF are used when fitting the clean beam resolution, and therefore the resolution metric is largely insensitive to the level of the PSF skirt.
+For a more detailed discussion on the effects of different imaging weights on the PSF see
+ngVLA memo #65 [6] Section 2.
+Figure 4 (right) and all similar ones10 are the resulting ‘sculptability’ curves from the analysis of the 21 constant resolution images. These figures show the level of the PSF skirt (as
+measured with metric 2b; solid blue line) versus the Briggs robust parameter. They also
+7 https://www.oso.nordic-alma.se/software-tools.php
+8 A complete list of these figures, in the left side, is as follows: 6, 4, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
+28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58.
+9 Note that I don’t show the PSF of the actual combination of robust plus taper which would give a skirt
+of exactly 10%, since my images are limited to robust increments of 0.2, but I do estimate these actual robust
+and taper values using interpolation.
+10 Same list of figures than for the 1D East-West PSF cuts but now on the right side.
+
+7
+
+show the inefficiency factor (ηweight ; solid green line) which is the factor by which the sensitivity increases over natural weight and no uv-taper. A target PSF level of 10% (dashed
+blue line) and corresponding inefficiency factor for the robust-taper combination that yields
+this target level (dashed green line) are also shown.
+Table 3 (and all the ones with the same format) presents the analysis results for each driving
+case at each requested band and considered subarray. The time needed on a science target
+(TT arget ) is estimated using the corresponding inefficiency factor and these values also reflect
+the operational requirement of only using 95% of the antennas in the subarray in order to
+accommodate maintenance activities. Results are presented that use the sculptability curves
+(i.e., the robust-taper combination that gives the desired resolution and a PSF skirt of 10%)
+and also using only the taperability curves (i.e., natural plus the uv-taper that gives the
+desired resolution, with no constraints on the PSF skirt). Column 1 is the subset/subarray
+assigned and the custom one (if indicated), columns 2 to 5 are the robust, taper (TA), ηweight
+and TT arget for the sculptability results. Columns 6 to 8 are the taper, ηweight and TT arget
+for natural+TA weighting (to achieve the desired resolution), respectively. Column 9 is the
+TT arget as reported in the ROP using only the taperability results.
+
+5.3
+
+Caveats
+
+There are a few caveats that should be taken into account when interpreting these results.
+One important consideration is how the results may have been affected by the use of a single
+channel in the simulations. While this should be appropriate for driving cases observing in
+the spectral line mode, some caution is recommended for continuum cases. One issue is that
+continuum cases were simulated using a frequency at the band center, but multi-frequency
+synthesis (MFS) imaging typically produces resolutions which more closely approximate the
+resolution of channels near the upper end of the band. This means that the achievable continuum resolutions are expected to be systematically higher than presented here, especially
+for large fractional bandwidths (i.e., Bands 1 and 2). Additionally, the effects of MFS imaging on the PSF skirt and the sculptability curves are not yet well understood. Ideally, full
+MFS simulations should be performed to better predict the ngVLA’s PSF properties for the
+continuum driving cases.
+Another consideration is the level of the PSF skirt that we have used to compute efficiencies
+and target integration times. We have chosen a PSF with a level of 10% (for reference a
+Gaussian has a PSF level at 6%), but this is a generalization since not all driving cases may
+need such a degree of beam sculpting. But what appears to be true is that for the majority
+of cases it will be necessary to manufacture a more Gaussian PSF than the one produced
+by natural weighting. Although target integration times are only tabulated for a PSF skirt
+of 10% (and natural), the PSF levels and corresponding sensitivity penalties over a range
+of robust values are provided via the ’sculptability figures’ for each driving case. This will
+be most important for cases seeking high-fidelity imaging of bright and extended objects.
+Weak detection experiments may be able to use weighting at or near natural, and other less
+demanding cases may be able to accept a less Gaussian PSF. A more detailed study of how a
+non-Gaussian PSF will impact each individual driving use case’s science requirements would
+8
+
+help to better refine the integration times in the ROP.
+Additionally, the details of robust weighting depends on the selection of the cell size and the
+total image field of view. While the exact values presented here (robust and taper) may need
+to be slightly different for other imaging parameters (e.g., number of image pixels, cell size)
+and other simulation parameters (e.g., source declination, correlator dump time), the general
+trends about the sensitivity and PSF quality are expected to hold. In particular, there are
+a few cases in our results where the values estimated using the sensitivity calculator are
+slightly different that the simulations done for this project (but no more than about 10%).
+
+5.4
+
+Summary
+
+There are several important ways that the results of these simulations can be used:
+• Verifying that the ROP-selected subarray meets resolution requirements for each driving case at the requested frequency.
+• Justifying the ROP target integration time, taking into account the loss in sensitivity
+due to using a uv-taper to achieve the requested resolution.
+• Identifying robust-taper combinations that improve the PSF quality, and quantifying
+the resulting change in target integration time.
+• Selecting an alternate subarray that reduces the inefficiency introduced by imaging
+weights (but which typically increases the target integration time due to having fewer
+antennas).
+For every band of all 11 driving use cases studied here, an ngVLA subarray has been identified
+that satisfies the resolution requirements. Two methods of achieving the desired resolution
+are presented: 1) using natural weighting plus an uv-taper (with no constraints on the quality of the beam), and 2) using robust weighting plus an uv-taper (with a constraint on the
+quality of the beam). The target integration time is estimated for each of these two methods.
+In some cases where the use of beam sculpting comes with a large penalty in sensitivity, an
+alternate subarray is identified and all of the above values are presented for both subarrays.
+In conclusion, the current reference design provides one or more subarray options that meet
+the fundamental requirements of the driving cases, and the amount of observing time is
+reasonable.
+A total of 18 driving use case - receiver band combinations were simulated as part of this
+work. One of these cases (KSG 3.5.2) is well-matched to the LBA subset. The Main subset
+is capable of meeting the resolution requirements of the remaining 17 cases, and also meets
+the LAS requirements for all but a couple of cases which appear to require the SBA subset
+and/or total power. While the Main subset is capable of meeting these requirements due to
+its high degree of taperability, most of these cases involve frequency-resolution requirements
+that are different than Main’s native resolution, resulting in a loss of efficiency. The ideal
+subarray for many KSGs at many bands appears to be Plains + only a few antennas from
+the Core and only the inner antennas from the Mid subarray.
+
+9
+
+Figure 2 summarizes the results that are presented below. The Plains subarray is essential
+for 16 of the 18 driving case - receiver band combinations studied here (case 3.5.2 can use
+the LBA alone and case 3.3.5 can use the Core alone). In 5 of these 16 cases, the Mid
+subarray was required to add longer baselines than provided by the Plains alone. Although
+Mid’s longer baselines are not required for several cases, it can still be included because of
+the range of shorter baselines it adds. This typically reduces the target integration time,
+but the overall inefficiency is higher due to the larger uv-taper that is then required to
+reach the target resolution. For the 16 cases requiring the Plains subarray, at least some
+fraction of the Core is also required, often to improve over the LAS provided by the Plains
+alone. But adding the full Core to the Plains results in a natural PSF that has a large, nonGaussian skirt. In 9 of these cases, using a smaller fraction of the Core would satisfy the
+LAS requirements and produce a higher quality PSF, requiring less extreme beam sculpting
+and therefore a higher efficiency.
+
+Assigned
+Custom
+
+8
+
+Assigned
+Custom
+
+16
+
+Number of cases
+
+6
+
+4
+
+12
+10
+8
+6
+4
+
+2
+
+2
+
+Subarrays
+
+Figure 2: Occurrence of each ngVLA subarray for the driving cases, as listed in the ROP (assigned)
+and in this work (custom). left: use of each entire subarray right: use of each subarray component.
+
+The following sections present the results for each band of each driving use case in greater
+detail.
+
+10
+
+A
+LB
+
+id
+M
+
+re
+
+Pl
+ai
+ns
+
+lC
+tia
+
+M
+
+id
+
+Pa
+r
+
+Co
+
+or
+
+e
+
+A
+LB
+
+n
+ai
+
+Co
+th
++
+10
+
+M
+
+re
+
+re
+Co
+
+re
+
+ns
++
+
+th
+
+Co
+
+ai
+Pl
++
+
+Subarrays
+
+Pl
+ai
+ns
+
+Pl
+
+ai
+
+ns
+
++
+50
+
+th
+
+Co
+
+re
+Pl
+
+ai
+
+ns
+
++
+25
+
+th
+
+Co
+
+Co
+
++
+10
+ns
+ai
+
+re
+
+0
+
+re
+
+0
+
+Pl
+
+Number of cases
+
+14
+
+6
+
+KSG 1: Unveiling the Formation of Solar System Analogs
+on Terrestrial Scales (PF3)
+
+ROP Assigned Subarray: Main
+
+Table 2: Requirements for KSG 1
+ν
+
+Resolution
+
+rms
+
+[GHz]
+
+[mas]
+
+µJy/beam
+
+Band 6a
+
+82.0
+
+5
+
+0.5
+
+Band 4
+
+27.25
+
+5
+
+0.07
+
+Band
+
+6.1
+
+Mode
+
+BW
+
+LAS
+
+Custom
+
+[GHz]
+
+[arcsec]
+
+Subarray
+
+cont
+
+20.0
+
+2
+
+Plains`Mid`10Core
+
+cont
+
+13.5
+
+2
+
+Plains`Mid`10Core
+
+KSG 1 Band 6a
+
+Note that the requirements ask for a central frequency closer to 100 GHz, however due to
+operational considerations the ROP is assigning band 6a which has a central frequency of
+around 80 GHz. This is based primarily on the number of days predicted to have acceptable
+weather (see ngVLA memo #73 [1]). The system temperature and aperture efficiency are
+also expected to improve with this shift in frequency.
+The simulation results show that the Main subset (ROP assigned) can meet the resolution
+requirement using robust-taper combinations over the full range of robust values (i.e., uniform to natural). This array can be used very efficiently at natural weight (ηw “ 1.05) but
+the PSF is highly non-Gaussian (metric 2b „ 70%). A much more Gaussian PSF (metric
+2b „ 10%) can be constructed by using robust ´1.5 but with a large penalty in sensitivity
+(ηw “ 3.05), corresponding to an increased observing time of 8.4x.
+The beam sculpting penalty for Main is large because the short baselines are being heavily
+down-weighted, so I consider an alternate subarray having fewer antennas in the core. I
+choose Plains plus Mid plus 10% of the Core, retaining only enough core antennas to fulfill
+the LAS requirements. This new array has a similar efficiency at natural weight, but the
+target integration time increases by a significant amount due to having fewer antennas. The
+penalty for beam sculpting with this array is greatly reduced (ηw “ 1.87) since we only need
+to use robust ´0.4 to reach an acceptable PSF skirt, corresponding to an increased observing
+time of 2.8x (with respect to the natural weighting of the custom subarray).
+
+11
+
+Table 3: Results for KSG 1 Band 6a
+10%
+Subarray/
+
+Robust
+
+Subset
+
+TA
+
+Natural
+ηw
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+[mas]
+
+Main
+
+´1.5
+
+Plains`Mid`10Core
+
+´0.4
+
+4.5
+4.5
+
+3.05
+
+12.1
+
+1.87
+
+a
+
+12.5
+
+1.4
+2.0
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+1.05
+
+1.4
+
+3.9
+
+1.11
+
+a
+
+–
+
+ηw
+
+4.4
+
+a This subarray is not currently in the exposure calculator; T
+T arget has been estimated by scaling the
+number of antennas and ηw for an existing array.
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+6.1.1
+
+KSG 1 ROP Assigned Subarray: Main
+
+Figure 3: Resolution as a function of the robust and uv-taper values. The color scale shows the
+size of the clean beam as fit with the CASA tclean task. The solid white line are the combination
+of robust and uv-taper values that will result on the target resolution in mas, and the dashed lines
+delimit the combination of parameters that yield ˘20% the target resolution in mas.
+
+12
+
+Figure 4:
+
+left: East-West cuts through the natural plus taper PSF (dashed black line) and a
+robust plus taper PSF closest to the combination that satisfies metric 2b (solid black line). right:
+PSF skirt level (as measured with metric 2b; solid blue line) and inefficiency factor (solid green line)
+versus the Briggs robust parameter, A target PSF level of 10% (dashed blue line) and corresponding
+inefficiency factor for the robust-taper combination that yields this target level (dashed green line)
+are also shown.
+
+13
+
+6.1.2
+
+KSG 1 Custom Subarray: Plains ` Mid ` 10th Core
+
+Figure 5: Same caption as in Figure 3.
+
+Figure 6: Same caption as in Figure 4.
+
+14
+
+6.2
+
+KSG 1 Band 4
+
+The simulation results show that the Main subset (ROP assigned) can meet the resolution
+requirement using robust-taper combinations only for robust values À ´0.7. The native resolution of this subarray is lower than the desired one, and Figure 7 shows how this subarray
+does not have long enough baselines to achieve the desire resolution with natural weighting.
+Note that the sculptibility plot in Figure 8 (right) shows that there were no robust-taper
+combinations which could yield a PSF skirt of ď10%; the smallest PSF level that can be
+achieved for this case is „12% at uniform weighting but with a large penalty in sensitivity
+(ηw “ 3.04).
+The beam sculpting penalty for Main is large because the short baselines are being heavily
+down-weighted, so I consider an alternate subarray having fewer antennas in the core. I
+choose Plains plus Mid plus 10% of the Core, retaining only enough core antennas to fulfill
+the LAS requirements. The native resolution of this new subarray is lower resolution than
+the desired one, and Figure 9 shows how this subarray does not have long enough baselines
+to achieve the target resolution with natural weighting. Robust À `0.2 is required to achieve
+the desired resolution. The penalty for beam sculpting with this array is greatly reduced
+(ηw “ 1.92) compared with the Main subset and we are able to reach an acceptable PSF
+skirt level of 10% by using robust ´1.6.
+Table 4: Results for KSG 1 Band 4
+10%
+Subarray/
+
+Robust
+
+Subset
+
+TA
+
+Natural
+ηw
+
+[mas]
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+Main
+
+´2.0a
+
+3.9
+
+3.04a
+
+103.9
+
+0
+
+1.40b
+
+22.2b
+
+12.9
+
+Plains`Mid`10Core
+
+´1.6
+
+4.2
+
+1.92
+
+115.2c
+
+0
+
+1.21bc
+
+45.2bc
+
+–
+
+a There were no combinations that gave a skirt of 0.1, the value quoted is for a skirt of 12%
+b At natural there are no tapers that could produce the desired resolution. This happens mostly when the
+
+native resolution of the subarray at that band is lower than the desired one. The values quoted are using
+robust weighting with no taper.
+c This subarray is not currently in the exposure calculator; T
+T arget has been estimated by scaling the
+number of antennas and ηw for an existing array.
+Note: TT˚arget is the target time using only 95% of antennas.
+
+15
+
+6.2.1
+
+KSG 1 ROP Assigned Subarray: Main
+
+Figure 7: Same caption as in Figure 3.
+
+Figure 8: Same caption as in Figure 4.
+
+16
+
+6.2.2
+
+KSG 1 Custom Subarray: Plains ` Mid ` 10th Core
+
+Figure 9: Same caption as in Figure 3.
+
+Figure 10: Same caption as in Figure 4.
+
+17
+
+7
+
+KSG 2: Probing the Initial Conditions for Planetary
+Systems and Life with Astrochemistry (AC5)
+
+ROP Assigned Subarray: Main
+
+Table 5: Requirements for KSG 2
+ν
+
+Resolution
+
+rms
+
+[GHz]
+
+[mas]
+
+µJy/beam
+
+Band 5
+
+41
+
+100
+
+30
+
+Band 4
+
+27
+
+100
+
+Band 3
+
+16
+
+100
+
+Band
+
+7.1
+
+Mode
+
+BW
+
+LAS
+
+Custom
+
+[km/s]
+
+[arcsec]
+
+Subarray
+
+line
+
+0.6
+
+10
+
+Plains`50Core
+
+30
+
+line
+
+0.6
+
+10
+
+Plains`25Core
+
+30
+
+line
+
+0.6
+
+10
+
+Plains`Mid`10Core
+
+KSG 2 Band 5
+
+The simulation results show that the Main subset (ROP assigned) can meet the resolution
+requirement using robust-taper combinations over the full range of robust values (i.e., uniform to natural). This array can be used somewhat efficiently at natural weight (ηw “ 1.30)
+but the PSF is non-Gaussian (metric 2b „ 50%). A much more Gaussian PSF (metric 2b
+„ 10%) can be constructed by using robust ´0.2 but with a larger penalty in sensitivity
+(ηw “ 1.86), corresponding to an increased observing time of 2x.
+The beam sculpting penalty for Main is due both the longest and shortest baselines being
+down-weighted, thus I consider a subarray with the Plains plus 50% of the Core. This
+alternate subarray can meet the target resolution over the full range of robust-taper combinations, indicating that the longer baselines provided by the Mid subarray are not required
+for this KSG at this band. The penalty for beam sculpting with this alternate array is
+reduced (ηw “ 1.30) and we only need to use robust 0.0 to reach an acceptable PSF skirt.
+Main is a good option if the goal is to reduce TT arget , because it has a large number of
+antennas and the inefficiency factor is aceptable (ηw ď2). Plains`50 Core is a good option
+if the goal is to reduce ηw , provided that the unused antennas can be used efficiently for
+other projects.
+
+18
+
+Table 6: Results for KSG 2 Band 5
+10%
+Subarray/
+
+Robust
+
+Subset
+
+TA
+
+Natural
+ηw
+
+[mas]
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+Main
+
+´0.2
+
+86.9
+
+1.86
+
+61.28
+
+34.7
+
+1.30
+
+30.2
+
+55
+
+Plains`50Core
+
+`0.0
+
+82.3
+
+1.30
+
+93.9
+
+12.9
+
+1.00
+
+55.9
+
+–
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+7.1.1
+
+KSG 2 ROP Assigned Subarray: Main
+
+Figure 11: Same caption as in Figure 3.
+
+19
+
+Figure 12: Same caption as in Figure 4.
+
+20
+
+7.1.2
+
+KSG 2 Custom Subarray: Plains `50th Core
+
+Figure 13: Same caption as in Figure 3.
+
+Figure 14: Same caption as in Figure 4.
+
+21
+
+7.2
+
+KSG 2 Band 4
+
+The simulation results show that the Main subset (ROP assigned) can meet the resolution
+requirement using robust-taper combinations over the full range of robust values (i.e., uniform to natural). This array can be used efficiently at natural weight (ηw “ 1.25) but the
+PSF is non-Gaussian (metric 2b „ 50%). A much more Gaussian PSF (metric 2b „ 10%)
+can be constructed by using robust ´0.2 but with a larger penalty in sensitivity (ηw “ 1.81),
+corresponding to an increased observing time of 2x.
+The beam sculpting penalty for Main due to both the long and short baselines being heavily
+down-weighted, thus I consider a subarray with the Plains plus 25% of the Core. The native
+resolution of this new subarray is lower resolution than the desired one, and Figure 17 shows
+how this subarray does not have long enough baselines to achieve the target resolution with
+natural weighting. However, the desired resolution can be achieved by weighting with robust
+À `0.4. The penalty for beam sculpting with this array is greatly reduced (ηw “ 1.18) since
+all robust values À `0.4 also provide an acceptable PSF skirt.
+Main is a good option if the goal is to reduce TT arget because it has a larger number of
+antennas and the inefficiency factor is aceptable (ηw ď2). Plains`25 Core is a good option
+if the goal is to reduce ηw provided that the unused antennas can be used efficiently for other
+projects. Main would also be the preferred option if beam sculpting was not desired and the
+natural PSF was acceptable.
+Table 7: Results for KSG 2 Band 4
+10%
+Subarray/
+
+Robust
+
+Subset
+Main
+Plains`25Core
+
+TA
+
+Natural
+ηw
+
+[mas]
+´0.2
+
+68.3
+
+a
+
+a
+
+`0.2
+
+27.4
+
+1.81
+1.18
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+40.8
+
+32.6
+
+84.9
+
+0
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+1.25
+
+19.6
+
+3.3
+
+b
+
+b
+
+–
+
+1.11
+
+75.1
+
+a There were no combinations that gave a skirt of 0.1, the value quoted is for a skirt of 7%.
+b At natural there are no tapers that could produce the desired resolution. This happens mostly when the
+
+native resolution of the subarray at that band is lower than the desired one. The values quoted are using
+robust weighting with no taper.
+Note: TT˚arget is the target time using only 95% of antennas.
+
+22
+
+7.2.1
+
+KSG 2 ROP Assigned Subarray: Main
+
+Figure 15: Same caption as in Figure 3.
+
+Figure 16: Same caption as in Figure 4.
+
+23
+
+7.2.2
+
+KSG 2 Custom Subarray: Plains ` 25th Core
+
+Figure 17: Same caption as in Figure 3.
+
+Figure 18: Same caption as in Figure 4.
+
+24
+
+7.3
+
+KSG 2 Band 3
+
+The simulation results show that the Main subset (ROP assigned) can meet the resolution
+requirement using robust-taper combinations over the full range of robust values (i.e., uniform to natural). This array can be used very efficiently at natural weight (ηw “ 1.19) but
+the PSF is highly non-Gaussian (metric 2b „ 65%). A much more Gaussian PSF (metric
+2b „ 10%) can be constructed by using robust ´0.9 but with a large penalty in sensitivity
+(ηw “ 2.61), corresponding to an increased observing time of 4.8x.
+The beam sculpting penalty for Main due primarily to the short baselines being downweighted, so I consider an alternate subarray having fewer antennas in the core: Plains plus
+Mid plus 10% of the Core. This new array has a similar efficiency at natural weight, but
+the target integration time increases by a significant amount due to having fewer antennas.
+The penalty for beam sculpting with this array is greatly reduced (ηw “ 1.80) since we only
+need to use robust `0.1 to reach an acceptable PSF skirt, corresponding to an increased
+observing time of 1.7x (with respect to the natural weighting of the custom subarray).
+Table 8: Results for KSG 2 Band 3
+10%
+Subarray/
+
+Robust
+
+Subset
+Main
+Plains`Mid`10Core
+
+TA
+
+Natural
+ηw
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+[mas]
+´0.9
+`0.1
+
+90.8
+89.6
+
+2.61
+
+103.0
+
+1.80
+
+a
+
+135.4
+
+32.1
+45.5
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+1.19
+
+21.5
+
+2.2
+
+1.38
+
+a
+
+–
+
+79.6
+
+a This subarray is not currently in the exposure calculator; T
+T arget has been estimated by scaling the
+number of antennas and ηw for an existing array.
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+25
+
+7.3.1
+
+KSG 2 ROP Assigned Subarray: Main
+
+Figure 19: Same caption as in Figure 3.
+
+Figure 20: Same caption as in Figure 4.
+
+26
+
+7.3.2
+
+KSG 2 Custom Subarray: Plains ` Mid ` 10th Core
+
+Figure 21: Same caption as in Figure 3.
+
+Figure 22: Same caption as in Figure 4.
+
+27
+
+8
+
+KSG 3.3.1: Blind Search for CO Galaxies at High Redshift (HiZ1)
+
+ROP Assigned Subarray: Plains`Core
+
+Table 9: Requirements for KSG 3.3.1
+ν
+
+Resolution
+
+rms
+
+[GHz]
+
+[mas]
+
+µJy/beam
+
+Band 5
+
+41
+
+1000
+
+10
+
+Band 4
+
+27
+
+1000
+
+Band 3
+
+16
+
+1000
+
+Band
+
+8.1
+
+Mode
+
+BW
+
+LAS
+
+Custom
+
+[MHz]
+
+[arcsec]
+
+Subarray
+
+line
+
+2
+
+5
+
+–
+
+10
+
+line
+
+2
+
+5
+
+–
+
+10
+
+line
+
+2
+
+5
+
+–
+
+KSG 3.3.1 Band 5
+
+The simulation results show that the Plains`Core subarray (ROP assigned) can meet the
+resolution requirement using robust-taper combinations over the full range of robust values
+(i.e., uniform to natural). The Plains`Core subarray appears to be a good choice and no alternative subarray is proposed. This array can be used with acceptable efficiently at natural
+weight (ηw “ 1.51) and with the advantage that the PSF is Gaussian-like (metric 2b „ 12%).
+In order to meet metric 2b (PSF level „ 10%) a robust `0.7 paying a very similar penalty in
+sensitivity than with natural (ηw “ 1.54), corresponding to very similar time of observations.
+Table 10: Results for KSG 3.3.1 Band 5
+10%
+Subarray/
+
+Robust
+
+Subset
+Plains`Core
+–
+
+TA
+
+Natural
+ηw
+
+[mas]
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+`0.7
+
+813.1
+
+1.54
+
+25.2
+
+546.1
+
+1.51
+
+24.3
+
+41.9
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+28
+
+8.1.1
+
+KSG 3.3.1 ROP Assigned Subarray: Plains`Core
+
+Figure 23: Same caption as in Figure 3.
+
+Figure 24: Same caption as in Figure 4.
+
+29
+
+8.2
+
+KSG 3.3.1 Band 4
+
+The simulation results show that the Plains`Core subarray (ROP assigned) can meet the
+resolution requirement using robust-taper combinations over the full range of robust values (i.e., uniform to natural). The Plains`Core subarray appears to be a good choice and
+no alternative subarray is proposed. This array can be used efficiently at natural weight
+(ηw “ 1.38) but the PSF is non-Gaussian (metric 2b „ 30%). A more Gaussian PSF (metric
+2b „ 10%) can be constructed by using robust `0.4 and with a modest penalty in sensitivity
+(ηw “ 1.62), corresponding to an increased observing time of 1.4x.
+Table 11: Results for KSG 3.3.1 Band 4
+10%
+Subarray/
+
+Robust
+
+Subset
+Plains`Core
+–
+
+TA
+
+Natural
+ηw
+
+[mas]
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+`0.4
+
+891.3
+
+1.62
+
+12.9
+
+495.8
+
+1.38
+
+9.4
+
+12.8
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+30
+
+8.2.1
+
+KSG 3.3.1 ROP Assigned Subarray: Plains`Core
+
+Figure 25: Same caption as in Figure 3.
+
+Figure 26: Same caption as in Figure 4.
+
+31
+
+8.3
+
+KSG 3.3.1 Band 3
+
+The simulation results show that the Plains`Core subarray (ROP assigned) can meet the
+resolution requirement using robust-taper combinations over the full range of robust values (i.e., uniform to natural). The Plains`Core subarray appears to be a good choice and
+no alternative subarray is proposed. This array can be used efficiently at natural weight
+(ηw “ 1.25) but the PSF is non-Gaussian (metric 2b „ 45%). A much more Gaussian PSF
+(metric 2b „ 10%) can be constructed by using robust `0.1 with a higher penalty in sensitivity (ηw “ 1.67), corresponding to an increased observing time of 1.8x.
+Table 12: Results for KSG 3.3.1 Band 3
+10%
+Subarray/
+
+Robust
+
+Subset
+Plains`Core
+–
+
+TA
+
+Natural
+ηw
+
+[mas]
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+`0.1
+
+928.9
+
+1.67
+
+9.9
+
+471.2
+
+1.25
+
+5.5
+
+6.2
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+32
+
+8.3.1
+
+KSG 3.3.1 ROP Assigned Subarray: Plains`Core
+
+Figure 27: Same caption as in Figure 3.
+
+Figure 28: Same caption as in Figure 4.
+
+33
+
+9
+
+KSG 3.3.2: Imaging Molecular Gas in CO Galaxies at
+High Redshift (HiZ5)
+
+ROP Assigned Subarray: Main
+
+Table 13: Requirements for KSG 3.3.2
+ν
+
+Resolution
+
+rms
+
+[GHz]
+
+[mas]
+
+µJy/beam
+
+Band 6a
+
+82
+
+100
+
+10
+
+Band 5
+
+41
+
+100
+
+Band 4
+
+27
+
+100
+
+Band
+
+9.1
+
+Mode
+
+BW
+
+LAS
+
+Custom
+
+[km/s]
+
+[arcsec]
+
+Subarray
+
+line
+
+30
+
+5
+
+Plains`Core
+
+10
+
+line
+
+30
+
+5
+
+Plains`50Core
+
+10
+
+line
+
+30
+
+5
+
+Plains`10Core
+
+KSG 3.3.2 Band 6a
+
+The simulation results show that the Main subset (ROP assigned) can meet the resolution requirement using robust-taper combinations over the full range of robust values (i.e., uniform
+to natural). This array can be used with moderate efficiency at natural weight (ηw “ 1.48)
+but the PSF is non-Gaussian (metric 2b „ 40%). A much more Gaussian PSF (metric 2b
+„ 10%) can be constructed by using robust `0.0 but with a large penalty in sensitivity
+(ηw “ 2.08), corresponding to an increased observing time of 2x.
+The beam sculpting penalty for Main is large because the long baselines are being downweighted, thus I consider the Plains plus Core subarray. The penalty for beam sculpting
+with this array is reduced (ηw “ 1.60) since we only need to use robust ´0.1 to reach an
+acceptable PSF skirt, corresponding to an increased observing time of 2.2x (with respect to
+the natural weighting of the custom subarray).
+Table 14: Results for KSG 3.3.2 Band 6a
+10%
+Subarray/
+
+Robust
+
+Subset
+
+TA
+
+Natural
+ηw
+
+[mas]
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+Main
+
+`0.0
+
+94.3
+
+2.08
+
+31.5
+
+45.9
+
+1.48
+
+16.0
+
+37.6
+
+Plains`Core
+
+´0.1
+
+91.7
+
+1.60
+
+30.2
+
+42.7
+
+1.09
+
+14.1
+
+–
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+9.1.1
+
+KSG 3.3.2 ROP Assigned Subarray: Main
+
+34
+
+Figure 29: Same caption as in Figure 3.
+
+Figure 30: Same caption as in Figure 4.
+
+35
+
+9.1.2
+
+KSG 3.3.2 Custom Subarray: Plains `Core
+
+Figure 31: Same caption as in Figure 3.
+
+Figure 32: Same caption as in Figure 4.
+
+36
+
+9.2
+
+KSG 3.3.2 Band 5
+
+The simulation results show that the Main subset (ROP assigned) can meet the resolution
+requirement using robust-taper combinations over the full range of robust values (i.e., uniform to natural). This array can be used efficiently at natural weight (ηw “ 1.30) but the
+PSF is non-Gaussian (metric 2b „ 50%). A much more Gaussian PSF (metric 2b „ 10%)
+can be constructed by using robust ´0.2 but with a larger penalty in sensitivity (ηw “ 1.85),
+corresponding to an increased observing time of 2x.
+The beam sculpting penalty for Main due to both the long and short baselines being heavily
+down-weighted, thus I consider a subarray with the Plains plus 50% of the Core. This new
+array has a similar efficiency at natural weight, but the target integration time increases by
+around a factor of 2 due to having fewer antennas. The penalty for beam sculpting with this
+array is reduced (ηw “ 1.30) since we only need to use robust `0.0 to reach an acceptable
+PSF skirt, corresponding to an increased observing time of 1.7x (with respect to the natural
+weighting of the custom subarray).
+Table 15: Results for KSG 3.3.2 Band 5
+10%
+Subarray/
+
+Robust
+
+Subset
+
+TA
+
+Natural
+ηw
+
+[mas]
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+Main
+
+´0.2
+
+86.9
+
+1.85
+
+10.9
+
+34.7
+
+1.30
+
+5.4
+
+9.5
+
+Plains`50Core
+
+`0.0
+
+82.3
+
+1.30
+
+16.9
+
+12.9
+
+1.00
+
+10.1
+
+–
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+37
+
+9.2.1
+
+KSG 3.3.2 ROP Assigned Subarray: Main
+
+Figure 33: Same caption as in Figure 3.
+
+Figure 34: Same caption as in Figure 4.
+
+38
+
+9.2.2
+
+KSG 3.3.2 Custom Subarray: Plains ` 50th Core
+
+Figure 35: Same caption as in Figure 3.
+
+Figure 36: Same caption as in Figure 4.
+
+39
+
+9.3
+
+KSG 3.3.2 Band 4
+
+The simulation results show that the Main subset (ROP assigned) can meet the resolution
+requirement using robust-taper combinations over the full range of robust values (i.e., uniform to natural). This array can be used efficiently at natural weight (ηw “ 1.25) but the
+PSF is non-Gaussian (metric 2b „ 50%). A much more Gaussian PSF (metric 2b „ 10%)
+can be constructed by using robust ´0.2 but with a larger penalty in sensitivity (ηw “ 1.81),
+corresponding to an increased observing time of 2x.
+The beam sculpting penalty for Main is large because both long baselines and short baselines
+are being down-weighted, thus I consider a subarray with the Plains plus 10% of the Core.
+The longest baselines provided by the Plains are not quite long enough to meet the resolution
+requirements when using natural weighting, but the required resolution is achievable using
+robust values À `0.5. The penalty for beam sculpting with this array is greatly reduced
+(ηw “ 1.14) since all robust values À `0.5 also provide an acceptable PSF skirt.
+There are several good options for subarrays for this specific case at this band. Main is a
+good option if the goal is to reduce TT arget because it has a large number of antennas and
+the inefficiency factor is aceptable (ηw ď2). Plains`10th Core is a good option if the goal
+is to reduce ηw provided that the unused antennas can be used efficiently for other projects.
+Plains alone also appears to satisfy all of the KSG requirements and the performance is
+expected to be similar to Plains`10th Core.
+Table 16: Results for KSG 3.3.2 Band 4
+10%
+Subarray/
+
+Robust
+
+Subset
+Main
+Plains`10Core
+
+TA
+
+Natural
+ηw
+
+[mas]
+´0.2
+
+68.3
+
+1.81
+
+a
+
+a
+
+a
+
+`0.5
+
+0.0
+
+1.14
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+7.4
+
+32.6
+
+19.5
+
+0
+
+ηw
+
+1.25
+1.02
+
+b
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+3.5
+
+4.8
+b
+
+15.8
+
+–
+
+a There were no combinations that gave a skirt of 0.1, the value quoted is for a skirt of 8%.
+b At natural there are no tapers that could produce the desired resolution. This happens mostly when the
+
+native resolution of the subarray at that band is lower than the desired one. The values quoted are using
+robust weighting with no taper.
+Note: TT˚arget is the target time using only 95% of antennas.
+
+40
+
+9.3.1
+
+KSG 3.3.2 ROP Assigned Subarray: Main
+
+Figure 37: Same caption as in Figure 3..
+
+Figure 38: Same caption as in Figure 4.
+
+41
+
+9.3.2
+
+KSG 3.3.2 Custom Subarray: Plains`10th Core
+
+Figure 39: Same caption as in Figure 3.
+
+Figure 40: Same caption as in Figure 4.
+
+42
+
+10
+
+KSG 3.3.3: Imaging Molecular Gas in Nearby Galaxies (NGA8)
+
+ROP Assigned Subarray: Plains`Core
+
+Table 17: Requirements for KSG 3.3.3
+Band
+
+Band 6b
+
+10.1
+
+ν
+
+Resolution
+
+rms
+
+[GHz]
+
+[mas]
+
+rKs
+
+106
+
+100
+
+0.75
+
+Mode
+
+BW
+
+LAS
+
+Custom
+
+[km/s]
+
+[arcsec]
+
+Subarray
+
+2
+
+120
+
+–
+
+line
+
+KSG 3.3.3 Band 6b
+
+The simulation results show that the Plains`Core subarray (ROP assigned) can meet the
+resolution requirement using robust-taper combinations over the full range of robust values
+(i.e., uniform to natural). The Plains`Core subarray appears to be a good choice and no
+alternative subarray is proposed. This array can be used very efficiently at natural weight
+(ηw “ 1.15) but the PSF is non-Gaussian (metric 2b „ 50%). A much more Gaussian
+PSF (metric 2b „ 10%) can be constructed by using robust `0.0 and with a slightly higher
+penalty in sensitivity (ηw “ 1.64), corresponding to an increased observing time of 2x.
+Table 18: Results for KSG 3.3.3 Band 6b
+10%
+Subarray/
+
+Robust
+
+Subset
+Plains`Core
+–
+
+TA
+
+Natural
+ηw
+
+[mas]
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+`0.0
+
+93.4
+
+1.64
+
+10.1
+
+45.2
+
+1.15
+
+5.0
+
+17.6
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+43
+
+10.1.1
+
+KSG 3.3.3 ROP Assigned Subarray: Plains`Core
+
+Figure 41: Same caption as in Figure 3.
+
+Figure 42: Same caption as in Figure 4.
+
+44
+
+11
+
+KSG 3.3.4: HI Emission from Nearby Galaxies (NGA2)
+
+ROP Assigned Subarray: Plains`Core
+
+Table 19: Requirements for KSG 3.3.4
+Band
+
+Band 1
+
+11.1
+
+ν
+
+Resolution
+
+rms
+
+[GHz]
+
+[mas]
+
+µJy/beam
+
+1.4
+
+1000
+
+50
+
+Mode
+
+line
+
+BW
+
+LAS
+
+Custom
+
+[km/s]
+
+[arcsec]
+
+Subarray
+
+1
+
+60
+
+Main, Plains`Mid`10thCore
+
+KSG 3.3.4 Band 1
+
+The simulation results show that the Plains`Core subarray (ROP assigned) does not meet
+the resolution requirement of 1 arcsec at 1.4 GHz (the native resolution is 3.5 arcsec).
+Therefore, I consider an alternate subarray that also contains the Mid subarray, i.e., the
+Main subset. This array can be used very efficiently at natural weight (ηw “ 1.18) but the
+PSF is highly non-Gaussian (metric 2b „ 70%). A much more Gaussian PSF (metric 2b
+„ 10%) can be constructed by using robust ´1.1 but with a large penalty in sensitivity
+(ηw “ 2.88), corresponding to an increased observing time of 6x.
+The beam sculpting penalty for Main is large because the short baselines are being heavily
+down-weighted, so I consider an alternate subarray having fewer antennas in the core which
+is Plains plus Mid plus 10% of the Core. This new array has a similar efficiency at natural
+weight, but the target integration time increases by a significant amount due to having fewer
+antennas. The penalty for beam sculpting with this array is significantly reduced (ηw “ 1.91)
+since we only need to use robust `0.0 to reach an acceptable PSF skirt, corresponding to an
+increased observing time of 2x (with respect to the natural weighting of the custom subarray).
+
+45
+
+Table 20: Results for KSG 3.3.4 Band 1
+10%
+Subarray/
+
+Robust
+
+Subset
+Plains`Core
+Main
+Plains`Mid`10Core
+
+TA
+
+Natural
+ηw
+
+TA
+
+[h]
+
+[mas]
+a
+
+–
+
+a
+
+–
+
+319.0
+
+1.18
+
+55.2
+
+[mas]
+–
+
+–
+
+–
+
+–
+
+´1.1
+
+943.5
+
+2.88
+
+329.6
+
+1.91
+
+b
+
+`0.0
+
+944.2
+
+ROPN atural
+
+TT˚arget
+
+400.4
+
+–
+
+451.4
+
+ηw
+
+1.35
+
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+a
+
+88.6
+
+200.0
+
+–
+b
+
+–
+
+a This subarray does not meet the target resolution of 1 arcsec at 1.4 GHz (native resolution 3.5 arcsec).
+b This subarray is not currently in the exposure calculator; T
+T arget has been estimated by scaling the
+
+number of antennas and ηw for an existing array.
+Note: TT˚arget is the target time using only 95% of antennas.
+
+46
+
+11.1.1
+
+KSG 3.3.4 Custom Subarray: Main
+
+Figure 43: Same caption as in Figure 3.
+
+Figure 44: Same caption as in Figure 4.
+
+47
+
+11.1.2
+
+KSG 3.3.4 Custom Subarray: Plains `Mid`10thCore
+
+Figure 45: Same caption as in Figure 3.
+
+Figure 46: Same caption as in Figure 4.
+
+48
+
+12
+
+KSG 3.3.5: Imaging Molecular Gas in Nearby Galaxies (NGA2)
+
+ROP Assigned Subarray: Core
+
+Table 21: Requirements for KSG 3.3.5
+Band
+
+Band 1
+
+12.1
+
+ν
+
+Resolution
+
+rms
+
+[GHz]
+
+[mas]
+
+µJy/beam
+
+1.4
+
+60000
+
+–
+
+Mode
+
+line
+
+BW
+
+LAS
+
+Custom
+
+[km/s]
+
+[arcsec]
+
+Subarray
+
+1
+
+60
+
+–
+
+KSG 3.3.5 Band 1
+
+The simulation results show that the Core subarray (ROP assigned) can meet the resolution requirement using robust-taper combinations over the full range of robust values (i.e.,
+uniform to natural). The Core subarray appears to be a good choice and no alternative
+subarray is proposed. This array can be used very efficiently at natural weight (ηw “ 1.16)
+and the PSF is Gaussian-like (metric 2b „ 10%), thus beam sculpting is not needed.
+Table 22: Results for KSG 3.3.5 Band 1
+10%
+Subarray/
+
+Robust
+
+Subset
+
+Natural
+TT˚arget
+
+TA
+
+[mas]
+
+[h]
+a
+
+TA
+
+ηw
+
+Core
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+TT˚arget
+
+[mas]
+
+[h]
+
+[h]
+
+45962.3
+
+1.16
+
+b
+
+–
+
+660
+
+–
+
+–
+
+–
+
+–
+
+a Natural+TA already meets metric2b.
+b The desired rms was not provided.
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+49
+
+ROPN atural
+TT˚arget
+
+ηw
+
+12.1.1
+
+KSG 3.3.5 ROP Assigned Subarray: Core
+
+Figure 47: Same caption as in Figure 3.
+
+Figure 48: This figure compares natural and uniform weighting at approximately the same resolution, showing that the PSF quality is very similar.
+
+50
+
+13
+
+KSG 3.5.1: Localize a LIGO Event (TDCP2)
+
+ROP Assigned Subarray: Main
+
+Table 23: Requirements for KSG 3.5.1
+Band
+
+Band 1
+
+13.1
+
+ν
+
+Resolution
+
+rms
+
+[GHz]
+
+[mas]
+
+rKs
+
+2.4
+
+1000
+
+1
+
+Mode
+
+cont
+
+BW
+
+LAS
+
+Custom
+
+[GHz]
+
+[arcsec]
+
+Subarray
+
+2.3
+
+1
+
+Plains`Mid`10Core
+
+KSG 3.5.1 Band 1
+
+The simulation results show that the Main subset (ROP assigned) can meet the resolution
+requirement using robust-taper combinations over the full range of robust values (i.e., uniform to natural). This array can be used efficiently at natural weight (ηw “ 1.24) but the
+PSF is non-Gaussian (metric 2b „ 55%). A much more Gaussian PSF (metric 2b „ 10%)
+can be constructed by using robust ´0.4 but with a larger penalty in sensitivity (ηw “ 1.88),
+corresponding to an increased observing time of 2.3x.
+The beam sculpting penalty for Main is slightly large because most of the short baselines are
+being heavily down-weighted, thus I consider a subarray with the Plains plus Mid plus 10%
+of the Core. The penalty for beam sculpting with this array is slightly reduced (ηw “ 1.61)
+and we only need to use a robust `0.6 to reach an acceptable PSF skirt.
+Main is a good option if the goal is to reduce TT arget because it has a large number of
+antennas and the inefficiency factor is aceptable (ηw ď2). Plains`Mid+10th Core is a good
+option if the goal is to reduce ηw provided that the unused antennas can be used efficiently
+for other projects.
+Table 24: Results for KSG 3.5.1 Band 1
+10%
+Subarray/
+
+Robust
+
+Subset
+
+TA
+
+Natural
+ηw
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+Main
+
+´0.4
+
+702.0
+
+1.88
+
+0.2
+
+324.7
+
+1.24
+
+0.09
+
+0.1
+
+Plains`Mid`10Core
+
+`0.6
+
+728.9
+
+1.61
+
+1.3a
+
+473.6
+
+1.48
+
+1.1a
+
+–
+
+a This subarray is not currently in the exposure calculator; T
+T arget has been estimated by scaling the
+number of antennas and ηw for an existing array.
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+51
+
+13.1.1
+
+KSG 3.5.1 ROP Assigned Subarray: Main
+
+Figure 49: Same caption as in Figure 3.
+
+Figure 50: Same caption as in Figure 4.
+
+52
+
+13.1.2
+
+KSG 3.5.1 Custom Subarray: Plains`Mid`10Core
+
+Figure 51: Same caption as in Figure 3.
+
+Figure 52: Same caption as in Figure 4.
+
+53
+
+14
+
+KSG 3.5.2: Proper Motion of a LIGO Event (TDCP8)
+
+ROP Assigned Subarray: LBA
+
+Table 25: Requirements for KSG 3.5.2
+Band
+
+Band 3
+
+14.1
+
+ν
+
+Resolution
+
+rms
+
+[GHz]
+
+[mas]
+
+[µ/beam]
+
+16
+
+0.6
+
+0.23
+
+Mode
+
+cont
+
+BW
+
+LAS
+
+Custom
+
+[GHz]
+
+[arcsec]
+
+Subarray
+
+8.2
+
+1
+
+–
+
+KSG 3.5.2 Band 3
+
+The simulation results show that the LBA subset (ROP assigned) can meet the resolution
+requirement using robust-taper combinations over the full range of robust values (i.e., uniform to natural). The LBA subset appears to be a good choice and no alternative subarray
+is proposed. This array can be used very efficiently at natural weight (ηw “ 1.04) and with
+the advantage that the PSF is Gaussian-like (metric 2b „ 14%). A slightly better PSF
+(metric 2b „ 10%) can be constructed by using robust `0.8 and with a similar penalty in
+sensitivity (ηw “ 1.09).
+Table 26: Results for KSG 3.5.2 Band 3
+10%
+Subarray/
+
+Robust
+
+Subset
+LBA
+–
+
+TA
+
+Natural
+ηw
+
+[mas]
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+`0.8
+
+0.26
+
+1.09
+
+63.1
+
+0.18
+
+1.04
+
+58.1
+
+58.7
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+54
+
+14.1.1
+
+KSG 3.5.2 ROP Assigned Subarray: LBA
+
+Figure 53: Same caption as in Figure 3.
+
+Figure 54: Same caption as in Figure 4.
+
+55
+
+15
+
+KSG 3.5.3: Localize a LISA Event (TDCP5)
+
+ROP Assigned Subarray: Plains`Core
+
+Table 27: Requirements for KSG 3.5.3
+Band
+
+Band 4
+
+15.1
+
+ν
+
+Resolution
+
+rms
+
+[GHz]
+
+[mas]
+
+[µ/beam]
+
+27
+
+1000
+
+14
+
+Mode
+
+cont
+
+BW
+
+LAS
+
+Custom
+
+[GHz]
+
+[arcsec]
+
+Subarray
+
+13.5
+
+10
+
+–
+
+KSG 3.5.3 Band 4
+
+The simulation results show that the Plains`Core subarray (ROP assigned) can meet the
+resolution requirement using robust-taper combinations over the full range of robust values
+(i.e., uniform to natural). The Plains`Core subarray appears to be a good choice and no
+alternative subarray is proposed. This array can be used somewhat efficiently at natural
+weight (ηw “ 1.38) but the PSF is non-Gaussian (metric 2b „ 35%). A more Gaussian
+PSF (metric 2b „ 10%) can be constructed by using robust `0.4 and with a slightly higher
+penalty in sensitivity (ηw “ 1.62), corresponding to an increased observing time of 1.4x.
+Table 28: Results for KSG 3.5.3 Band 4
+10%
+Subarray/
+
+Robust
+
+Subset
+Plains`Core
+–
+
+TA
+
+Natural
+ηw
+
+[mas]
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+`0.4
+
+891.4
+
+1.62
+
+0.001
+
+495.8
+
+1.38
+
+0.0009
+
+0.001
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+56
+
+15.1.1
+
+KSG 3.5.3 ROP Assigned Subarray: Plains`Core
+
+Figure 55: Same caption as in Figure 3.
+
+Figure 56: Same caption as in Figure 4.
+
+57
+
+16
+
+KSG 3.5.4: Search for Black Holes and Pulsars in the
+Galactic Center
+
+ROP Assigned Subarray: Plains`Core
+
+Table 29: Requirements for KSG 3.5.4
+Band
+
+Band 2
+
+16.1
+
+ν
+
+Resolution
+
+rms
+
+[GHz]
+
+[mas]
+
+[µ/beam]
+
+8
+
+1000
+
+1
+
+Mode
+
+cont
+
+BW
+
+LAS
+
+Custom
+
+[GHz]
+
+[arcsec]
+
+Subarray
+
+8.8
+
+10
+
+–
+
+KSG 3.5.4 Band 2
+
+The simulation results show that the Plains`Core subarray (ROP assigned) can meet the
+resolution requirement using robust-taper combinations over the full range of robust values
+(i.e., uniform to natural). The Plains`Core subarray appears to be a good choice and no
+alternative subarray is proposed. This array can be used very efficiently at natural weight
+(ηw “ 1.08) but the PSF is highly non-Gaussian (metric 2b „ 50%). A much more Gaussian
+PSF (metric 2b „ 10%) can be constructed by using robust ´0.1 and with a higher penalty
+in sensitivity (ηw “ 1.60), corresponding to an increased observing time of 2.2x.
+Table 30: Results for KSG 3.5.4 Band 2
+10%
+Subarray/
+
+Robust
+
+Subset
+Plains`Core
+–
+
+TA
+
+Natural
+ηw
+
+[mas]
+
+TT˚arget
+
+TA
+
+[h]
+
+[mas]
+
+ηw
+
+ROPN atural
+TT˚arget
+
+TT˚arget
+
+[h]
+
+[h]
+
+´0.1
+
+921.5
+
+1.60
+
+0.26
+
+422.8
+
+1.08
+
+0.12
+
+0.25
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+–
+
+Note: TT˚arget is the target time using only 95% of antennas.
+
+58
+
+16.1.1
+
+KSG 3.5.4 ROP Assigned Subarray: Plains`Core
+
+Figure 57: Same caption as in Figure 3.
+
+Figure 58: Same caption as in Figure 4.
+
+59
+
+Acknowledgments
+Many thanks to Joan Wrobel and Brian Mason for providing useful information to develop
+this project. This study made use of the CASA task casairing, an open-source tool from
+the Nordic ALMA regional center. The National Radio Astronomy Observatory is a facility
+of the National Science Foundation operated under cooperative agreement by Associated
+Universities, Inc.
+
+References
+[1] Bryan Butler, Next Generation Very Large Array Memo No. 73 Preliminary ngVLA
+Observing Band Availability Estimate.
+[2] Chris Carilli, Next Generation Very Large Array Memo No. 12 The Strength of the Core.
+[3] Chris Carilli, Alan Erickson, Next Generation VLA Memo. 41 Initial Imaging Tests of
+the Spiral Configuration.
+[4] Chris Carilli, Next Generation Very Large Array Memo No. 47 Resolution and Sensitivity
+of ngvla-revB.
+[5] Rosero, V., Next Generation Very Large Array Memo No. 55 Taperability Study for the
+ngVLA and Performance Estimates.
+[6] Rosero, V., Next Generation Very Large Array Memo No. 65 Sculpting of the Synthesized
+Beam and Image Fidelity Study of KSG 1: Imaging of Protoplanetary Disks.
+[7] Rosero, V., Next Generation Very Large Array Memo No. 72 A Study of ngVLA Subarray
+Efficiency: Plains ` Fractions of the Core.
+[8] Wrobel, J., NRAO Doc. #: 020.10.15.05.10´0001´REP-B, A Notional Reference Observing Program.
+
+60
+
+The National Radio Astronomy Observatory and Green Bank Observatory are facilities of the U.S.
+National Science Foundation operated under cooperative agreement by Associated Universities, Inc.
+This work was supported by awards AST-2034328 (MSIP Prototype Antenna) and AST-2334267 (ngVLA
+Design Activities); NRAO related activities are funded under award AST-1647378 (NRAO
+Operations/Development).
+
+

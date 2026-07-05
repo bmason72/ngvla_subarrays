@@ -1,0 +1,64 @@
+*** UseCase  , BmaxKm , BminKm, subarray , AntHrs , Hrs , Hrs(RevC_eop), LASOk 
+PF3(KSG1)  ,  154.7  ,  0.31  ,  ngvla-revE.mid_spiral_outerCore  ,  100974.2  ,  643.1  ,  462.0  ,  True
+PF3(KSG1)  ,  454.2  ,  0.91  ,  ngvla-revE.spiral_mid  ,  113756.6  ,  1137.6  ,  422.5  ,  True
+PF1  ,  51.6  ,  0.31  ,  ngvla-revE.mid_spiral_outerCore  ,  2061.8  ,  13.1  ,  9.0  ,  True
+PF1  ,  151.4  ,  0.91  ,  ngvla-revE.spiral_mid  ,  137768.8  ,  1377.7  ,  522.5  ,  True
+PF5  ,  154.7  ,  0.12  ,  ngvla-revE.main  ,  4254.8  ,  19.9  ,  21.0  ,  True
+PF5  ,  454.2  ,  0.36  ,  ngvla-revE.mid_spiral_outerCore  ,  118689.1  ,  756.0  ,  495.0  ,  True
+AC5(KSG2)  ,  15.3  ,  0.12  ,  ngvla-revE.spiral_core  ,  91654.4  ,  545.6  ,  660.0  ,  True
+AC5(KSG2)  ,  22.7  ,  0.18  ,  ngvla-revE.spiral_outerCore  ,  6735.6  ,  60.7  ,  39.6  ,  True
+AC5(KSG2)  ,  37.7  ,  0.30  ,  ngvla-revE.mid_spiral_outerCore  ,  4892.1  ,  31.2  ,  19.8  ,  True
+AC1  ,  6.4  ,  1.03  ,  ngvla-revD.spiral  ,  261896.2  ,  4849.9  ,  237.6  ,  True
+AC2  ,  8.4  ,  0.67  ,  ngvla-revE.spiralPlus5core  ,  139765.9  ,  2368.9  ,  231.0  ,  True
+AC3  ,  39.3  ,  0.55  ,  ngvla-revE.spiral_mid_5core  ,  21023.5  ,  200.2  ,  55.0  ,  True
+AC4  ,  4.4  ,  0.35  ,  ngvla-revE.spiral_outerCore  ,  127365.3  ,  1147.4  ,  462.0  ,  True
+AC6  ,  2.6  ,  0.41  ,  ngvla-revE.core  ,  779.2  ,  6.8  ,  6.3  ,  True
+SS06  ,  188.7  ,  0.34  ,  ngvla-revE.mid_spiral_outerCore  ,  51530.6  ,  328.2  ,  211.8  ,  True
+SF9  ,  471.6  ,  30.18  ,  SpMID_CW_28_MOD  ,  21117.2  ,  459.1  ,  96.2  ,  True
+SF9  ,  1513.9  ,  1.21  ,  ngvla-revE.long_mid_spiral_5core  ,  1982.5  ,  14.7  ,  715.0  ,  True
+HiZ1(KSG3.3.1)  ,  0.8  ,  0.24  ,  ngvla-revE.coreInner  ,  92411.4  ,  1621.3  ,  569.8  ,  True
+HiZ1(KSG3.3.1)  ,  1.1  ,  0.36  ,  ngvla-revE.coreInner  ,  35757.9  ,  627.3  ,  223.3  ,  True
+HiZ1(KSG3.3.1)  ,  1.9  ,  0.60  ,  ngvla-revE.core  ,  11857.2  ,  104.0  ,  87.2  ,  True
+HiZ5(KSG3.3.2)  ,  8.6  ,  0.14  ,  ngvla-revE.spiral_core  ,  37361.4  ,  222.4  ,  302.5  ,  True
+HiZ5(KSG3.3.2)  ,  17.2  ,  0.28  ,  ngvla-revE.spiral_outerCore  ,  5977.9  ,  53.9  ,  35.2  ,  True
+HiZ5(KSG3.3.2)  ,  22.1  ,  0.35  ,  ngvla-revE.spiral_outerCore  ,  4482.3  ,  40.4  ,  26.4  ,  True
+HiZ2  ,  0.8  ,  0.32  ,  ngvla-revE.coreInner  ,  23309.8  ,  408.9  ,  144.4  ,  True
+HiZ3  ,  1.1  ,  0.57  ,  ngvla-revE.coreInner  ,  17478.2  ,  306.6  ,  109.7  ,  True
+HiZ6  ,  1.1  ,  0.05  ,  ngvla-revE.coreInner  ,  3075.3  ,  54.0  ,  19.2  ,  True
+HiZ7  ,  19.9  ,  0.30  ,  ngvla-revE.spiral_outerCore  ,  24632.1  ,  221.9  ,  144.4  ,  True
+HiZ7  ,  52.2  ,  0.63  ,  ngvla-revE.spiral_mid_5core  ,  15827.4  ,  150.7  ,  47.5  ,  True
+HiZ7  ,  19.9  ,  0.30  ,  ngvla-revE.spiral_outerCore  ,  24632.1  ,  221.9  ,  144.4  ,  True
+HiZ7  ,  52.2  ,  0.63  ,  ngvla-revE.spiral_mid_5core  ,  15827.4  ,  150.7  ,  47.5  ,  True
+HiZ8  ,  32.6  ,  1.30  ,  ngvla-revD.spiral  ,  29656.9  ,  549.2  ,  107.2  ,  True
+HiZ10  ,  78.3  ,  0.63  ,  ngvla-revE.spiral_mid_5core  ,  23538.4  ,  224.2  ,  73.7  ,  True
+NGA8(KSG3.3.3)  ,  5.4  ,  0.00  ,  ngvla-revE.spiral_core  ,  84520.1  ,  503.1  ,  631.0  ,  False
+NGA2 (KSG3.3.4)  ,  21.8  ,  0.58  ,  ngvla-revE.spiralPlus5core  ,  86993.3  ,  1474.5  ,  310.2  ,  True
+NGA2(KSG3.3.5)  ,  0.7  ,  0.01  ,  ngvla-revE.core  ,  68051.8  ,  596.9  ,  264.0  ,  False
+NGA3  ,  1.5  ,  0.02  ,  ngvla-revE.core  ,  30839.4  ,  270.5  ,  192.5  ,  False
+NGA3  ,  2.3  ,  0.03  ,  ngvla-revE.core  ,  16271.5  ,  142.7  ,  129.3  ,  False
+NGA3  ,  3.8  ,  0.05  ,  ngvla-revE.core  ,  4995.7  ,  43.8  ,  39.6  ,  True
+NGA3  ,  7.8  ,  0.10  ,  ngvla-revE.spiral_core  ,  1006.8  ,  6.0  ,  8.2  ,  True
+NGA3  ,  26.3  ,  0.35  ,  ngvla-revE.spiral_outerCore  ,  2364.2  ,  21.3  ,  13.7  ,  True
+NGA6  ,  254.6  ,  0.12  ,  ngvla-revE.main  ,  4551.8  ,  21.3  ,  20.5  ,  True
+NGA6  ,  378.5  ,  0.18  ,  ngvla-revE.mid_spiral_outerCore  ,  4932.4  ,  31.4  ,  20.5  ,  True
+NGA6  ,  628.9  ,  0.30  ,  ngvla-revE.mid_spiral_outerCore  ,  11178.9  ,  71.2  ,  46.2  ,  True
+NGA7  ,  1.1  ,  0.04  ,  ngvla-revE.core  ,  24290.0  ,  213.1  ,  135.0  ,  False
+NGA9  ,  2.7  ,  0.00  ,  ngvla-revE.core  ,  44024.5  ,  386.2  ,  357.5  ,  False
+NGA10  ,  0.7  ,  0.00  ,  ngvla-revE.core  ,  200954.1  ,  1762.8  ,  770.0  ,  False
+NGA15  ,  37.7  ,  30.18  ,  SpMID_CW_28_MOD  ,  785791.2  ,  17082.4  ,  232.6  ,  True
+NGA16  ,  4796.9  ,  575.62  ,  ngvla-revE.long  ,  11755.3  ,  391.8  ,  462.0  ,  True
+NGA17  ,  1527.9  ,  244.46  ,  ngvla-revE.long_mid  ,  31954.6  ,  420.5  ,  77.0  ,  True
+TDCP1 (KSG4)  ,  188.7  ,  188.66  ,  SpMID_CW_28_MOD  ,  135444.0  ,  2944.4  ,  198.0  ,  True
+TDCP2 (KSG5)  ,  25.8  ,  25.78  ,  ngvla-revD.spiral  ,  55386.0  ,  1025.7  ,  195.4  ,  True
+TDCP8  ,  6288.6  ,  503.08  ,  ngvla-revE.long  ,  19660.9  ,  655.4  ,  679.8  ,  True
+TDCP5  ,  2.3  ,  1.82  ,  ngvla-revE.core  ,  55371.1  ,  485.7  ,  440.0  ,  True
+Prepare  ,  7.8  ,  6.27  ,  ngvla-revD.spiral  ,  165715.2  ,  3068.8  ,  206.2  ,  True
+TDCP17  ,  377.3  ,  377.31  ,  SpMID_CW_28_MOD  ,  83696.8  ,  1819.5  ,  182.9  ,  True
+TDCP17  ,  3773.1  ,  603.70  ,  ngvla-revE.long  ,  9650.7  ,  321.7  ,  55.0  ,  True
+NGA12  ,  10.8  ,  0.21  ,  ngvla-revE.spiral_outerCore  ,  8895.7  ,  80.1  ,  49.5  ,  True
+TDCP7 (KSG3.5.5)  ,  263.3  ,  263.32  ,  SpMID_CW_28_MOD  ,  15651.4  ,  340.2  ,  312.0  ,  True
+TDCP16  ,  7734.9  ,  618.79  ,  ngvla-revE.long  ,  23083.5  ,  769.4  ,  164.5  ,  True
+TDCP16  ,  7734.9  ,  618.79  ,  ngvla-revE.long  ,  23083.5  ,  769.4  ,  164.5  ,  True
+TDCP16  ,  2.3  ,  0.06  ,  ngvla-revE.core  ,  11225.2  ,  98.5  ,  89.2  ,  True
+TDCP18  ,  522.2  ,  522.19  ,  SpMID_CW_28_MOD  ,  97561.7  ,  2120.9  ,  440.0  ,  True
+

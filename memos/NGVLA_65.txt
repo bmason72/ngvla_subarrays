@@ -1,0 +1,1256 @@
+Next Generation Very Large Array Memo #65
+
+Sculpting of the Synthesized Beam and
+Image Fidelity Study of KSG 1: Imaging of
+Protoplanetary Disks
+Viviana Rosero (NRAO)
+May 17, 2019
+Abstract
+In this memo I use key science goal (KSG) 1, imaging of protoplanetary disks, to perform a systematic study on sculpting of the synthesized beam. I investigate different combinations of imaging parameters to
+achieve a synthesized beam that has a resolution suitable for this specific
+science goal and I develop four PSF quality metrics in order to better
+understand the ideal combination of imaging parameters. Furthermore, I
+present an image fidelity analysis to determine the combination of imaging
+parameters that provides the optimal balance between PSF quality and
+sensitivity for this use case and to demonstrate that the ngVLA meets the
+science requirements of this use case.
+
+1
+
+Requirements, Model and Simulations
+
+I explore the capabilities of the ngVLA in order to fulfill the requirements of
+the key science goal (KSG) 1, namely ‘Unveiling the Formation of Solar System Analogs on Terrestrial Scales’. The primary goal of KSG 1 as described
+in the ngVLA Science Requirements document [1] is: ‘The ngVLA shall be able
+to measure the planet initial mass function down to a mass of 5 – 10 Earth
+masses and unveil the formation of planetary systems similar to our own Solar
+System by probing the presence of planets on orbital radii as small as 0.5 au at
+the distance of 140 pc.’
+This translates into: ‘Continuum observations for center frequencies between 20
+– 110 GHz with angular resolution better than 5 mas at 100 GHz.’ and ‘A sensitivity of 0.2 µJy/bm in the continuum at 100 GHz is required to map structures
+in the dust distribution created by planets of mass down to 10 Earth-masses and
+orbital radius of 2.5 au.’
+
+1
+
+Figure 1: Synthetic model image for a planetary disk at 3 mm from KSG 1.
+For the simulations of the ngVLA observations, we employ the ngVLA Main
+interferometric subarray (ngvla-main-revC.cfg), which is composed of 214 18 m
+antennas. We adopt the same model used in ngVLA Memo #33 [2], namely,
+‘Imaging Planetary Systems in the Act of Forming with the ngVLA’ by Ricci et
+al. 2018a [3] and Ricci et al. 2018b [4]. The model image, shown in Figure 1,
+is at 3 mm and the disk is at `24˝ Declination, which corresponds to the declination of the nearby Taurus star forming region. Ricci et al. 2018b [4] presents
+in detail information about the creation of the synthetic image of the model for
+the continuum emission and all the physical parameters that they adopted.
+For the simulations, we generated the visibilities with CASA task simobserve
+and using 8 hr synthesis centered on transit. The simulations have a center
+frequency of 100 GHz and are composed of 1 channel with a bandwidth of
+10 GHz and an integration time of 60 s1 . Thermal noise was added using
+the sm.setnoise function of the sm toolkit with a ‘simplenoise’ parameter2 of
+1 We choose this integration time in order to keep the measurement set files small. Time
+smearing is not an issue for simulated observations, but this value would need to be reconsidered before scheduling actual observations.
+2 For more on estimating the expected rms noise in an untapered, naturally-weighted Stokes
+I image and adding thermal noise to a MS see https://casaguides.nrao.edu/index.php/
+Simulating_ngVLA_Data-CASA5.4.1
+
+2
+
+0.9 mJy which corresponds to an rms level of „ 0.2 µJy/beam in the final natural and untapered continuum image. From ngVLA memo #55 [5], we find that
+the untapered, naturally weighted point source sensitivity of the Main interferometric array at 93 GHz is 0.83 µJy/beam for a 1 hour observation3 . Therefore,
+an rms value of „ 0.2 µJy/beam corresponds to on-time integrations of about
+„ 17 hr with the ngVLA.
+
+2
+
+Determination of Imaging Parameters
+
+A fundamental requirement of KSG 1 is to achieve a spatial resolution of 5 mas
+at 100 GHz. Therefore, in order to investigate what combination of imaging
+parameters will produce such resolution, we made a grid of PSFs using a range
+of Briggs weighting and uv-tapers. We vary the robust value from uniform
+(R “ ´2) to natural (R “ 2) in steps of 0.4 (for a total of 11 values of robust)
+and use values of uv-taper from 0 to 6 mas in steps of 0.5 mas (for a total of
+13 values of uv-taper) resulting in a grid of 143 images. The imaging was done
+using CASA task tclean and all the simulated images have an image size of
+5120 px. Figure 2 is a color contour representing the achieved resolutions4 of
+the resulting PSFs from our grid using different Briggs robust values and uvtapers. The combinations of Briggs robust and uv-taper values that result in a
+resolution of 5 mas is represented by the white solid line and the dashed lines
+indicate the combination of parameters that yield resolutions between 4 and 6
+mas.
+
+2.1
+
+Images with the Desired Resolution
+
+The results from Section 2 show that there are many combinations of robust and
+uv-taper that will produce a 5 mas clean beam. Although different combinations will formally result in the same resolution, other properties of the resulting
+PSFs may be very different. Different combinations of robust and uv-taper will
+also affect the image sensitivity.
+For this study, we create new simulated images using only combinations of Briggs
+weighting and uv-taper which will give 5 mas resolution. We vary the robust
+value from uniform (R “ ´2) to natural (R “ 2) in steps of 0.2 in order to have
+a suite of 21 equally spaced values. We pair each robust value with a uv-taper
+based on interpolation of the white solid line shown in Figure 2. Table 1 shows
+the imaging parameters and statistics, where columns 1 and 2 are the robust
+and uv-taper, respectively. Column 3 gives the full width at half maximum
+3 Since the system temperature have been averaged at each band, we assume that the
+continuum rms of the images at 93 GHz and 100 GHz are the same.
+4 The plotted resolutions correspond to the geometric mean of the minor and major beam
+FWHM of the synthesized beam, as parameterized by Gaussian fitting inside the CASA tclean
+task.
+
+3
+
+Figure 2: Resolution as a function of the robust and uv-taper values. The color scale
+shows the size of the clean beam as fit with the CASA tclean task. The solid white
+line are the combination of robust and uv-taper values that will result on a resolution
+of 5 mas, and the dashed lines delimit the resolutions from 4 to 6 mas.
+
+(FWHM) of the major and minor axes of the synthesized beam, for which the
+geometric mean is very close to 5 mas. Column 4 is the standard deviation (σ)
+scaled relative to that of the naturally weighted image (i.e., σ{σN A ). All the
+simulated images have an image size of 5120 px and cell sizes of 0.1 mas, chosen
+to provide a large degree of oversampling in order to better analyze detailed
+PSF features.
+Figure 3 shows 1D East-West cuts through example PSFs to demonstrate the
+effect of different imaging weights. All these PSFs have a resolution of „ 5 mas
+as parameterized by Gaussian fitting in the CASA tclean task. However, we
+can see how combinations of robust and uv-taper values will allow for beams of
+much higher quality (i.e., more Gaussian), but at the expense of sensitivity as
+we will describe below.
+It is important to understand the algorithm used by tclean to determine the
+resolution. The tclean task determines the resolution by using the fitGaus-
+
+4
+
+sianPSF function of CASACore’s StokesImageUtil class. This function locates
+the PSF peak and then grows the fitting area in a way that tries to capture only
+the main lobe of the PSF. The fitting area is allowed to grow until it reaches a
+level of 0.35 or until the algorithm detects that it has encountered a sidelobe.
+Also, this algorithm restricts the maximum fitting area to a size of 11ˆ11 pixels. The results of this algorithm can be seen in the example PSFs in Figure 3.
+Since these PSFs were created using a large amount of oversampling, the resulting resolutions are based only on the very inner peak of the PSF. We will refer
+to the resolution that is measured with this algorithm as the “clean beam size”.
+
+Table 1: Parameters and statistics of the images with resolutions „ 5 mas.
+Robust
+
+σ{σN A
+
+Taper
+
+Beam
+
+[mas]
+
+[mas]ˆ[mas]
+
+`2.0
+
+1.48985
+
+5.403 ˆ 4.623
+
+1.000
+
+`1.8
+
+1.49647
+
+5.415 ˆ 4.630
+
+1.001
+
+`1.6
+
+1.50292
+
+5.410 ˆ 4.621
+
+1.003
+
+`1.4
+
+1.53411
+
+5.455 ˆ 4.643
+
+1.009
+
+`1.2
+
+1.56529
+
+5.431 ˆ 4.604
+
+1.023
+
+`1.0
+
+1.64881
+
+5.496 ˆ 4.612
+
+1.059
+
+`0.8
+
+1.73233
+
+5.489 ˆ 4.562
+
+1.116
+
+`0.6
+
+1.84842
+
+5.548 ˆ 4.554
+
+1.179
+
+`0.4
+
+1.96450
+
+5.551 ˆ 4.506
+
+1.234
+
+`0.2
+
+2.15905
+
+5.654 ˆ 4.522
+
+1.294
+
+`0.0
+
+2.36288
+
+5.625 ˆ 4.449
+
+1.371
+
+´0.2
+
+2.67495
+
+5.661 ˆ 4.438
+
+1.486
+
+´0.4
+
+3.03671
+
+5.646 ˆ 4.429
+
+1.640
+
+´0.6
+
+3.40299
+
+5.566 ˆ 4.417
+
+1.835
+
+´0.8
+
+3.84265
+
+5.544 ˆ 4.513
+
+2.092
+
+´1.0
+
+4.21335
+
+5.431 ˆ 4.567
+
+2.405
+
+´1.2
+
+4.62142
+
+5.346 ˆ 4.678
+
+2.756
+
+´1.4
+
+4.92968
+
+5.211 ˆ 4.728
+
+3.087
+
+´1.6
+
+5.24773
+
+5.164 ˆ 4.842
+
+3.377
+
+´1.8
+
+5.39224
+
+5.074 ˆ 4.864
+
+3.583
+
+´2.0
+
+5.53597
+
+5.067 ˆ 4.933
+
+3.718
+
+5
+
+1.0
+
+0.6
+0.4
+0.2
+
+R = −2.0; TA =5.536
+R = −1.0; TA =4.213
+R =0.0; TA =2.363
+R =1.0; TA =1.649
+R =2.0; TA =1.489
+
+0.8
+
+Normalized Amplitude
+
+0.8
+
+Normalized Amplitude
+
+1.0
+
+R = −2.0; TA =5.536
+R = −1.0; TA =4.213
+R =0.0; TA =2.363
+R =1.0; TA =1.649
+R =2.0; TA =1.489
+
+0.6
+0.4
+0.2
+
+0.0
+
+0.10
+
+0.05
+
+0.00
+
+arcsec
+
+0.05
+
+0.0
+
+0.10
+
+0.010
+
+0.005
+
+0.000
+
+arcsec
+
+0.005
+
+Figure 3:
+
+Examples of our simulated 100 GHz PSFs, and the effect of different
+combinations of robust and uv-taper values producing a clean beam size of 5 mas. The
+PSFs are a selection of the data presented in Table 1. The right panel corresponds to
+a zoom in of the same PSFs shown in the left panel.
+
+Figure 4 shows the change in sensitivity with Briggs robust for all the images
+that have a clean beam size of „ 5 mas presented in Table 1, where ηweight
+is an inefficiency factor defined as σ{σN A . As we can see, from the examples
+shown in Figure 3 that have more Gaussian-like beams the image noise increases
+as much as by a factor of „3.7 for combinations of robust and uv-taper, but
+some combinations yield beams with a penalty in sensitivity of the order of „2
+that could be suitable for this KSG. We investigate this further in the following
+sections.
+
+3
+
+Analysis of PSF Quality Metrics
+
+Our next step is to study in detail the different PSFs having a clean beam size
+of 5 mas and to develop several beam quality metrics. Analysis of these metrics
+will inform decisions about how to ‘sculpt’ the synthesized beam to something
+suitable to this specific science goal.
+
+6
+
+0.010
+
+σ/σN A at 100 GHz
+
+3.5
+
+ηweight
+
+3.0
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+−2.0
+
+−1.5
+
+−1.0
+
+−0.5
+
+0.0
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+Briggs Robust
+
+Figure 4: Change of sensitivity with Briggs robust for images with clean beam size
+of „5 mas achieved by varying the imaging weights, simulated at 100 GHz. The data
+is presented in Table 1.
+
+3.1
+
+Metric 1: PSF Width at Half Maximum
+
+This metric directly calculates the full width of the PSF at its half-maximum
+value (0.5). First, a radially-averaged PSF profile is produced using the 3rd
+party CASA task iring obtained from the ALMA Nordic Node5 . Then, spline
+interpolation is used to determine the radius for which the PSF profile first
+crosses a level of 0.5. Figure 5 shows an example of the radial-averaged PSF
+profile for R “ ´1 and R “ 0 from the data shown in Table 1. As we can see
+for these two PSFs the more Gaussian-like profile corresponds to R “ ´1 with
+a value of metric 1 “ 2.46 mas.
+Figure 6 shows the half width as a function of Briggs robust values for all the
+PSFs presented in Table 1. The gray solid line corresponds to the half width
+of a perfect Gaussian with a FWHM of 5 mas. As we can see in Figure 6 the
+simulated PSFs with Briggs robust values from R“ ´2 to R „ ´0.6 have halfwidths which are consistent with a Gaussian the size of the clean beam. We
+5 https://www.oso.nordic-alma.se/software-tools.php
+
+7
+
+Robust= 0.0; metric 1=4.13 mas
+Robust=−1.0; metric 1=2.46 mas
+
+1.0
+
+PSF level
+
+0.8
+
+0.6
+metric 1
+metric 1
+
+0.4
+
+0.2
+
+0.0
+0.000
+
+0.002
+
+0.004
+
+0.006
+
+0.008
+
+0.010
+
+Radial distance (arcsec)
+Figure 5: Radial-averaged PSF profile for R “ ´1 and R “ 0 showing an example of
+metric 1 which calculates the full width of the PSF at its half-maximum value (0.5).
+As we can see for these two PSFs the more Gaussian-like profile corresponds to R “ ´1
+with a value of metric 1 “ 2.46 mas.
+20
+
+Half Width (mas)
+
+16
+
+12
+
+8
+
+4
+
+−2
+
+−1
+
+0
+
+1
+
+2
+
+Briggs Robust
+
+Figure 6:
+
+Metric 1 measures the PSF Width at Half Maximum using a radiallyaveraged PSF profile as seen in Figure 5. The gray solid line corresponds to the half
+width of a perfect Gaussian with a half width of 2.5 mas. The data is shown in Table
+2 column 2.
+
+8
+
+can also see this from our examples shown in Figure 3 where for the PSF with
+combinations R “ ´2 and T A “ 5.536 and R “ ´1 and T A “ 4.213 (also
+shown in Figure 5) the PSF width at half maximum is „2.5 mas. The data is
+shown in Table 2 column 2.
+
+Table 2: Results of PSF quality metrics
+Robust
+
+WHMmet 1
+
+HWHMmet 2a
+
+FWHMmet 2b
+
+[mas]
+
+RMSmet 3
+
+AP SF {Gauss met 4
+
+[Jy/beam]
+
+`2.0
+
+19.08
+
+0.79
+
+0.70
+
+0.50
+
+47.33
+
+`1.8
+
+18.89
+
+0.79
+
+0.70
+
+0.50
+
+47.10
+
+`1.6
+
+18.36
+
+0.78
+
+0.70
+
+0.49
+
+46.35
+
+`1.4
+
+17.47
+
+0.78
+
+0.69
+
+0.48
+
+44.33
+
+`1.2
+
+15.84
+
+0.77
+
+0.68
+
+0.46
+
+40.91
+
+`1.0
+
+13.85
+
+0.76
+
+0.66
+
+0.42
+
+34.77
+
+`0.8
+
+11.46
+
+0.74
+
+0.63
+
+0.37
+
+27.99
+
+`0.6
+
+9.32
+
+0.73
+
+0.60
+
+0.32
+
+21.45
+
+`0.4
+
+7.04
+
+0.70
+
+0.56
+
+0.26
+
+15.95
+
+`0.2
+
+5.33
+
+0.68
+
+0.51
+
+0.21
+
+10.96
+
+`0.0
+
+4.13
+
+0.64
+
+0.45
+
+0.16
+
+7.23
+
+´0.2
+
+3.37
+
+0.61
+
+0.37
+
+0.11
+
+4.47
+
+´0.4
+
+2.91
+
+0.57
+
+0.29
+
+0.07
+
+2.80
+
+´0.6
+
+2.65
+
+0.53
+
+0.22
+
+0.05
+
+1.90
+
+´0.8
+
+2.54
+
+0.51
+
+0.16
+
+0.03
+
+1.44
+
+´1.0
+
+2.46
+
+0.49
+
+0.12
+
+0.02
+
+1.22
+
+´1.2
+
+2.42
+
+0.48
+
+0.09
+
+0.01
+
+1.10
+
+´1.4
+
+2.38
+
+0.47
+
+0.06
+
+0.01
+
+1.03
+
+´1.6
+
+2.38
+
+0.47
+
+0.06
+
+0.004
+
+1.01
+
+´1.8
+
+2.36
+
+0.46
+
+0.05
+
+0.002
+
+1.00
+
+´2.0
+
+2.38
+
+0.47
+
+0.05
+
+0.001
+
+1.00
+
+9
+
+3.2
+
+Metric 2: PSF level at HWHM and FWHM
+
+This metric directly calculates the PSF level at a radial distance of one and two
+times that of the clean beam. First, a radially-averaged PSF profile is produced
+using the 3rd party CASA task iring obtained from the ALMA Nordic Node.
+Then, spline interpolation is used to determine the level of the PSF at a radius
+of one clean beam HWHM (2.5 mas; “metric 2a”) and one FWHM (5.0 mas;
+“metric 2b”). Figure 7 shows an example of the radial-averaged PSF profile for
+R “ ´1 and R “ 0 from the data shown in Table 1 and their resulting values
+for metric 2a and 2b.
+Robust= 0.0; metric 2a=0.64; metric 2b=0.45
+Robust=−1.0; metric 2a=0.49; metric 2b=0.12
+
+1.0
+
+PSF level
+
+0.8
+
+0.6
+
+0.0
+0.000
+
+metric 2a
+
+0.2
+
+metric 2b
+
+0.4
+
+0.002
+
+0.004
+
+0.006
+
+0.008
+
+0.010
+
+Radial distance (arcsec)
+Figure 7: Radial-averaged PSF profile for R “ ´1 and R “ 0 showing examples for
+metrics 2a and 2b for this specific science case. Metric 2a calculates the PSF level at
+a radial distance of one clean beam (2.5 mas). Metric 2b calculates the PSF level at
+a radial distance of two times the clean beam (5 mas).
+
+Figure 8 shows the values of metric 2a (top panel) and metric 2b (bottom panel)
+as a function of Briggs robust values of the PSFs presented in Table 1. In the
+top panel, the gray solid line corresponds to the full width of the PSF at its
+half-maximum value i.e., 0.5. For the beams with Briggs robust values R Á ´0.6
+we can see that metric 2a is significantly larger than what is inferred from a
+Gaussian of the same clean beam size. This raises some concerns about the
+clean beam size calculated with the algorithm described in Section 2.1, e.g., it
+may underestimate the true resolving power of these PSFs. At the very least,
+this illustrates the need to be cautious when using clean beam sizes for highly
+non-Gaussian PSFs.
+
+10
+
+Metric 2b, which is shown in the bottom panel, is sensitive to a type of PSF
+non-Gaussianity which is often referred to as a beam ‘skirt’ or ‘plateau’. It was
+suggested in memo #47 that a skirt which raises the PSF to a level of 10% at a
+radius of one FWHM (i.e., metric 2b) may be acceptably low. For comparison,
+a Gaussian beam is „6% at a radius of one FWHM, represented in the bottom
+panel of Figure 8 by a solid gray line. At this radius, for the examples shown
+in Figure 3 the beams with Briggs robust values R Á 0 are far above 10%,
+but drop to below or about 10% when a robust value of R À ´1 is used (also
+seen in Figure 7). This ‘sculpting’ of a more Gaussian beam comes at a cost of
+sensitivity as shown in Figure 4. The data is shown in Table 2 columns 3 and 4.
+
+0.80
+
+Level at HWHM
+
+0.72
+
+0.64
+
+0.56
+
+0.48
+−2
+
+−1
+
+−2
+
+−1
+
+0
+
+1
+
+2
+
+0
+
+1
+
+2
+
+Level at FWHM
+
+0.60
+
+0.45
+
+0.30
+
+0.15
+
+Briggs Robust
+
+Figure 8:
+
+Top panel shows the values of metric 2a as a function of Briggs robust
+values of the PSFs presented in Table 1. The gray solid line corresponds to the full
+width of the PSF at its half-maximum value i.e., 50%. Bottom panel shows the values
+of metric 2b as a function of Briggs robust values of the PSFs presented in Table 1.
+The gray solid line represents the level value of a Gaussian beam at a radius of one
+FWHM, i.e., „6%. The data is shown in Table 2 columns 3 and 4.
+
+11
+
+3.3
+
+Metric 3: Near-field RMS of the PSF
+
+This metric is a measure of the near-field RMS of the PSF. This is similar to
+the metric developed by the SKAP science team in the SKA1 Science Performance document (No. SKA–TEL–SKO–0000000). The RMS is calculated over
+a square region 10 times the clean beam size on each side. The main lobe of
+the PSF is masked out using an elliptical region having a size of three times the
+clean beam.
+
+Figure 9: Example of the data used to test metric 3 where the RMS is calculated
+over a square region 10 times the clean beam size on each side. In this example we
+show the PSF for R “ ´1.8 (upper panel). The main lobe of the PSF is masked out
+(seen in white) using an elliptical region having a size of three times the clean beam
+(lower panel).
+
+Figure 9 shows one example of the data used to calculate metric 3. Note that
+this metric is influenced both by high PSF sidelobe levels and by the presence
+of a PSF skirt. A low value of this metric is desirable for high-fidelity and high
+dynamic range imaging. Therefore, comparing relative values of metric 3 may
+12
+
+provide a useful figure of merit during beam sculpting. Figure 10 shows the
+values of metric 3 for the images with robust values presented in Table 1. The
+data is shown in Table 2 column 5.
+
+RMS (Jy/beam)
+
+10−1
+
+10−2
+
+10−3
+−2
+
+−1
+
+0
+Briggs Robust
+
+1
+
+2
+
+Figure 10:
+
+Metric 3 is a measure of the near-field RMS of the PSF as shown in
+Figure 9. Here we show the resulting values of metric 3. The data is shown in Table
+2 column 5.
+
+3.4
+
+Metric 4: PSF Beam Efficiency
+
+This metric compares the total area under the PSF with the area under a Gaussian clean beam, similar to the ‘main beam efficiency’ term used in antenna theory. This is similar to the metric presented in the ngVLA Science Requirements
+document (No. 020.10.15.00–0001–REQ) [1] for the quality of the synthesized
+beam. Here we have restricted the PSF to a square cutout region 10 times
+the clean beam size on each side (like in metric 3) so that this metric does not
+depend on the total image field of view and because it would be impractical to
+calculate the PSF over a very large area. The solid angle of the PSF is calculated as the sum of squared pixels in the cutout region. Then, an image of a
+unit-peak Gaussian is created using the fromComponentList method of CASA’s
+image analysis toolkit which has the same image parameters as the PSF (e.g.,
+image size, cell size). The solid angle of the Gaussian clean beam is calculated
+in the same way as for the PSF, i.e., the sum of squared pixels. Metric 4 is then
+calculated as the ratio of the PSF solid angle to the solid angle of the Gaussian
+clean beam.
+Figure 11 shows the values of metric 4 for each of the PSFs presented in Table 1.
+The data is shown in Table 2 column 6.
+
+13
+
+Area under PSF/Area under Gaussian
+
+40
+
+30
+
+20
+
+10
+
+0
+−2
+
+−1
+
+0
+Briggs Robust
+
+1
+
+2
+
+Figure 11:
+
+Metric 4 compares the total area under the PSF with the area under
+a Gaussian clean beam. Here we show the resulting values of metric 4. The data is
+shown in Table 2 column 6.
+
+4
+
+Analysis of Image Fidelity
+
+Here we measure and analyze the resulting image fidelity for each of our simulated images. By fidelity we refer to the comparison of the model with the resulting image, such that a high fidelity image has smaller residuals after subtracting
+the model from the image. We present two definitions of fidelity. Equation 1 is
+defined as:
+FEq 1 “ 1 ´
+
+maxp|Image ´ M odel|q
+.
+maxpM odelq
+
+(1)
+
+Equation 2 is defined as:
+ΣrM odel ˚ p|Image ´ M odel|qs
+(2)
+ΣM odel2
+Note that FEq 2 , is also presented in the ngVLA Science Requirements document
+[1] (Section 1.4).
+FEq 2 “ 1 ´
+
+We calculate the fidelity for all the images that have a clean beam size of „ 5 mas
+whose imaging parameters (robust and uv-taper values are presented in Table 1.
+Furthermore, we made simulations and images for noisy and noise-free cases.
+The model image that we use in Equations 1 and 2 has been smoothed with
+a 5 mas Gaussian to have the same restoring beam as the images it is being
+compared to.
+
+14
+
+The results of our study using both definitions of fidelity are shown in Figures 12
+and 13, where we show the image fidelity as a function of robust value. Figures
+12 and 13 show how the image fidelity starts decreasing for robust values Rą 0
+and Rą 0.8, respectively. At that point, clean is failing to converge due to the
+broad skirt of the PSF. Note that we used typical, conservative clean parameters that were held constant across the set of images we analyzed. Additional
+tuning of clean parameters may improve this issue with convergence (e.g., loop
+gain, cycle niter, multiscale).
+For the noise-free and noisy cases we obtain image fidelities of „ 95% and „ 60%,
+respectively. We find that the fidelity is maximized when using robust R“ ´1.4
+for the noisy case and R» ´1.9 for the noise-free case. Therefore, we conclude
+that R“ ´1.4 provides the optimal balance between PSF quality and sensitivity
+for this use case. Specifically, for more positive robust values the fidelity decreases due to poor PSF quality (leading to increased deconvolution errors) and
+for more negative robust values the fidelity decreases because the noise increases.
+Figure 14 shows an example of one of the images with high image fidelity as
+seen in Figures 12 and 13 corresponding to a R“ ´1.4. The upper panel shows
+the model image smoothed to a resolution of 5 mas and the lower panel shows
+the resulting image with R“ ´1.4. Figures 15 and 16 show the magnitude of
+the residual image, |Image–Model|, for the noise-free and noisy cases, respectively. The white contours on the residual images trace the main features of the
+smoothed model image. We can see how the residuals are an order of magnitude
+smaller for the noise-free case compared to the noisy one and that the residuals
+in the noisy case are noise-like and do not appear related with the model flux.
+This indicates that the fidelity in the noisy case is noise limited and not strongly
+affected by deconvolution errors, and therefore not strongly dependent on the
+exact choice of cleaning parameters. Such an image appears to satisfy each of
+the requirements of KSG 1.
+
+15
+
+Fidelity Equation 1
+
+1.0
+
+Noisy
+Noise-free
+
+Image Fidelity
+
+0.5
+0.0
+0.5
+1.0
+1.5
+2.02.0
+
+1.5
+
+1.0
+
+0.5 0.0
+
+0.5
+
+Briggs Robust
+
+1.0
+
+1.5
+
+2.0
+
+Figure 12: Fidelity vs robust using equation 1.
+
+Fidelity Equation 2
+
+1.0
+
+Noisy
+Noise-free
+
+0.8
+
+Image Fidelity
+
+0.6
+0.4
+0.2
+0.0
+0.2
+0.4
+0.62.0
+
+1.5
+
+1.0
+
+0.5 0.0
+
+0.5
+
+Briggs Robust
+
+1.0
+
+1.5
+
+2.0
+
+Figure 13: Fidelity vs robust using equation 2.
+
+16
+
+Figure 14: (Upper panel) Smooth model to a 5 mas resolution. (Lower panel) Clean
+image for R“ ´1.4.
+
+17
+
+Figure 15: Residuals noise-free image for R“ ´1.4.
+
+Figure 16: Residuals noisy image for R“ ´1.4.
+
+18
+
+5
+
+Summary
+
+The ngVLA is capable of achieving the resolution requirements of KSG 1 using
+several different combinations of imaging parameters. Different combinations
+can result in PSFs which formally have the same clean beam size (as reported
+by tclean) but which look very different. Four PSF metrics are developed and
+used to quantify the differences in these resulting PSFs. Typically, uniform
+weighting plus a uv-taper produces the most Gaussian PSF but at the cost of
+a severe penalty in sensitivity. Using a study of image fidelity for an example
+KSG 1 simulated observation, a Briggs robust value of R“ ´1.4 was shown
+to maximize fidelity and therefore produce an optimum compromise between
+sensitivity and PSF quality.
+The following conclusions are drawn regarding the four PSF metrics:
+• Metric 1: This is a direct measure of the width at half maximum and
+provides a useful comparison with the Gaussian fit done by tclean. Unlike
+the tclean procedure this metric does not depend on imaging parameters
+such as the cell size or on assumptions about the PSF sidelobes, and
+indicates the need for caution when dealing with a clean beam resolution
+from a non-Gaussian PSF. For the PSF studied in Section 3, metric 1
+converged to within 10% of that for a Gaussian for all the robust-taper
+combinations having robust À ´0.5.
+• Metric 2: This measures the value of the PSF at a radius of one (metric
+2a) and two (metric 2b) clean beams. Metric 2a is highly correlated with
+metric 1 and therefore the above conclusions also apply. Metric 2b is a
+direct probe of the PSF skirt and only the most negative values of robust
+produced PSFs for which metric 2b was within 10% of a Gaussian (i.e.,
+robust À ´1.4); robust values Á ´1 produced values for metric 2b which
+were more than twice the level of a Gaussian.
+• Metric 3: This is a calculation of the near-field sidelobe levels, and was
+seen to vary by more than 2.5 orders of magnitude across the full range
+of robustness (uniform to natural). The value of metric 3 was 10´2 for
+the imaging parameters that produced the maximum fidelity. Unlike the
+other metrics which converged to their minimum value with decreasing
+robustness, metric 3 continued to monotonically decrease with decreasing
+robustness.
+• Metric 4: This metric computes the area under the PSF as compared with
+a Gaussian, and converged to within 10% for all the robust-taper combinations having robust À ´1.2. Substantially larger values of this metric
+may be associated with tclean diverging and could indicate that standard
+deconvolution parameters (e.g., loop gain) are no longer appropriate.
+It is interesting to note that for the robust-taper combination that maximized
+the fidelity (i.e., R“ ´1.4), metrics 1, 2b and 4 were all within 10% of that of
+
+19
+
+a Gaussian, which highlights the importance of a Gaussian PSF. Real observations, for which there is no model available to measure fidelity, may benefit
+from using one or more of these metric to estimate the ideal imaging weights.
+The importance of different metrics may very well depend of the details of the
+science use case and should be studied further, and it will be useful to explore
+in detail the effects of these metrics on imaging performance in greater detail.
+
+Acknowledgments
+Many thanks to Josh Marvil and Kumar Golap for very useful discussions and
+insights. This study made use of the CASA task iring, an open-source tool from
+the Nordic ALMA regional center. The National Radio Astronomy Observatory
+is a facility of the National Science Foundation operated under cooperative
+agreement by Associated Universities, Inc.
+
+References
+[1] Murphy E., Selina R., ngVLA SAC, ngVLA Science Requirements document
+020.10.15.00.00–0001–REQ.
+[2] Ricci L., et. al., Next Generation Very Large Array Memo No. 33 Investigating The Early Evolution Of Planetary Systems With Alma And The Next
+Generation Very Large Array.
+[3] Ricci, L., Isella, A., Liu, S., & Li, H. 2018, in Astronomical Society of the
+Pacific Conference Series, Vol. 517, Science with a Next Generation Very
+Large Array, ed. E. Murphy, 147
+[4] Ricci, L., Liu, S.-F., Isella, A., & Li, H. 2018b, ApJ, 853, 110
+[5] Rosero, V., Next Generation Very Large Array Memo No. 55 Taperability
+Study for the ngVLA and Performance Estimates.
+
+20
+
+The National Radio Astronomy Observatory and Green Bank Observatory are facilities of the U.S.
+National Science Foundation operated under cooperative agreement by Associated Universities, Inc.
+This work was supported by awards AST-2034328 (MSIP Prototype Antenna) and AST-2334267 (ngVLA
+Design Activities); NRAO related activities are funded under award AST-1647378 (NRAO
+Operations/Development).
+
+

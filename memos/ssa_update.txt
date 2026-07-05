@@ -1,0 +1,148 @@
+Science Subarrays
+Work in progress / discussion 1 March 2023
+
+Brian & Viviana
+
+Envelope Observing Program
+• Current EOP: core is oversubscribed, and is the most in demand subarray
+• Core = 8876h (106% subscribed for 95% year)
+• plains=6736h (81%)
+• Mid=4785h (57%)
+• Notes: this is all RevC; maybe too many MAIN assigned? (Some of those could be Plains or
+even, now, core). Several LBA cases probably needs CORE observations that haven’t been
+tallied
+
+• Only about 10% (9% - 13%) are obviously complentary in the sense that (roughly) BMAX < BMIN
+of some other observation. This means: 10% of core obs. Have a longer baseline observation
+they can run against. Doesn’t consider band availability or any other scheduling constraints.
+
+Plains
+
+V. Rosero
+
+Plains
+
+One possible “commensal” subarray pairing:
+“Spiral+Outer half core” with
+“inner half core”
+
+V. Rosero
+
+Total set of observations in identi ed Science Use Cases
+Characteristics of “Science Goals” of
+individual observations.
+
+fi
+
+Max required baseline and min required
+baseline are sorted independently; one
+“row” in the plot is not a single SG
+
+Total set of observations in identi ed Science Use Cases
+
+“Spiral+Outer half core” with
+“inner half core”
+Only about 5% of SGs want Inner half
+core max baselines.
+This does not consider other
+constraints a ecting coschedulability such as LST, weather.
+
+fi
+
+ff
+
+~5%
+
+Total set of observations in identi ed Science Use Cases
+
+“Core” w/ {Spiral, Spiral+Mid}
+
+~20%
+
+about 20% of SGs can do with Spiral
+Min baselines
+This does not consider other
+constraints a ecting coschedulability such as LST, weather.
+
+fi
+
+ff
+
+If we were to extend the core inwards
+by 5-10 antennas (1 or 2 per arm),
+down to ~200m spacings, we would be
+able to schedule up to ~half of SGs
+independently of the core; would this
+be worth the extra time you need to
+spend on the Spiral/Mid observations?
+
+V. Rosero
+
+Move a few antennas back into Spiral to provide shorter spacings?
+
+“Group Observing” for LAS
+Split a single observation into two 18m subarray obs.
+• Using the UV-tapered beam approach in use for ALMA since ~2016 (not actually documented in memo
+598)
+
+• Tcore/Tspiral(4km taper) = 1%
+• TouterCore/tSpiral(4km taper) = 5%
+• TinnerCore/tSpiral(1.5km taper) = 1%
+• Could be a useful way to alleviate some of the pressure on Core antennas, at least for some SGs (e.g.
+Mid or Mid+Spiral that need larger scales)
+
+• SGs that only require Spiral max baselines would take more (2x?) Spiral observing time if split this way;
+but perhaps useful as a special case where core antenna time availability is minimal
+
+• We could consider awarding “e ective ant-hours in X subarray with supplemental data as needed to
+
+ff
+
+reach LAS” where X is a relatively small, enumerated subset (eg core, spiral, mid, main, long)
+
+Scoring & Costing
+Things to track and compare
+
+• Score by summing N_vis,e ective in the EOP; account for taper and robust
+weighting (only; no TSYS or other weights). Could convert to N_ant,e for
+tracking or external-facing purposes
+
+• Number of distinct SG’s completed
+• “Cost” is Ant-hours or BL hours by subarray (core, spiral, mid, long); goal is to
+
+ff
+
+maximally use all available. 95% year of MAIN @ natural weight = 200. Million
+bl-hrs (1.9 Million Ant-hours)
+
+Questions
+• Do we want to steal a few antennas back from core into spiral to extend its LAS coverage?
+• For SGs that have have “Spiral” BLmax’s but need shorter baselines, what is the right
+
+way(s) to provide it: Plains? Spiral+outerHalfCore? Spiral obs and separate (1%) Core obs?
+
+• Need to evaluate the time requirements and imaging/beam sculpting characteristics for
+these scenarios
+
+• For SGs that have “Mid” BLmax’s but need shorter obs, what is the right way(s) to
+provide? Main? Mid+extendedSpiral? Mid+Spiral with 1% core snapshots?
+
+• ditto
+• How “elastic” are the provided LAS #s? Would providing pre-de ned arrays with known
+oversubscription rates impact the demand side in practice?
+
+Next Steps
+• Make expanded (in) spiral — call it SPIRAL_5Core or something like that
+• Do several strategic EOP subarray assignments — straightforward
+• Coarse/naive (current approach) - core, plains, main, mid, mid+spiral
+• Same, including expanded spiral
+• Coarse/naive, but split core component of any Mid- or Long- involving SG
+• More automated computation of beam sculpting parameters and time requirements for individual SGs
+given a set of SG parameters (RMS & AR) & subarray choice - challenging?
+
+• Simulate one or two relevant cases as a sanity check and proof of concept, e.g. KSG1 with group
+combination for short baselines — straightforward, probably
+
+• Also do this with SPIRAL_5core or similar
+
+
