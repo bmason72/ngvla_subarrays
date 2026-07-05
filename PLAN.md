@@ -218,10 +218,30 @@ adjust to whatever is current.)
 | T2 | Phase-B selection engine + freq scaling + LAS filter + ranking | **Opus 4.8** | GPT-5 (high) | high | ☑ `selector.py`, `heuristics.py` (smoke-tested on synthetic data; validate on real data) |
 | T3 | Bootstrap curves from `memo121artifacts/*Cln.csv` (Track 1) | Sonnet 5 | GPT-5 | medium | ☑ `data/{subarrays,bootstrap_curves}.csv` + builder (188 samples; mid & core+mid have none) |
 | T4 | Sensitivity-calculator integration → integration time / ant-hrs | Sonnet 5 | GPT-5 | medium–high | ☑ `sensitivity.py` (self-tested; see gotchas §13) |
-| T5 | Adapt taperability pipeline + **add PSF-skirt measurement** (Track 2) | **Opus 4.8** | GPT-5 (high) | high | ☐ |
-| T6 | Run Rev F curve generation under CASA; QA the curves | Sonnet 5 | GPT-5 | medium (long-running) | ☐ |
+| T5 | Adapt taperability pipeline + **add PSF-skirt measurement** (Track 2) | **Opus 4.8** | GPT-5 (high) | high | ☑ `curvegen/` (core validated vs memo-121) |
+| T6 | Run Rev F curve generation under CASA; QA the curves | Sonnet 5 | GPT-5 | medium (long-running) | ◐ background run, 6 remaining subarrays (5 Jul 2026) |
 | T7 | LaTeX memo (algorithm + approach) | Opus 4.8 | GPT-5 | medium | ☐ |
 | T8 | Tests + example CLI + validation vs. memo 76/121 numbers | Sonnet 5 | GPT-5-mini | medium | ☑ 25 tests green; `python3 -m sa_select` CLI (exit 0 feasible / 2 not) |
+
+### Implementation decisions (5 Jul 2026, M2/T5 build)
+- **`curvegen/`** at repo root (CASA-dependent, kept out of `sa_select/` so query time stays
+  CASA-free): `config.py` (grids/presets — the only file to tweak), `build_configs.py`,
+  `simulate.py`, `measure.py`, `sweep.py` (resumable driver), `collect.py` (→
+  `sa_select/data/revf_curves.csv`, same schema as bootstrap).
+- Runs under CASA's **python3 directly via `casatools`/`casatasks`** — no `casa -c`, no cluster.
+  The old TORQUE submission layer (`create_images.py` + `casa_script_wrapper.py`) is replaced by
+  a sequential local loop. **Sims DO work on macOS** (CASA 6.7) — the 2023 note in notes.txt is
+  obsolete; the crash I hit was a `readantenna` unpacking bug (returns 7 or 8 items by version;
+  feeding wrong types to `sm.setconfig` = hard C++ abort, exit 134).
+- Sweep is **resumable**: done points are read from `results/<sa>.csv` and skipped; failed
+  points re-run; grids in `config.py` can be extended and only new points execute.
+- Sim setup identical to Viviana's (30 GHz, 4 h HA track, dec +24, 60 s, 1 chan, 1 Jy noise)
+  for comparability. Grid: natural×13 tapers + robust −2…2×0.4 + sculpt (4 robusts × 4 tapers)
+  ≈ 40 points/subarray. eta = dirty-image rms ratio to untapered natural (memo 55/72 method).
+- Core sweep: ~6.5 s/point at imsize 4096 (M-series laptop). Core validation vs memo-121:
+  natural skirt 0.116 vs 0.12; robust-branch skirt crosses 0.10 at robust ≈ 1.2 vs their
+  sculpted points at robust 0.85–1.06 (pre-Rev-F configs, so ~agreement is expected).
+  Rev F core native beam 0.710″ vs 0.719″ (memo-121 era) at 30 GHz.
 
 ### Implementation decisions (5 Jul 2026, M1 build)
 - Package: **`sa_select/`** at repo root — `schema.py` (dataclasses + CSV column docs in the
@@ -268,8 +288,10 @@ high effort. Plumbing/IO/CLI → mid model, medium effort.
   resource-cost framing); overridable per call. ✔ (revisit if user prefers integration time)
 
 **Still open:**
-1. **Skirt metric convention** — azimuthal average vs. specific cut; radius exactly 1 FWHM of
-   which beam (nominal vs. fitted)? Confirm against memo 121/65 method before coding T5.
+1. ~~Skirt metric convention~~ — **resolved 5 Jul 2026**: memo 65 "metric 2b" = azimuthally
+   averaged radial PSF profile (iring + spline), evaluated at r = 1 clean-beam FWHM; memo 121
+   adopts ≤10% (Gaussian ≈ 6%). Implemented in `curvegen/measure.py` (numpy annuli +
+   CubicSpline, geometric-mean FWHM radius, central-cutout read for big PSFs).
 2. **eta-invariance under frequency scaling** — accept as v1 assumption, or verify per subarray?
    (continuum fractional-bandwidth dependence flagged in notes.txt.)
 3. **Antenna-hours definition** — simple t_int × N_ant is fine for the {Core,Spiral,Mid} set;

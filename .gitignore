@@ -6,6 +6,12 @@ __pycache__/
 # macOS
 .DS_Store
 
+# curve-generation scratch (MSes and tclean products are regenerable/huge;
+# results/*.csv ARE tracked)
+curvegen/ms/
+curvegen/work/
+TempLattice*/
+
 # CASA droppings and simulation/imaging outputs (regenerable, can be huge)
 casa-*.log
 *.last
