@@ -3,18 +3,24 @@ Configuration for Rev F taperability/sculptability curve generation (PLAN.md
 Track 2).  Everything tunable lives here: subarray composition, image sizes,
 and the (robust, taper) parameter grids.
 
-Grid design (kept deliberately small -- PLAN.md section 9):
-  * natural branch : natural weighting, taper 0 + ~12 log-spaced tapers.
-    Traces the classic taperability curve rightward from native resolution
-    (memos 55/72).  Taper ranges adapted per subarray from the presets in
-    ngvla-taperability-pipeline/run_all.py.
-  * robust branch  : Briggs robust -2..+2 step 0.4, no taper (memo 65 grid).
-    Traces finer-than-native resolutions and beam sculpting.
-  * sculpt branch  : a coarse robust x taper grid (memo 121's sculptability
-    move: reach a *tapered* resolution with a sculpted skirt).
+Grid design (v2, after bmason's 5 Jul 2026 review of the v1 curves):
+  * The grid is a full 2-D (robust x taper) lattice: rows are natural
+    weighting plus Briggs robust -2..+2 in steps of 0.4, columns are taper 0
+    plus ~14 log-spaced tapers.  Natural+taper is then genuinely one edge of
+    the searched space, so the sculpted (imaging) curve can never sit above
+    an admissible natural point at the same resolution -- the v1 failure.
+  * Tapers are anchored to the subarray's OWN measured resolutions: from
+    0.3 x the robust=-2 beam (so every row samples smoothly down to its
+    untapered resolution) up to 20 x the natural beam.  Anchors are read
+    from the two seed points, which the sweep runs first; grids are
+    therefore per-subarray and self-calibrating.
+  * eta is computed on the fly and rows are pruned once eta > ETA_CAP
+    (points beyond are recorded as skipped): we don't need the eta > ~5
+    regime, and this keeps the lattice tractable.
 
-The sweep is resumable, so grids can be extended later -- new points are
-appended, finished ones are skipped.
+Only the relatively homogeneous subarrays are swept for now (RUN_SET);
+core+mid and main need a smarter treatment of their two-component beams
+and are deferred (see PLAN.md).
 """
 
 import os
@@ -29,8 +35,10 @@ COMPONENT_CFGS = {
     "mid": "RevF_MidSitesPreferred_2025_01_16_xyz.cfg",
 }
 
-# v1 subarray set: all non-empty subsets of {core, spiral, mid} (PLAN.md sec 5)
+# 'core-inner' is memo 121's CoreInner: the innermost 57 of the core's 114
+# antennas (selected by radius from the core centroid in build_configs.py).
 SUBARRAYS = {
+    "core-inner": ["core-inner"],
     "core": ["core"],
     "spiral": ["spiral"],
     "mid": ["mid"],
@@ -40,10 +48,11 @@ SUBARRAYS = {
     "main": ["core", "spiral", "mid"],
 }
 
-# image size in pixels; larger arrays need more pixels so the uv plane is
-# gridded finely enough for Briggs weighting (cf. run_all.py comments:
-# 4096 "most arrays", 15000 main)
+# the relatively homogeneous set we are getting right first
+RUN_SET = ["core-inner", "core", "spiral", "mid", "core+spiral", "spiral+mid"]
+
 IMSIZE = {
+    "core-inner": 4096,
     "core": 4096,
     "spiral": 4096,
     "mid": 4096,
@@ -53,23 +62,11 @@ IMSIZE = {
     "main": 15000,
 }
 
-# natural-branch uv tapers in mas (on-sky FWHM), log-spaced from roughly the
-# native resolution up to ~the LAS scale of the shortest baselines present
-TAPERS_MAS = {
-    "core": np.logspace(3.0, 4.0, 12),      # 1" - 10"
-    "spiral": np.logspace(1.5, 3.0, 12),    # 30 mas - 1"
-    "mid": np.logspace(0.0, 1.5, 12),       # 1 - 30 mas
-    "core+spiral": np.logspace(1.8, 4.0, 12),
-    "spiral+mid": np.logspace(0.0, 3.0, 12),
-    "core+mid": np.logspace(0.0, 4.0, 12),
-    "main": np.logspace(0.0, 4.0, 12),
-}
-
-ROBUST_LIST = np.arange(-2.0, 2.01, 0.4)     # memo 65 grid
-
-# sculpt branch: negative-robust x a subsample of the taper grid
-SCULPT_ROBUSTS = [-2.0, -1.5, -1.0, -0.5]
-SCULPT_TAPER_STRIDE = 3                       # every 3rd natural taper
+ROBUST_LIST = [round(r, 2) for r in np.arange(-2.0, 2.01, 0.4)]
+N_TAPERS = 14        # log-spaced taper count per row
+TAPER_LO_X = 0.3     # taper range: TAPER_LO_X * res(robust=-2) ...
+TAPER_HI_X = 20.0    # ... TAPER_HI_X * res(natural)
+ETA_CAP = 5.0        # stop extending a row once eta exceeds this
 
 # simulation parameters (identical to Viviana's pipeline for comparability)
 SIM = dict(
@@ -82,27 +79,32 @@ SIM = dict(
 
 OVERSAMPLE = 5           # pixels per synthesized-beam FWHM (via im.advise)
 
-# working directories (ms/ and work/ are regenerable -> gitignored)
 CFG_DIR = os.path.join(REPO, "curvegen", "configs")
 MS_DIR = os.path.join(REPO, "curvegen", "ms")
 WORK_DIR = os.path.join(REPO, "curvegen", "work")
 RESULTS_DIR = os.path.join(REPO, "curvegen", "results")
 
+# the two seed points every sweep runs first; their measured beams anchor
+# the taper grid (res_nat from the first, res_fine from the second)
+SEEDS = [("natural", 2.0, 0.0), ("briggs", -2.0, 0.0)]
 
-def grid_points(subarray):
-    """The (weighting, robust, taper_mas) grid for one subarray.
 
-    Returns a list of tuples; taper 0 means no taper.  The natural untapered
-    point is first -- it is the eta = 1 reference and must exist before any
-    eta can be computed.
+def taper_list_mas(res_fine_mas, res_nat_mas):
+    """Log-spaced tapers anchored to the subarray's measured resolutions."""
+    lo = TAPER_LO_X * res_fine_mas
+    hi = TAPER_HI_X * res_nat_mas
+    return [round(float(t), 3) for t in
+            np.logspace(np.log10(lo), np.log10(hi), N_TAPERS)]
+
+
+def grid_rows(res_fine_mas, res_nat_mas):
+    """The full sweep lattice: [(weighting, robust, [tapers ascending]), ...].
+
+    Every row starts at taper 0; the sweep walks tapers in order and prunes
+    the row once eta > ETA_CAP.
     """
-    pts = [("natural", 2.0, 0.0)]
-    for t in TAPERS_MAS[subarray]:
-        pts.append(("natural", 2.0, round(float(t), 3)))
+    tapers = [0.0] + taper_list_mas(res_fine_mas, res_nat_mas)
+    rows = [("natural", 2.0, tapers)]
     for r in ROBUST_LIST:
-        pts.append(("briggs", round(float(r), 2), 0.0))
-    sculpt_tapers = TAPERS_MAS[subarray][::SCULPT_TAPER_STRIDE]
-    for r in SCULPT_ROBUSTS:
-        for t in sculpt_tapers:
-            pts.append(("briggs", round(float(r), 2), round(float(t), 3)))
-    return pts
+        rows.append(("briggs", r, tapers))
+    return rows

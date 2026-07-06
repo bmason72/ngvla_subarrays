@@ -102,8 +102,21 @@ def baseline_minmax(xyz):
     return float(d.min()), float(d.max())
 
 
-# The 7 subarrays: every non-empty subset of {Core, Spiral, Mid}.
+def inner_core_positions(core_xyz, n_inner=57):
+    """The innermost `n_inner` core antennas, by 3D distance from the core
+    centroid.  Matches memo 121's CoreInner (57 antennas = half the 114-
+    antenna core); the by-radius selection is our reading of "the smallest
+    allowable inner part of the array" -- verify against Viviana's list if
+    exact antenna membership ever matters.
+    """
+    centroid = core_xyz.mean(axis=0)
+    r = np.sqrt(((core_xyz - centroid) ** 2).sum(axis=1))
+    return core_xyz[np.argsort(r)[:n_inner]]
+
+
+# The v1 subarrays: subsets of {Core, Spiral, Mid} plus memo 121's CoreInner.
 SUBARRAY_COMPONENTS = {
+    "core-inner": ["core-inner"],
     "core": ["core"],
     "spiral": ["spiral"],
     "mid": ["mid"],
@@ -117,6 +130,7 @@ SUBARRAY_COMPONENTS = {
 # subarray_data.pkl support: sba, core, spiral, mid, long, main, main+long,
 # spiral+mid, spiral+core, mid+long). core+mid has no calculator entry.
 CALC_NAME = {
+    "core-inner": "",
     "core": "core",
     "spiral": "spiral",
     "mid": "mid",
@@ -126,41 +140,24 @@ CALC_NAME = {
     "main": "main",
 }
 
-# ---- memo 67 LAS coefficients -----------------------------------------
-# memo 67 measured, from disk-simulation fidelity analysis (Sec. 2):
-#   LAS_core = 0.85 * lambda / b_min   (dense, well-sampled short spacings)
-#   LAS_SBA  = 0.58 * lambda / b_min   (sparse/snapshot short-spacing coverage)
-# It did not measure Spiral, Mid, or Spiral+Mid (those subdivisions of the
-# outer array postdate memo 67). Per the task rule, any subarray that
-# contains Core inherits the Core coefficient, because its shortest
-# baselines -- which set the LAS -- ARE the Core's baselines.
-LAS_COEFF_CORE = 0.85
-LAS_COEFF_SBA = 0.58  # borrowed as the provisional Spiral/Mid/Spiral+Mid value
+# ---- LAS coefficient ---------------------------------------------------
+# memo 67 measured LAS_core ~ 0.8 * lambda / b_min from disk-simulation
+# fidelity analysis (Sec. 2), and LAS_SBA = 0.58 * lambda / b_min for the
+# 6-m SBA.  Per bmason (5 Jul 2026): use ~0.8 for ALL the 18-m subarrays --
+# a uniform, memo-67-anchored value -- until per-subarray disk simulations
+# are done.  (The SBA value stays 0.58 when the SBA is added later.)
+LAS_COEFF_18M = 0.80
 
-LAS_NOTE_CORE_MEASURED = (
-    "memo 67 Sec. 2: LAS_core = 0.85*lambda/b_min, from disk-fidelity "
-    "simulations (90% recovered-flux criterion)."
-)
-LAS_NOTE_CORE_INHERITED = (
-    "Inherits the Core LAS coefficient (0.85): this subarray's shortest "
-    "baselines are Core baselines, and memo 67 measured LAS from the "
-    "short-spacing sampling, so Core's value applies directly."
-)
-LAS_NOTE_PROVISIONAL = (
-    "PROVISIONAL: memo 67 did not measure Spiral, Mid, or Spiral+Mid "
-    "(they postdate its analysis). Borrowing the SBA coefficient (0.58, "
-    "vs. 0.85 for Core) as a conservative stand-in: like the SBA, these "
-    "subarrays sample their shortest spacings with relatively few "
-    "antennas/baselines rather than Core's dense, highly-redundant "
-    "short-spacing coverage, so LAS recovery is expected to be closer to "
-    "the SBA case than to Core's. Should be replaced with a direct "
-    "disk-simulation measurement (memo 67 Sec. 2 method) for Rev F "
-    "Spiral/Mid."
+LAS_NOTE_18M = (
+    "0.80*lambda/b_min for all 18-m subarrays (memo 67 core measurement, "
+    "applied uniformly per bmason 5 Jul 2026); replace with per-subarray "
+    "disk-simulation measurements (memo 67 Sec. 2 method) eventually."
 )
 
 
 def build_subarrays_table():
     positions = {name: read_cfg_positions(path) for name, path in CFG_FILES.items()}
+    positions["core-inner"] = inner_core_positions(positions["core"])
 
     rows = []
     for name, comps in SUBARRAY_COMPONENTS.items():
@@ -168,13 +165,7 @@ def build_subarrays_table():
         n_ant = xyz.shape[0]
         b_min, b_max = baseline_minmax(xyz)
 
-        has_core = "core" in comps
-        if comps == ["core"]:
-            las_coeff, note = LAS_COEFF_CORE, LAS_NOTE_CORE_MEASURED
-        elif has_core:
-            las_coeff, note = LAS_COEFF_CORE, LAS_NOTE_CORE_INHERITED
-        else:
-            las_coeff, note = LAS_COEFF_SBA, LAS_NOTE_PROVISIONAL
+        las_coeff, note = LAS_COEFF_18M, LAS_NOTE_18M
 
         rows.append(
             {
@@ -232,6 +223,7 @@ NAME_SUB_MAP = {
     "spiral": "spiral",
     "spiral_mid": "spiral+mid",
     "mid": "mid",
+    "coreInner": "core-inner",
 }
 
 

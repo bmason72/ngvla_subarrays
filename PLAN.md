@@ -223,6 +223,33 @@ adjust to whatever is current.)
 | T7 | LaTeX memo (algorithm + approach) | Opus 4.8 | GPT-5 | medium | ☐ |
 | T8 | Tests + example CLI + validation vs. memo 76/121 numbers | Sonnet 5 | GPT-5-mini | medium | ☑ 25 tests green; `python3 -m sa_select` CLI (exit 0 feasible / 2 not) |
 
+### v2 curve generation (5–6 Jul 2026, after bmason's review of v1 curves)
+User feedback on v1 (all implemented):
+- **No web artifacts** — bmason doesn't want Artifact publishing; produce **local HTML** under
+  `curvegen/reports/` instead (memory: `no-web-artifacts`). Plots themselves were good.
+- **Natural branch sampled too coarsely near native** (core jumped 0.71″→1.42″). Fix: tapers
+  now start at 0.3× the robust=−2 beam so every subarray samples smoothly down to its
+  untapered resolution.
+- **Sculpt branch far too coarse; not finding the (robust, taper) eta-minimum** — filled
+  triangles sat above filled circles, impossible if natural+taper is truly an edge of the
+  searched space. Fix: full 2-D lattice, natural + robust −2…+2 step 0.4 × (0 + 14 log tapers),
+  anchored per subarray by two seed points (self-calibrating), **eta ≤ 5 cap** prunes each row,
+  plus a convergence prune when a briggs row lands on the natural+taper edge.
+- **core+mid sculpting "went bonkers"** (false minima; tapering away the long spacings to use
+  core+mid as core is not the goal — sculpt resolutions should track the higher-resolution
+  component's range). **core+mid & main deferred** until the homogeneous set is solid;
+  `collect.py` excludes their v1 results.
+- **Current run set (homogeneous):** core-inner, core, spiral, mid, core+spiral, spiral+mid.
+  Long-term: most of the memo-121 subarray list.
+- **core-inner added** = memo 121 CoreInner, innermost **57** of the core's 114 antennas
+  (by radius from core centroid — membership rule is our assumption; verify with Viviana).
+  b_max 1.63 km; native beam 2.04″; natural skirt ≈ 0.10.
+- **LAS coefficient → 0.80 for all 18-m subarrays** (bmason: memo-67 core value ~0.8, apply
+  uniformly). `subarrays.csv` + builder updated; SBA stays 0.58 when added.
+- **Deliverable to add:** a robust–taper-space illustration (eta map + skirt≤10% region +
+  located minimum) for representative subarrays — build into the local report once v2 data
+  lands.
+
 ### Implementation decisions (5 Jul 2026, M2/T5 build)
 - **`curvegen/`** at repo root (CASA-dependent, kept out of `sa_select/` so query time stays
   CASA-free): `config.py` (grids/presets — the only file to tweak), `build_configs.py`,

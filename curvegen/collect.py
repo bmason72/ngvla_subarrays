@@ -52,9 +52,18 @@ def collect_one(path):
     return out
 
 
+# heterogeneous subarrays whose v1 sweeps are not trustworthy (sculpt search
+# found false minima); excluded from the curve table until reworked
+DEFERRED = {"core_mid.csv", "main.csv"}
+
+
 def main():
     samples = []
     for path in sorted(glob.glob(os.path.join(RESULTS_DIR, "*.csv"))):
+        if os.path.basename(path) in DEFERRED:
+            print("%-28s deferred (heterogeneous; see PLAN.md)"
+                  % os.path.basename(path))
+            continue
         got = collect_one(path)
         print("%-28s %3d samples" % (os.path.basename(path), len(got)))
         samples += got

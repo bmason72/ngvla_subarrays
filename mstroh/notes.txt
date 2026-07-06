@@ -1,0 +1,9 @@
+
+Mar/Apr 2026
+
+*most files are a package delivered by Michael to document his work on the subarray
+sensitivity curves for sensitivity calculator and EOP. may not contain spiral-only.
+
+*supplementary subarray_data.json is explicitly for the sensitivity
+calculator.  should contain spiral-only option (issue Joan Wrobel noticed in the ECT)
+
