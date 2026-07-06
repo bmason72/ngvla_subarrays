@@ -1,0 +1,495 @@
+<title>NGVLA Rev F subarray curves</title>
+<style>
+:root {
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
+  --muted: #898781; --grid: #e1e0d9; --axis: #c3c2b7;
+  --ring: rgba(11,11,11,0.10);
+  --s-core: #2a78d6; --s-spiral: #1baf7a; --s-mid: #eda100;
+  --s-core-spiral: #008300; --s-spiral-mid: #4a3aa7; --s-core-mid: #e34948;
+  --s-main: #e87ba4;
+  --good: #0ca30c; --warning: #fab219;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+    --ring: rgba(255,255,255,0.10);
+    --s-core: #3987e5; --s-spiral: #199e70; --s-mid: #c98500;
+    --s-core-spiral: #008300; --s-spiral-mid: #9085e9; --s-core-mid: #e66767;
+    --s-main: #d55181;
+  }
+}
+:root[data-theme="light"] {
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
+  --muted: #898781; --grid: #e1e0d9; --axis: #c3c2b7;
+  --ring: rgba(11,11,11,0.10);
+  --s-core: #2a78d6; --s-spiral: #1baf7a; --s-mid: #eda100;
+  --s-core-spiral: #008300; --s-spiral-mid: #4a3aa7; --s-core-mid: #e34948;
+  --s-main: #e87ba4;
+}
+:root[data-theme="dark"] {
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+  --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+  --ring: rgba(255,255,255,0.10);
+  --s-core: #3987e5; --s-spiral: #199e70; --s-mid: #c98500;
+  --s-core-spiral: #008300; --s-spiral-mid: #9085e9; --s-core-mid: #e66767;
+  --s-main: #d55181;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--page); color: var(--ink);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  margin: 0; padding: 32px 20px 80px;
+}
+.wrap { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+header h1 { font-size: 26px; font-weight: 650; margin: 0 0 6px; text-wrap: balance; }
+header .sub { color: var(--ink-2); max-width: 72ch; margin: 0; }
+.eyebrow {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+}
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.tile {
+  background: var(--surface); border: 1px solid var(--ring); border-radius: 6px;
+  padding: 14px 16px;
+}
+.tile .v { font-size: 26px; font-weight: 650; }
+.tile .l { font-size: 12.5px; color: var(--ink-2); }
+.tile .v .unit { font-size: 15px; font-weight: 500; color: var(--ink-2); }
+.card {
+  background: var(--surface); border: 1px solid var(--ring); border-radius: 6px;
+  padding: 18px 20px 14px;
+}
+.card h2 { font-size: 17px; font-weight: 650; margin: 0 0 2px; }
+.card .note { color: var(--ink-2); font-size: 13.5px; margin: 0 0 10px; max-width: 78ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0 4px; }
+.legend .chip {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
+  color: var(--ink-2); background: none; border: none; padding: 2px 4px;
+  cursor: pointer; border-radius: 4px; font-family: inherit;
+}
+.legend .chip:focus-visible { outline: 2px solid var(--s-core); outline-offset: 1px; }
+.legend .swatch { width: 14px; height: 3px; border-radius: 2px; }
+.legend .chip.pending { opacity: 0.55; cursor: default; }
+.legend .chip.pending .swatch { height: 0; border-top: 3px dotted var(--s-main); }
+svg text { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--muted); }
+svg .tick-num { font-variant-numeric: tabular-nums; }
+svg .serieslabel { font-weight: 600; font-size: 11.5px; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.tooltip {
+  position: fixed; pointer-events: none; z-index: 10; display: none;
+  background: var(--ink); color: var(--page); font-size: 12px; line-height: 1.45;
+  padding: 7px 9px; border-radius: 5px; max-width: 260px;
+  font-variant-numeric: tabular-nums;
+}
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; letter-spacing: 0.03em; }
+.tablewrap { overflow-x: auto; }
+details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
+.flag { color: var(--warning); }
+.ok { color: var(--good); }
+.caveats { color: var(--ink-2); font-size: 14px; max-width: 82ch; }
+.caveats li { margin-bottom: 6px; }
+@media (prefers-reduced-motion: no-preference) {
+  .series-g, .mark { transition: opacity 0.15s ease; }
+}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">NGVLA subarray-selection tool &middot; Track 2 curve generation &middot; 5&ndash;6 Jul 2026</p>
+  <h1>Rev&thinsp;F taperability &amp; sculptability curves</h1>
+  <p class="sub">Sensitivity cost (&eta;, the image rms relative to natural weighting) versus achieved
+  resolution at the 30&thinsp;GHz reference frequency, measured from noise simulations of each Rev&thinsp;F
+  subarray (4&thinsp;h track, dec&thinsp;+24&deg;) over a grid of Briggs robust and uv-taper values.
+  The <em>imaging</em> curves admit only beams whose PSF skirt &mdash; the azimuthally averaged PSF level at
+  a radius of one FWHM (memo&thinsp;65 metric&thinsp;2b) &mdash; is &le;&thinsp;10% (memo&thinsp;121 criterion).</p>
+</header>
+
+<div class="tiles" id="tiles"></div>
+
+<div class="card">
+  <h2>Imaging curves (PSF skirt &le; 10%)</h2>
+  <p class="note">Minimum &eta; at each resolution among sculpted beams. Dashed verticals mark each
+  subarray&rsquo;s largest angular scale (LAS) at 30&thinsp;GHz; the core-bearing subarrays share
+  b<sub>min</sub> and hence a common LAS. This is the operational look-up view for imaging projects
+  (the memo&thinsp;76 figure&thinsp;1 analog).</p>
+  <div class="legend" id="legend-img"></div>
+  <div id="chart-imaging"></div>
+</div>
+
+<div class="card">
+  <h2>Point-source curves (skirt unconstrained)</h2>
+  <p class="note">Same envelope over <em>all</em> beams regardless of PSF quality &mdash; applicable to
+  point-source detection projects. Near-natural weighting the two curves differ most: a messy skirt is
+  free here but costly to sculpt away.</p>
+  <div class="legend" id="legend-ps"></div>
+  <div id="chart-ps"></div>
+</div>
+
+<div class="card">
+  <h2>Raw sweep samples</h2>
+  <p class="note">Every measured grid point. Circles: natural&thinsp;+&thinsp;taper branch. Squares: Briggs
+  robust branch. Triangles: sculpt branch (robust&thinsp;&times;&thinsp;taper). Filled marks pass the 10% skirt
+  criterion; hollow marks fail it. Hover any mark for its parameters.</p>
+  <div class="grid3" id="multiples"></div>
+</div>
+
+<div class="card">
+  <h2>Why composite subarrays disagree with the calculator&rsquo;s native beams</h2>
+  <p class="note">The natural-weight PSF of core+spiral is a two-component composite: a narrow
+  spiral-scale spike on a broad core-scale plateau. A single-Gaussian fit is ill-defined on such a
+  beam &mdash; CASA&rsquo;s fit lands at 286&thinsp;mas here, while the memo-121-era value (147.7&thinsp;mas)
+  tracks the narrow spike. Neither is wrong; the &ldquo;resolution&rdquo; of an unsculpted composite beam is
+  simply not a single number. The sculpted (imaging-curve) beams are quasi-Gaussian and do not suffer
+  this ambiguity &mdash; one more reason the imaging curves are the operational reference.</p>
+  <div id="chart-profile"></div>
+</div>
+
+<div class="card">
+  <h2>QA cross-checks</h2>
+  <p class="note">Native (natural-weight, untapered) beam vs the sensitivity calculator&rsquo;s
+  <code>subarray_data.pkl</code>. Component subarrays agree to &le;&thinsp;2%; composite-subarray
+  differences reflect the fit ambiguity above (and the pkl&rsquo;s pre-Rev-F Mid sites for mid-bearing rows).</p>
+  <div class="tablewrap"><table id="qa-table"></table></div>
+</div>
+
+<div class="card">
+  <h2>Caveats &amp; status</h2>
+  <ul class="caveats">
+    <li><strong>main is not swept yet</strong> &mdash; the run was paused for this evaluation before the
+        largest job (214 antennas, imsize 15000). Its color slot is reserved; curves will drop in
+        without re-mapping the others.</li>
+    <li>core+mid is 39/40 points (final sculpt-branch point was mid-flight at pause).</li>
+    <li>LAS coefficients for spiral, mid, and spiral+mid are <span class="flag">provisional</span>
+        (SBA value 0.58 borrowed; memo-67-style disk sims pending). Core-bearing subarrays use the
+        measured 0.85.</li>
+    <li>&eta; is assumed frequency-invariant when the curves are scaled from 30&thinsp;GHz
+        (PLAN.md open question 2); continuum fractional-bandwidth effects are not yet modeled.</li>
+    <li>Curves assume the memo-121 fixed-FOV single-pointing convention.</li>
+  </ul>
+  <details><summary>Full sample table (all subarrays, all grid points)</summary>
+    <div class="tablewrap"><table id="data-table"></table></div>
+  </details>
+</div>
+</div>
+<div class="tooltip" id="tt"></div>
+
+<script>
+const DATA = __DATA__;
+const SLOT = {"core":"--s-core","spiral":"--s-spiral","mid":"--s-mid",
+  "core+spiral":"--s-core-spiral","spiral+mid":"--s-spiral-mid",
+  "core+mid":"--s-core-mid","main":"--s-main"};
+const css = name => `var(${SLOT[name]})`;
+const ACTIVE = DATA.order.filter(n => (DATA.samples[n]||[]).length);
+
+const fmtRes = mas => mas >= 1000 ? (mas/1000).toPrecision(3) + '″'
+                                  : mas.toPrecision(3) + ' mas';
+const tt = document.getElementById('tt');
+function showTT(ev, html) {
+  tt.innerHTML = html; tt.style.display = 'block';
+  const pad = 14, w = tt.offsetWidth;
+  tt.style.left = Math.min(ev.clientX + pad, innerWidth - w - 8) + 'px';
+  tt.style.top = (ev.clientY + pad) + 'px';
+}
+function hideTT() { tt.style.display = 'none'; }
+
+function svgEl(tag, attrs) {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+// log-x, log-y curve chart --------------------------------------------------
+function curveChart(el, curves, opts) {
+  const W = opts.w || 960, H = opts.h || 430;
+  const M = {l: 46, r: 84, t: 12, b: 40};
+  const xmin = opts.xmin, xmax = opts.xmax, ymin = 1, ymax = opts.ymax;
+  const X = v => M.l + (Math.log10(v) - Math.log10(xmin)) /
+                 (Math.log10(xmax) - Math.log10(xmin)) * (W - M.l - M.r);
+  const Y = v => H - M.b - (Math.log10(v) - 0) /
+                 (Math.log10(ymax)) * (H - M.t - M.b);
+  const svg = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%',
+                            role: 'img', 'aria-label': opts.label});
+  // grid + ticks
+  const xticks = opts.xticks, yticks = opts.yticks;
+  for (const t of xticks) {
+    svg.append(svgEl('line', {x1: X(t.v), x2: X(t.v), y1: M.t, y2: H - M.b,
+                              stroke: 'var(--grid)', 'stroke-width': 1}));
+    const lb = svgEl('text', {x: X(t.v), y: H - M.b + 16, 'text-anchor': 'middle',
+                              'class': 'tick-num'});
+    lb.textContent = t.l; svg.append(lb);
+  }
+  for (const t of yticks) {
+    svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: Y(t), y2: Y(t),
+                              stroke: 'var(--grid)', 'stroke-width': 1}));
+    const lb = svgEl('text', {x: M.l - 7, y: Y(t) + 4, 'text-anchor': 'end',
+                              'class': 'tick-num'});
+    lb.textContent = t; svg.append(lb);
+  }
+  svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: H - M.b, y2: H - M.b,
+                            stroke: 'var(--axis)', 'stroke-width': 1}));
+  const xt = svgEl('text', {x: (M.l + W - M.r)/2, y: H - 6, 'text-anchor': 'middle'});
+  xt.textContent = 'resolution (beam FWHM at 30 GHz)'; svg.append(xt);
+  const yt = svgEl('text', {x: 12, y: (H - M.b + M.t)/2, 'text-anchor': 'middle',
+    transform: `rotate(-90 12 ${(H - M.b + M.t)/2})`});
+  yt.textContent = 'η  (rms ÷ natural rms)'; svg.append(yt);
+
+  // LAS verticals (drawn under the curves); stack coincident labels
+  const lasSeen = {};
+  for (const name of ACTIVE) {
+    const las = DATA.las[name]; if (!las || las.mas > xmax || las.mas < xmin) continue;
+    const key = Math.round(las.mas);
+    const n = (lasSeen[key] = (lasSeen[key] || 0) + 1);
+    svg.append(svgEl('line', {x1: X(las.mas), x2: X(las.mas), y1: M.t, y2: H - M.b,
+      stroke: css(name), 'stroke-width': 1.2, 'stroke-dasharray': '3 4', opacity: 0.75,
+      'class': `las-${SLOT[name].slice(3)}`}));
+    const lb = svgEl('text', {x: X(las.mas) + 4, y: M.t + 12 * n,
+      fill: css(name), 'class': 'serieslabel'});
+    lb.textContent = 'LAS ' + name + (las.provisional ? ' †' : '');
+    svg.append(lb);
+  }
+
+  // series
+  const endLabels = [];
+  for (const name of ACTIVE) {
+    const pts = curves[name]; if (!pts || !pts.length) continue;
+    const g = svgEl('g', {'class': 'series-g', 'data-series': name});
+    const path = pts.map((p, i) => (i ? 'L' : 'M') + X(p.res).toFixed(1) + ' ' +
+                                   Y(p.eta).toFixed(1)).join('');
+    g.append(svgEl('path', {d: path, fill: 'none', stroke: css(name),
+                            'stroke-width': 2, 'stroke-linejoin': 'round'}));
+    for (const p of pts) {
+      const m = svgEl('circle', {cx: X(p.res), cy: Y(p.eta), r: 3.5,
+        fill: css(name), stroke: 'var(--surface)', 'stroke-width': 1.5, 'class': 'mark'});
+      const hit = svgEl('circle', {cx: X(p.res), cy: Y(p.eta), r: 10,
+                                   fill: 'transparent'});
+      hit.addEventListener('mousemove', ev => showTT(ev, ttHtml(name, p)));
+      hit.addEventListener('mouseleave', hideTT);
+      g.append(m, hit);
+    }
+    svg.append(g);
+    const last = pts[pts.length - 1];
+    endLabels.push({name, x: X(last.res) + 8, y: Y(last.eta) + 4});
+  }
+  // direct labels at line ends, nudged apart if they collide
+  endLabels.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < endLabels.length; i++)
+    if (endLabels[i].y - endLabels[i-1].y < 13) endLabels[i].y = endLabels[i-1].y + 13;
+  for (const l of endLabels) {
+    const lb = svgEl('text', {x: l.x, y: l.y, fill: css(l.name), 'class': 'serieslabel'});
+    lb.textContent = l.name; svg.append(lb);
+  }
+  el.append(svg);
+  return svg;
+}
+
+function ttHtml(name, p) {
+  const pars = p.weighting === 'natural'
+    ? 'natural' + (p.taper ? `, taper ${fmtRes(p.taper)}` : ', no taper')
+    : `briggs robust ${p.robust.toFixed(2)}` + (p.taper ? `, taper ${fmtRes(p.taper)}` : '');
+  return `<b>${name}</b><br>beam ${fmtRes(p.res)}<br>η = ${p.eta.toFixed(2)}` +
+         `<br>skirt ${p.skirt === null ? '—' : (100*p.skirt).toFixed(1) + '%'}<br>${pars}`;
+}
+
+const XT = [{v:1,l:'1 mas'},{v:10,l:'10 mas'},{v:100,l:'100 mas'},
+            {v:1000,l:'1″'},{v:10000,l:'10″'},{v:60000,l:'60″'}];
+const YT = [1,2,4,8,16];
+const optsCommon = {xmin: 1.5, xmax: 80000, ymax: 18, xticks: XT, yticks: YT};
+
+function legend(el, svg) {
+  for (const name of DATA.order) {
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (ACTIVE.includes(name) ? '' : ' pending');
+    chip.innerHTML = `<span class="swatch" style="background:${ACTIVE.includes(name)?css(name):'none'}"></span>` +
+      name + (ACTIVE.includes(name) ? '' : ' (pending)');
+    if (ACTIVE.includes(name)) {
+      const hl = on => {
+        svg.querySelectorAll('.series-g').forEach(g =>
+          g.style.opacity = (!on || g.dataset.series === name) ? 1 : 0.18);
+      };
+      chip.addEventListener('mouseenter', () => hl(true));
+      chip.addEventListener('mouseleave', () => hl(false));
+      chip.addEventListener('focus', () => hl(true));
+      chip.addEventListener('blur', () => hl(false));
+    }
+    el.append(chip);
+  }
+}
+
+legend(document.getElementById('legend-img'),
+  curveChart(document.getElementById('chart-imaging'), DATA.imaging,
+    {...optsCommon, label: 'Imaging curves: eta vs resolution, PSF skirt <= 10%'}));
+legend(document.getElementById('legend-ps'),
+  curveChart(document.getElementById('chart-ps'), DATA.pointsource,
+    {...optsCommon, label: 'Point-source curves: eta vs resolution, skirt unconstrained'}));
+
+// stat tiles ------------------------------------------------------------------
+const nPts = ACTIVE.reduce((a, n) => a + DATA.counts[n], 0);
+const tiles = [
+  {v: ACTIVE.length + '<span class="unit"> / 7</span>', l: 'subarrays swept'},
+  {v: String(nPts), l: 'grid points measured'},
+  {v: '0', l: 'failed points', cls: 'ok'},
+  {v: 'main', l: 'pending (paused before largest job)'},
+];
+document.getElementById('tiles').innerHTML = tiles.map(t =>
+  `<div class="tile"><div class="v ${t.cls||''}">${t.v}</div><div class="l">${t.l}</div></div>`).join('');
+
+// small multiples ---------------------------------------------------------------
+function multiple(el, name) {
+  const card = document.createElement('div');
+  card.innerHTML = `<p class="eyebrow" style="margin:0 0 4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${css(name)};vertical-align:-1px"></span> ${name} &middot; ${DATA.counts[name]} pts</p>`;
+  const pts = DATA.samples[name];
+  const W = 330, H = 230, M = {l: 34, r: 10, t: 8, b: 26};
+  const xs = pts.map(p => p.res), ys = pts.map(p => p.eta);
+  const xmin = Math.min(...xs) / 1.4, xmax = Math.max(...xs) * 1.4;
+  const ymax = Math.max(...ys) * 1.15;
+  const X = v => M.l + (Math.log10(v) - Math.log10(xmin)) /
+                 (Math.log10(xmax) - Math.log10(xmin)) * (W - M.l - M.r);
+  const Y = v => H - M.b - Math.log10(v) / Math.log10(ymax) * (H - M.t - M.b);
+  const svg = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img',
+                            'aria-label': `${name} raw samples`});
+  for (const t of YT) {
+    if (t > ymax) break;
+    svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: Y(t), y2: Y(t),
+                              stroke: 'var(--grid)', 'stroke-width': 1}));
+    const lb = svgEl('text', {x: M.l - 5, y: Y(t) + 4, 'text-anchor': 'end',
+                              'class': 'tick-num'});
+    lb.textContent = t; svg.append(lb);
+  }
+  const decades = [];
+  for (let d = Math.ceil(Math.log10(xmin)); d <= Math.floor(Math.log10(xmax)); d++)
+    decades.push(10 ** d);
+  for (const v of decades) {
+    svg.append(svgEl('line', {x1: X(v), x2: X(v), y1: M.t, y2: H - M.b,
+                              stroke: 'var(--grid)', 'stroke-width': 1}));
+    const lb = svgEl('text', {x: X(v), y: H - M.b + 14, 'text-anchor': 'middle',
+                              'class': 'tick-num'});
+    lb.textContent = fmtRes(v); svg.append(lb);
+  }
+  svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: H - M.b, y2: H - M.b,
+                            stroke: 'var(--axis)', 'stroke-width': 1}));
+  for (const p of pts) {
+    const branch = p.weighting === 'natural' ? 'nat' : (p.taper ? 'sculpt' : 'rob');
+    const pass = p.skirt !== null && p.skirt <= 0.10;
+    const fill = pass ? css(name) : 'var(--surface)';
+    let m;
+    if (branch === 'nat')
+      m = svgEl('circle', {cx: X(p.res), cy: Y(p.eta), r: 4});
+    else if (branch === 'rob')
+      m = svgEl('rect', {x: X(p.res) - 3.5, y: Y(p.eta) - 3.5, width: 7, height: 7});
+    else {
+      const x = X(p.res), y = Y(p.eta);
+      m = svgEl('path', {d: `M${x} ${y-4.5}L${x+4} ${y+3.5}L${x-4} ${y+3.5}Z`});
+    }
+    m.setAttribute('fill', fill);
+    m.setAttribute('stroke', css(name));
+    m.setAttribute('stroke-width', 1.5);
+    m.setAttribute('class', 'mark');
+    m.addEventListener('mousemove', ev => showTT(ev, ttHtml(name, p)));
+    m.addEventListener('mouseleave', hideTT);
+    svg.append(m);
+  }
+  card.append(svg);
+  el.append(card);
+}
+for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
+
+// PSF radial profile -----------------------------------------------------------
+(function profileChart() {
+  const P = DATA.profile, el = document.getElementById('chart-profile');
+  const W = 960, H = 320, M = {l: 46, r: 24, t: 16, b: 40};
+  const xmax = 1.0;
+  const X = v => M.l + v / xmax * (W - M.l - M.r);
+  const Y = v => H - M.b - v * (H - M.t - M.b);
+  const svg = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img',
+    'aria-label': 'core+spiral natural PSF radial profile'});
+  for (const t of [0, 0.25, 0.5, 0.75, 1.0]) {
+    svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: Y(t), y2: Y(t),
+      stroke: 'var(--grid)', 'stroke-width': 1}));
+    const lb = svgEl('text', {x: M.l - 7, y: Y(t) + 4, 'text-anchor': 'end',
+                              'class': 'tick-num'});
+    lb.textContent = t.toFixed(2); svg.append(lb);
+  }
+  for (const t of [0, 0.2, 0.4, 0.6, 0.8, 1.0]) {
+    const lb = svgEl('text', {x: X(t), y: H - M.b + 16, 'text-anchor': 'middle',
+                              'class': 'tick-num'});
+    lb.textContent = t.toFixed(1) + '″'; svg.append(lb);
+  }
+  svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: H - M.b, y2: H - M.b,
+    stroke: 'var(--axis)', 'stroke-width': 1}));
+  const xt = svgEl('text', {x: (M.l + W - M.r)/2, y: H - 6, 'text-anchor': 'middle'});
+  xt.textContent = 'radius from PSF peak (arcsec)'; svg.append(xt);
+  const yt = svgEl('text', {x: 12, y: (H - M.b + M.t)/2, 'text-anchor': 'middle',
+    transform: `rotate(-90 12 ${(H - M.b + M.t)/2})`});
+  yt.textContent = 'azimuthally averaged PSF'; svg.append(yt);
+
+  // reference verticals: the two "fitted FWHM" claims
+  for (const [mas, label, dash] of [[P.fitted_fwhm_mas, 'CASA fit 286 mas', '4 3'],
+                                    [P.memo121_fwhm_mas, 'memo-121-era fit 148 mas', '2 3']]) {
+    const x = X(mas / 1e3 / 2);   // half-width: profile radius of FWHM/2
+    svg.append(svgEl('line', {x1: x, x2: x, y1: Y(0.5) - 34, y2: H - M.b,
+      stroke: 'var(--muted)', 'stroke-width': 1.2, 'stroke-dasharray': dash}));
+    const lb = svgEl('text', {x: x + 4, y: Y(0.5) - 22});
+    lb.textContent = label; svg.append(lb);
+  }
+  svg.append(svgEl('line', {x1: M.l, x2: X(0.6), y1: Y(0.5), y2: Y(0.5),
+    stroke: 'var(--grid)', 'stroke-width': 1, 'stroke-dasharray': '2 3'}));
+  const hm = svgEl('text', {x: X(0.61), y: Y(0.5) + 4});
+  hm.textContent = 'half maximum'; svg.append(hm);
+
+  const g = svgEl('g', {'class': 'series-g'});
+  const inDom = P.r_arcsec.map((r, i) => [r, P.psf[i]]).filter(p => p[0] <= xmax);
+  const path = inDom.map((p, i) => (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' +
+                                   Y(p[1]).toFixed(1)).join('');
+  g.append(svgEl('path', {d: path, fill: 'none', stroke: css('core+spiral'),
+                          'stroke-width': 2, 'stroke-linejoin': 'round'}));
+  P.r_arcsec.forEach((r, i) => {
+    if (r > xmax) return;
+    const hit = svgEl('circle', {cx: X(r), cy: Y(P.psf[i]), r: 8, fill: 'transparent'});
+    hit.addEventListener('mousemove', ev => showTT(ev,
+      `<b>core+spiral natural PSF</b><br>r = ${(r*1000).toFixed(0)} mas<br>PSF = ${P.psf[i].toFixed(3)}`));
+    hit.addEventListener('mouseleave', hideTT);
+    g.append(hit);
+  });
+  svg.append(g);
+  el.append(svg);
+})();
+
+// QA table ---------------------------------------------------------------------
+(function qaTable() {
+  const t = document.getElementById('qa-table');
+  t.innerHTML = '<tr><th>subarray</th><th>N ant</th><th>native beam, sim (mas)</th>' +
+    '<th>native beam, calc pkl (mas)</th><th>diff</th><th>natural skirt</th><th>LAS @30 GHz</th></tr>' +
+    DATA.qa.map(r => {
+      const las = DATA.las[r.sa];
+      const diff = (r.nat_sim && r.nat_calc)
+        ? ((r.nat_sim / r.nat_calc - 1) * 100).toFixed(1) + '%' : '—';
+      const flag = r.nat_sim && r.nat_calc && Math.abs(r.nat_sim/r.nat_calc - 1) > 0.1;
+      return `<tr><td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${css(r.sa)};margin-right:6px"></span>${r.sa}</td>` +
+        `<td>${las ? las.n_ant : ''}</td>` +
+        `<td>${r.nat_sim === null ? 'pending' : r.nat_sim.toFixed(2)}</td>` +
+        `<td>${r.nat_calc === null ? 'not in pkl' : r.nat_calc.toFixed(2)}</td>` +
+        `<td class="${flag ? 'flag' : 'ok'}">${diff}${flag ? ' ⚠' : ''}</td>` +
+        `<td>${r.skirt_nat === null ? '—' : (100*r.skirt_nat).toFixed(1) + '%'}</td>` +
+        `<td>${las ? fmtRes(las.mas) + (las.provisional ? ' †' : '') : ''}</td></tr>`;
+    }).join('') +
+    `<tr><td colspan="7" style="text-align:left;color:var(--muted);font-size:12px">† provisional LAS coefficient (0.58 borrowed from SBA; memo-67-style measurement pending)</td></tr>`;
+})();
+
+// full data table -----------------------------------------------------------------
+(function dataTable() {
+  const t = document.getElementById('data-table');
+  const rows = [];
+  for (const name of ACTIVE)
+    for (const p of DATA.samples[name])
+      rows.push(`<tr><td>${name}</td><td>${p.weighting}</td>` +
+        `<td>${p.robust === null ? '' : p.robust.toFixed(2)}</td>` +
+        `<td>${p.taper ? fmtRes(p.taper) : ''}</td><td>${fmtRes(p.res)}</td>` +
+        `<td>${p.eta.toFixed(3)}</td><td>${p.skirt === null ? '' : (100*p.skirt).toFixed(1) + '%'}</td></tr>`);
+  t.innerHTML = '<tr><th>subarray</th><th>weighting</th><th>robust</th><th>taper</th>' +
+    '<th>beam</th><th>&eta;</th><th>skirt</th></tr>' + rows.join('');
+})();
+</script>
