@@ -20,45 +20,73 @@ TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "report_template.html")
 
 # fixed series order & display names (color slots assigned in the template;
-# 'main' keeps its slot even while pending so colors never re-map)
-ORDER = ["core", "spiral", "mid", "core+spiral", "spiral+mid", "core+mid", "main"]
+# deferred subarrays keep their slots so colors never re-map)
+ORDER = ["core", "spiral", "mid", "core+spiral", "spiral+mid", "core+mid",
+         "main", "core-inner"]
+DEFERRED = ["core+mid", "main"]     # heterogeneous; reworked later (PLAN.md)
 
 
-def lower_envelope(samples, side, res_nat):
-    """Non-dominated (res, eta) points on one side of the natural resolution.
-
-    A point is dominated if another point closer to (or at) the same distance
-    from native offers equal-or-lower eta.  Walking away from the natural
-    point this yields the clean V-shaped taperability curve of the memos.
-    """
-    if side == "left":
-        branch = [s for s in samples if s["res"] <= res_nat]
-        dominated = lambda p, q: q["res"] >= p["res"] and q["eta"] <= p["eta"]
-    else:
-        branch = [s for s in samples if s["res"] >= res_nat]
-        dominated = lambda p, q: q["res"] <= p["res"] and q["eta"] <= p["eta"]
-    keep = [p for p in branch
-            if not any(q is not p and dominated(p, q) for q in branch)]
-    return sorted(keep, key=lambda s: s["res"])
+BIN_DEX = 0.03      # resolution bin width for the curve, in dex (~7%)
 
 
 def build_curve(samples, skirt_max=None):
-    """V-shaped min-eta curve (list of sample dicts), optionally sculpted."""
+    """The operational min-eta curve: per resolution bin, the cheapest way to
+    make that beam (optionally restricted to sculpted beams, skirt <= max).
+
+    Each resolution is its own requirement, so the reduction is simply the
+    minimum eta within narrow log-spaced resolution bins -- the memo-style
+    taperability curve, traced by whatever branch is cheapest locally.
+    """
+    import math
     if skirt_max is not None:
         samples = [s for s in samples if s["skirt"] is not None
                    and s["skirt"] <= skirt_max]
     if not samples:
         return []
-    nat = min(samples, key=lambda s: s["eta"])
-    left = lower_envelope(samples, "left", nat["res"])
-    right = lower_envelope(samples, "right", nat["res"])
-    seen, out = set(), []
-    for s in left + right:
-        k = (s["res"], s["eta"])
-        if k not in seen:
-            seen.add(k)
-            out.append(s)
-    return out
+    best = {}
+    for s in samples:
+        b = int(math.floor(math.log10(s["res"]) / BIN_DEX))
+        if b not in best or s["eta"] < best[b]["eta"]:
+            best[b] = s
+    return sorted(best.values(), key=lambda s: s["res"])
+
+
+def build_heatmap(samples, imaging_curve):
+    """The (robust, taper) lattice as a rectangular cell table.
+
+    Columns are the v2 lattice tapers (values appearing in >= 6 rows of the
+    lattice -- this drops stray v1-era taper values, which sit in only one
+    or two rows).  Rows are natural + robust descending (+2 -> -2), i.e.
+    from the sensitivity edge toward uniform weighting.  Cells absent from
+    the results (pruned by the eta cap / edge convergence) are null.
+    """
+    from collections import Counter
+    tcount = Counter(s["taper"] for s in samples)
+    tapers = sorted(t for t, c in tcount.items() if t == 0.0 or c >= 6)
+    on_env = {(s["weighting"], s["robust"], s["taper"]) for s in imaging_curve}
+
+    def row_label(w, r):
+        return "natural" if w == "natural" else "%+.1f" % r
+
+    rows = []
+    robusts = sorted({s["robust"] for s in samples
+                      if s["weighting"] == "briggs"}, reverse=True)
+    for w, r in [("natural", None)] + [("briggs", r) for r in robusts]:
+        cells = []
+        for t in tapers:
+            m = [s for s in samples if s["weighting"] == w and
+                 s["robust"] == r and abs(s["taper"] - t) < 1e-6]
+            if not m:
+                cells.append(None)
+            else:
+                s = m[0]
+                cells.append(dict(eta=s["eta"], skirt=s["skirt"], res=s["res"],
+                                  env=(w, r, s["taper"]) in on_env))
+        # stray robust values from the v1 sweeps populate almost no lattice
+        # columns; keep only substantive rows
+        if sum(c is not None for c in cells) >= 3:
+            rows.append(dict(label=row_label(w, r), cells=cells))
+    return dict(tapers=tapers, rows=rows)
 
 
 def main(out_path):
@@ -86,10 +114,13 @@ def main(out_path):
                 provisional="PROVISIONAL" in r["las_coeff_note"],
                 n_ant=int(r["n_ant"]))
 
-    data = dict(order=ORDER, las=las, samples=samples_by,
-                imaging={n: build_curve(samples_by[n], 0.10) for n in ORDER},
+    imaging = {n: build_curve(samples_by[n], 0.10) for n in ORDER}
+    data = dict(order=ORDER, deferred=DEFERRED, las=las, samples=samples_by,
+                imaging=imaging,
                 pointsource={n: build_curve(samples_by[n]) for n in ORDER},
-                counts={n: len(samples_by[n]) for n in ORDER})
+                counts={n: len(samples_by[n]) for n in ORDER},
+                heatmaps={n: build_heatmap(samples_by[n], imaging[n])
+                          for n in ORDER if samples_by[n]})
 
     # core+spiral natural-PSF radial profile measured 5 Jul 2026 (subsampled
     # diagnostic dump; regenerate with the snippet in PLAN.md if needed)
@@ -109,6 +140,7 @@ def main(out_path):
 
     # QA cross-check vs the sensitivity calculator's native beams
     data["qa"] = [
+        dict(sa="core-inner", nat_sim=2036.65, nat_calc=None, skirt_nat=0.104),
         dict(sa="core", nat_sim=710.1, nat_calc=725.6, skirt_nat=0.116),
         dict(sa="spiral", nat_sim=76.13, nat_calc=76.15, skirt_nat=0.088),
         dict(sa="mid", nat_sim=2.96, nat_calc=2.91, skirt_nat=0.227),

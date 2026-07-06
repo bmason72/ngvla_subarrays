@@ -34,7 +34,9 @@
       "Bash(git commit -q -m 'Curve-inspection report page \\(make_report.py\\) + first 6 subarray curves *)",
       "Bash(/Applications/CASA.app/Contents/MacOS/python3 build_bootstrap_data.py)",
       "Bash(/Applications/CASA.app/Contents/MacOS/python3 sweep.py core-inner --limit 6)",
-      "Bash(grep -vE \"WARN|^$\")"
+      "Bash(grep -vE \"WARN|^$\")",
+      "Bash(mkdir -p /Users/bmason/Data/ngvla/sa/curvegen/reports)",
+      "Bash(/Applications/CASA.app/Contents/MacOS/python3 make_report.py reports/revf-curves.html)"
     ]
   }
 }

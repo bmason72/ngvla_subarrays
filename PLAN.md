@@ -219,7 +219,7 @@ adjust to whatever is current.)
 | T3 | Bootstrap curves from `memo121artifacts/*Cln.csv` (Track 1) | Sonnet 5 | GPT-5 | medium | ☑ `data/{subarrays,bootstrap_curves}.csv` + builder (188 samples; mid & core+mid have none) |
 | T4 | Sensitivity-calculator integration → integration time / ant-hrs | Sonnet 5 | GPT-5 | medium–high | ☑ `sensitivity.py` (self-tested; see gotchas §13) |
 | T5 | Adapt taperability pipeline + **add PSF-skirt measurement** (Track 2) | **Opus 4.8** | GPT-5 (high) | high | ☑ `curvegen/` (core validated vs memo-121) |
-| T6 | Run Rev F curve generation under CASA; QA the curves | Sonnet 5 | GPT-5 | medium (long-running) | ◐ background run, 6 remaining subarrays (5 Jul 2026) |
+| T6 | Run Rev F curve generation under CASA; QA the curves | Sonnet 5 | GPT-5 | medium (long-running) | ◐ homogeneous set ☑ v2 (6 SAs, 1008 pts, 0 failed, envelope-consistency PASS); core+mid & main deferred |
 | T7 | LaTeX memo (algorithm + approach) | Opus 4.8 | GPT-5 | medium | ☐ |
 | T8 | Tests + example CLI + validation vs. memo 76/121 numbers | Sonnet 5 | GPT-5-mini | medium | ☑ 25 tests green; `python3 -m sa_select` CLI (exit 0 feasible / 2 not) |
 
@@ -356,6 +356,11 @@ high effort. Plumbing/IO/CLI → mid model, medium effort.
 - SBA: D = 6 m and the sensitivity calculator does **not** support tapering it.
 - `artifacts/saUtil.py` and `assign_eop_sa.py` are unvetted sketches — verify any approach
   before adopting (see memory `sautil-grain-of-salt`).
+- **Curve-envelope reduction**: a Pareto-dominance rule is WRONG for taperability curves (it
+  collapses the coarse branch — each resolution is its own requirement, not dominated by a
+  finer/cheaper one). Correct reduction = min-eta per narrow log-resolution bin
+  (`make_report.build_curve`, 0.03 dex). The v1 report's overview curves were quietly
+  degenerate because of this; sa_select's window-solver was never affected.
 - Config `.cfg` format is CASA XYZ: `X Y Z diam name`, `#`-comments; 214 antennas in Main.
   Rev F counts verified 5 Jul 2026: Core 114, Spiral 54, Mid 46, Long 30, SBA 19, Main 214.
 - `subarray_data.pkl` lists `long` with b_min = 36.4 m — i.e. the calculator does **not**

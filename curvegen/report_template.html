@@ -6,7 +6,7 @@
   --ring: rgba(11,11,11,0.10);
   --s-core: #2a78d6; --s-spiral: #1baf7a; --s-mid: #eda100;
   --s-core-spiral: #008300; --s-spiral-mid: #4a3aa7; --s-core-mid: #e34948;
-  --s-main: #e87ba4;
+  --s-main: #e87ba4; --s-core-inner: #eb6834;
   --good: #0ca30c; --warning: #fab219;
 }
 @media (prefers-color-scheme: dark) {
@@ -16,7 +16,7 @@
     --ring: rgba(255,255,255,0.10);
     --s-core: #3987e5; --s-spiral: #199e70; --s-mid: #c98500;
     --s-core-spiral: #008300; --s-spiral-mid: #9085e9; --s-core-mid: #e66767;
-    --s-main: #d55181;
+    --s-main: #d55181; --s-core-inner: #d95926;
   }
 }
 :root[data-theme="light"] {
@@ -25,7 +25,7 @@
   --ring: rgba(11,11,11,0.10);
   --s-core: #2a78d6; --s-spiral: #1baf7a; --s-mid: #eda100;
   --s-core-spiral: #008300; --s-spiral-mid: #4a3aa7; --s-core-mid: #e34948;
-  --s-main: #e87ba4;
+  --s-main: #e87ba4; --s-core-inner: #eb6834;
 }
 :root[data-theme="dark"] {
   --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
@@ -33,7 +33,7 @@
   --ring: rgba(255,255,255,0.10);
   --s-core: #3987e5; --s-spiral: #199e70; --s-mid: #c98500;
   --s-core-spiral: #008300; --s-spiral-mid: #9085e9; --s-core-mid: #e66767;
-  --s-main: #d55181;
+  --s-main: #d55181; --s-core-inner: #d95926;
 }
 * { box-sizing: border-box; }
 body {
@@ -138,6 +138,18 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 </div>
 
 <div class="card">
+  <h2>Where the optima live in (robust,&thinsp;taper) space</h2>
+  <p class="note">The full sweep lattice per subarray: rows step from natural weighting down to
+  robust&thinsp;&minus;2, columns step through the uv tapers. Cell shade encodes &eta; (light&thinsp;=&thinsp;1,
+  dark&thinsp;=&thinsp;5); a dot marks beams passing the 10% skirt criterion; a ring marks the cells the
+  imaging curve actually selects &mdash; the min-&eta; sculpted solution at each resolution. Blank cells
+  were pruned (&eta;&thinsp;&gt;&thinsp;5, or the row converged onto the natural+taper edge). Hover any
+  cell for its beam, &eta;, and skirt.</p>
+  <div class="legend" id="hm-legend"></div>
+  <div class="grid3" style="grid-template-columns: repeat(auto-fit, minmax(460px, 1fr))" id="heatmaps"></div>
+</div>
+
+<div class="card">
   <h2>Why composite subarrays disagree with the calculator&rsquo;s native beams</h2>
   <p class="note">The natural-weight PSF of core+spiral is a two-component composite: a narrow
   spiral-scale spike on a broad core-scale plateau. A single-Gaussian fit is ill-defined on such a
@@ -159,13 +171,15 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 <div class="card">
   <h2>Caveats &amp; status</h2>
   <ul class="caveats">
-    <li><strong>main is not swept yet</strong> &mdash; the run was paused for this evaluation before the
-        largest job (214 antennas, imsize 15000). Its color slot is reserved; curves will drop in
-        without re-mapping the others.</li>
-    <li>core+mid is 39/40 points (final sculpt-branch point was mid-flight at pause).</li>
-    <li>LAS coefficients for spiral, mid, and spiral+mid are <span class="flag">provisional</span>
-        (SBA value 0.58 borrowed; memo-67-style disk sims pending). Core-bearing subarrays use the
-        measured 0.85.</li>
+    <li><strong>core+mid and main are deferred</strong> &mdash; their two-component beams need sculpt
+        targets anchored to the higher-resolution component (the v1 sweep found false minima there).
+        Color slots are reserved; curves will drop in without re-mapping the others.</li>
+    <li><strong>core-inner</strong> is memo 121&rsquo;s CoreInner (57 antennas), taken here as the
+        innermost 57 core antennas by radius from the core centroid &mdash; an assumed membership
+        rule, to be verified against Viviana&rsquo;s list.</li>
+    <li>LAS = <strong>0.80&thinsp;&lambda;/b<sub>min</sub> uniformly</strong> for the 18-m subarrays
+        (memo-67 core value applied across the set); per-subarray disk-simulation measurements
+        eventually.</li>
     <li>&eta; is assumed frequency-invariant when the curves are scaled from 30&thinsp;GHz
         (PLAN.md open question 2); continuum fractional-bandwidth effects are not yet modeled.</li>
     <li>Curves assume the memo-121 fixed-FOV single-pointing convention.</li>
@@ -181,7 +195,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 const DATA = __DATA__;
 const SLOT = {"core":"--s-core","spiral":"--s-spiral","mid":"--s-mid",
   "core+spiral":"--s-core-spiral","spiral+mid":"--s-spiral-mid",
-  "core+mid":"--s-core-mid","main":"--s-main"};
+  "core+mid":"--s-core-mid","main":"--s-main","core-inner":"--s-core-inner"};
 const css = name => `var(${SLOT[name]})`;
 const ACTIVE = DATA.order.filter(n => (DATA.samples[n]||[]).length);
 
@@ -303,8 +317,10 @@ function legend(el, svg) {
   for (const name of DATA.order) {
     const chip = document.createElement('button');
     chip.className = 'chip' + (ACTIVE.includes(name) ? '' : ' pending');
+    const tag = ACTIVE.includes(name) ? ''
+      : (DATA.deferred.includes(name) ? ' (deferred)' : ' (pending)');
     chip.innerHTML = `<span class="swatch" style="background:${ACTIVE.includes(name)?css(name):'none'}"></span>` +
-      name + (ACTIVE.includes(name) ? '' : ' (pending)');
+      name + tag;
     if (ACTIVE.includes(name)) {
       const hl = on => {
         svg.querySelectorAll('.series-g').forEach(g =>
@@ -329,10 +345,11 @@ legend(document.getElementById('legend-ps'),
 // stat tiles ------------------------------------------------------------------
 const nPts = ACTIVE.reduce((a, n) => a + DATA.counts[n], 0);
 const tiles = [
-  {v: ACTIVE.length + '<span class="unit"> / 7</span>', l: 'subarrays swept'},
-  {v: String(nPts), l: 'grid points measured'},
+  {v: ACTIVE.length + '<span class="unit"> / ' + DATA.order.length + '</span>',
+   l: 'subarrays swept (homogeneous set complete)'},
+  {v: String(nPts), l: 'lattice points measured'},
   {v: '0', l: 'failed points', cls: 'ok'},
-  {v: 'main', l: 'pending (paused before largest job)'},
+  {v: DATA.deferred.join(', '), l: 'deferred (heterogeneous beams; see caveats)'},
 ];
 document.getElementById('tiles').innerHTML = tiles.map(t =>
   `<div class="tile"><div class="v ${t.cls||''}">${t.v}</div><div class="l">${t.l}</div></div>`).join('');
@@ -396,6 +413,76 @@ function multiple(el, name) {
   el.append(card);
 }
 for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
+
+// robust-taper lattice heatmaps --------------------------------------------------
+(function heatmaps() {
+  const RAMP = ['#cde2fb','#9ec5f4','#6da7ec','#3987e5','#256abf','#184f95','#0d366b'];
+  const etaColor = eta => RAMP[Math.min(6, Math.max(0,
+    Math.round((Math.min(eta, 5) - 1) / 4 * 6)))];
+  const holder = document.getElementById('heatmaps');
+  for (const name of ACTIVE) {
+    const hm = DATA.heatmaps[name]; if (!hm) continue;
+    const CW = 26, CH = 20, ML = 62, MT = 44;
+    const W = ML + hm.tapers.length * CW + 8, H = MT + hm.rows.length * CH + 6;
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `<p class="eyebrow" style="margin:0 0 4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${css(name)};vertical-align:-1px"></span> ${name}</p>`;
+    const svg = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img',
+                              'aria-label': `${name} robust-taper lattice`});
+    hm.tapers.forEach((t, j) => {
+      if (j % 2) return;
+      const lb = svgEl('text', {x: ML + j*CW + CW/2, y: MT - 8,
+        'text-anchor': 'start', 'class': 'tick-num',
+        transform: `rotate(-42 ${ML + j*CW + CW/2} ${MT - 8})`});
+      lb.textContent = t === 0 ? 'no taper' : fmtRes(t);
+      svg.append(lb);
+    });
+    hm.rows.forEach((row, i) => {
+      const lb = svgEl('text', {x: ML - 6, y: MT + i*CH + CH/2 + 4,
+                                'text-anchor': 'end', 'class': 'tick-num'});
+      lb.textContent = row.label; svg.append(lb);
+      row.cells.forEach((c, j) => {
+        const x = ML + j*CW, y = MT + i*CH;
+        if (!c) {
+          svg.append(svgEl('rect', {x: x+1, y: y+1, width: CW-2, height: CH-2,
+            fill: 'none', stroke: 'var(--grid)', 'stroke-width': 1}));
+          return;
+        }
+        const cell = svgEl('rect', {x: x+1, y: y+1, width: CW-2, height: CH-2,
+          fill: etaColor(c.eta), stroke: 'var(--surface)', 'stroke-width': 2,
+          rx: 2});
+        svg.append(cell);
+        if (c.skirt !== null && c.skirt <= 0.10) {
+          const dark = c.eta > 2.5;
+          svg.append(svgEl('circle', {cx: x + CW/2, cy: y + CH/2, r: 2.4,
+            fill: dark ? '#fcfcfb' : '#0b0b0b', 'pointer-events': 'none'}));
+        }
+        if (c.env)
+          svg.append(svgEl('rect', {x: x+2, y: y+2, width: CW-4, height: CH-4,
+            fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, rx: 2,
+            'pointer-events': 'none'}));
+        const hit = svgEl('rect', {x: x, y: y, width: CW, height: CH,
+                                   fill: 'transparent'});
+        const parlbl = row.label === 'natural' ? 'natural'
+                                               : 'robust ' + row.label;
+        hit.addEventListener('mousemove', ev => showTT(ev,
+          `<b>${name}</b> &middot; ${parlbl}` +
+          `${hm.tapers[j] ? ', taper ' + fmtRes(hm.tapers[j]) : ', no taper'}` +
+          `<br>beam ${fmtRes(c.res)}<br>η = ${c.eta.toFixed(2)}` +
+          `<br>skirt ${(100*c.skirt).toFixed(1)}%${c.env ? '<br>← on the imaging curve' : ''}`));
+        hit.addEventListener('mouseleave', hideTT);
+        svg.append(hit);
+      });
+    });
+    wrap.append(svg);
+    holder.append(wrap);
+  }
+  document.getElementById('hm-legend').innerHTML =
+    RAMP.map((c, i) => `<span style="display:inline-block;width:18px;height:12px;background:${c};border-radius:2px"></span>`).join('') +
+    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:6px">η 1 → 5</span>` +
+    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">● skirt ≤ 10%</span>` +
+    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">▢ selected by the imaging curve</span>` +
+    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">blank = pruned</span>`;
+})();
 
 // PSF radial profile -----------------------------------------------------------
 (function profileChart() {
@@ -476,7 +563,7 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
         `<td>${r.skirt_nat === null ? '—' : (100*r.skirt_nat).toFixed(1) + '%'}</td>` +
         `<td>${las ? fmtRes(las.mas) + (las.provisional ? ' †' : '') : ''}</td></tr>`;
     }).join('') +
-    `<tr><td colspan="7" style="text-align:left;color:var(--muted);font-size:12px">† provisional LAS coefficient (0.58 borrowed from SBA; memo-67-style measurement pending)</td></tr>`;
+    `<tr><td colspan="7" style="text-align:left;color:var(--muted);font-size:12px">LAS = 0.80 λ/b<sub>min</sub> uniformly for the 18-m subarrays (memo-67 core value); per-subarray disk-sim measurements pending</td></tr>`;
 })();
 
 // full data table -----------------------------------------------------------------
