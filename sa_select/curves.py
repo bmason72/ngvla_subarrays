@@ -113,40 +113,58 @@ class CurveLibrary:
 
     def solve(self, name: str, resolution: float, freq_ghz: float,
               beam_margin: float = 0.05,
-              skirt_threshold: Optional[float] = None
+              skirt_threshold: Optional[float] = None,
+              relax: bool = True
               ) -> Tuple[Optional[CurveSample], str]:
         """Find the minimum-eta way for subarray `name` to reach `resolution`
         (arcsec) at `freq_ghz`, within a fractional beam tolerance.
 
-        Returns (sample, message).  The sample is returned in REFERENCE
-        (30 GHz) units -- use scale_sample() for request-frequency values.
-        On failure the sample is None and the message says why.
+        Returns (sample, message); message is "ok", a "relaxed: ..." warning,
+        or -- with sample None -- the reason there is no solution.  The sample
+        is in REFERENCE (30 GHz) units; use scale_sample() for request-
+        frequency values.
 
-        v1 note: with sparse bootstrap data we pick the best *tabulated*
-        sample inside the tolerance window rather than interpolating; the
-        dense Track-2 grids will make this exact (PLAN.md section 5).
+        Angular resolution is the primary requirement.  When an imaging query
+        (skirt_threshold given) finds no beam under the threshold at this
+        resolution, and `relax` is True, the skirt criterion is relaxed to the
+        best achievable value there (memo 121's 'partial' cases: some beams
+        bottom out at ~16%) rather than distorting the resolution or failing.
+        The returned message flags the relaxation.
         """
-        q = self.qualifying_samples(name, skirt_threshold)
-        if not q:
-            if name not in self.samples or not self.samples[name]:
-                return None, "no curve data tabulated for this subarray"
-            return None, ("no tabulated (robust, taper) combination meets the "
-                          "PSF-skirt threshold of %.2g" % skirt_threshold)
+        if name not in self.samples or not self.samples[name]:
+            return None, "no curve data tabulated for this subarray"
 
         # work at the reference frequency: the window scales the same way
         res_ref = resolution * freq_ghz / REF_FREQ_GHZ
         lo, hi = res_ref * (1 - beam_margin), res_ref * (1 + beam_margin)
-        in_window = [s for s in q if lo <= s.resolution <= hi]
-        if not in_window:
-            scale = REF_FREQ_GHZ / freq_ghz
-            return None, ("no tabulated solution within +/-%.0f%% of %.4g arcsec; "
-                          "nearest qualifying samples span %.4g - %.4g arcsec "
-                          "at this frequency"
-                          % (100 * beam_margin, resolution,
-                             q[0].resolution * scale, q[-1].resolution * scale))
 
-        best = min(in_window, key=lambda s: s.eta)
-        return best, "ok"
+        q = self.qualifying_samples(name, skirt_threshold)
+        in_window = [s for s in q if lo <= s.resolution <= hi]
+        if in_window:
+            return min(in_window, key=lambda s: s.eta), "ok"
+
+        # imaging query with nothing under the threshold at this resolution:
+        # fall back to the best achievable skirt here (if allowed)
+        if skirt_threshold is not None and relax:
+            near = [s for s in self.samples[name]
+                    if lo <= s.resolution <= hi and s.skirt is not None]
+            if near:
+                best_skirt = min(s.skirt for s in near)
+                pool = [s for s in near if s.skirt <= best_skirt * 1.15]
+                best = min(pool, key=lambda s: s.eta)
+                return best, ("relaxed: no beam here reaches skirt <= %.2g; "
+                              "best achievable is %.2g"
+                              % (skirt_threshold, best.skirt))
+
+        if not q:
+            return None, ("no tabulated (robust, taper) combination meets the "
+                          "PSF-skirt threshold of %.2g" % skirt_threshold)
+        scale = REF_FREQ_GHZ / freq_ghz
+        return None, ("no tabulated solution within +/-%.0f%% of %.4g arcsec; "
+                      "nearest qualifying samples span %.4g - %.4g arcsec "
+                      "at this frequency"
+                      % (100 * beam_margin, resolution,
+                         q[0].resolution * scale, q[-1].resolution * scale))
 
     def scale_sample(self, sample: CurveSample, freq_ghz: float) -> CurveSample:
         """Copy of `sample` with resolution and taper scaled 30 GHz -> freq_ghz."""

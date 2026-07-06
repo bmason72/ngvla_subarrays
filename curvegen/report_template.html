@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>NGVLA Rev F subarray curves</title>
 <style>
 :root {
@@ -112,8 +113,13 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 
 <div class="card">
   <h2>Imaging curves (PSF skirt &le; 10%)</h2>
-  <p class="note">Minimum &eta; at each resolution among sculpted beams. Dashed verticals mark each
-  subarray&rsquo;s largest angular scale (LAS) at 30&thinsp;GHz; the core-bearing subarrays share
+  <p class="note">Minimum &eta; at each target resolution (&plusmn;5% beam tolerance, the selection
+  tool&rsquo;s own window) among sculpted beams, trimmed at &eta;&thinsp;=&thinsp;5. Angular resolution
+  is the primary requirement: <strong>hollow triangles</strong> mark resolutions where no
+  (robust,&thinsp;taper) combination reaches a 10% skirt and the criterion is relaxed to the best
+  achievable value there (cf. memo&thinsp;121&rsquo;s &ldquo;bottom out at &sim;16%&rdquo; cases,
+  e.g. spiral+mid between &sim;11 and &sim;55&thinsp;mas) &mdash; hover for the achieved skirt.
+  Dashed verticals mark each subarray&rsquo;s LAS at 30&thinsp;GHz; the core-bearing subarrays share
   b<sub>min</sub> and hence a common LAS. This is the operational look-up view for imaging projects
   (the memo&thinsp;76 figure&thinsp;1 analog).</p>
   <div class="legend" id="legend-img"></div>
@@ -266,18 +272,33 @@ function curveChart(el, curves, opts) {
     svg.append(lb);
   }
 
-  // series
+  // series -- the line breaks where consecutive optima are > 35% apart in
+  // resolution: a genuine sculpt-infeasible band, not to be interpolated
   const endLabels = [];
   for (const name of ACTIVE) {
     const pts = curves[name]; if (!pts || !pts.length) continue;
     const g = svgEl('g', {'class': 'series-g', 'data-series': name});
-    const path = pts.map((p, i) => (i ? 'L' : 'M') + X(p.res).toFixed(1) + ' ' +
-                                   Y(p.eta).toFixed(1)).join('');
+    let path = '';
+    pts.forEach((p, i) => {
+      const gap = i && p.res / pts[i - 1].res > 1.35;
+      path += (i && !gap ? 'L' : 'M') + X(p.res).toFixed(1) + ' ' +
+              Y(p.eta).toFixed(1);
+    });
     g.append(svgEl('path', {d: path, fill: 'none', stroke: css(name),
                             'stroke-width': 2, 'stroke-linejoin': 'round'}));
     for (const p of pts) {
-      const m = svgEl('circle', {cx: X(p.res), cy: Y(p.eta), r: 3.5,
-        fill: css(name), stroke: 'var(--surface)', 'stroke-width': 1.5, 'class': 'mark'});
+      let m;
+      if (opts.marker === 'triangle') {
+        const x = X(p.res), y = Y(p.eta);
+        m = svgEl('path', {d: `M${x} ${y-4.6}L${x+4.2} ${y+3.6}L${x-4.2} ${y+3.6}Z`});
+      } else {
+        m = svgEl('circle', {cx: X(p.res), cy: Y(p.eta), r: 3.5});
+      }
+      // relaxed-skirt optima (10% unachievable at this resolution) are hollow
+      m.setAttribute('fill', p.relaxed ? 'var(--surface)' : css(name));
+      m.setAttribute('stroke', p.relaxed ? css(name) : 'var(--surface)');
+      m.setAttribute('stroke-width', 1.5);
+      m.setAttribute('class', 'mark');
       const hit = svgEl('circle', {cx: X(p.res), cy: Y(p.eta), r: 10,
                                    fill: 'transparent'});
       hit.addEventListener('mousemove', ev => showTT(ev, ttHtml(name, p)));
@@ -305,7 +326,9 @@ function ttHtml(name, p) {
     ? 'natural' + (p.taper ? `, taper ${fmtRes(p.taper)}` : ', no taper')
     : `briggs robust ${p.robust.toFixed(2)}` + (p.taper ? `, taper ${fmtRes(p.taper)}` : '');
   return `<b>${name}</b><br>beam ${fmtRes(p.res)}<br>η = ${p.eta.toFixed(2)}` +
-         `<br>skirt ${p.skirt === null ? '—' : (100*p.skirt).toFixed(1) + '%'}<br>${pars}`;
+         `<br>skirt ${p.skirt === null ? '—' : (100*p.skirt).toFixed(1) + '%'}` +
+         (p.relaxed ? ' <b>(relaxed — 10% unachievable here)</b>' : '') +
+         `<br>${pars}`;
 }
 
 const XT = [{v:1,l:'1 mas'},{v:10,l:'10 mas'},{v:100,l:'100 mas'},
@@ -337,7 +360,8 @@ function legend(el, svg) {
 
 legend(document.getElementById('legend-img'),
   curveChart(document.getElementById('chart-imaging'), DATA.imaging,
-    {...optsCommon, label: 'Imaging curves: eta vs resolution, PSF skirt <= 10%'}));
+    {...optsCommon, marker: 'triangle',
+     label: 'Imaging curves: eta vs resolution, PSF skirt <= 10%'}));
 legend(document.getElementById('legend-ps'),
   curveChart(document.getElementById('chart-ps'), DATA.pointsource,
     {...optsCommon, label: 'Point-source curves: eta vs resolution, skirt unconstrained'}));

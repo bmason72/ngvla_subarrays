@@ -248,7 +248,55 @@ User feedback on v1 (all implemented):
   uniformly). `subarrays.csv` + builder updated; SBA stays 0.58 when added.
 - **Deliverable to add:** a robust–taper-space illustration (eta map + skirt≤10% region +
   located minimum) for representative subarrays — build into the local report once v2 data
-  lands.
+  lands. ☑ done (lattice heatmaps in the report).
+
+### v2.1 (6 Jul 2026, second bmason review round)
+- **Report mojibake** — template lacked `<meta charset="utf-8">`; local file opens defaulted
+  to Latin-1. Fixed. (The artifact wrapper had been supplying it, masking the bug.)
+- **Imaging-curve markers** → filled triangles on the all-SA overview (matches small-multiple
+  symbol semantics).
+- **Curve reduction** → sliding-window min (±5% beam tolerance on a 0.01-dex grid, the
+  selector's own semantics), trimmed at **eta ≤ 5**; consecutive same-winner targets collapsed.
+  Replaces disjoint bins, which let isolated (often eta>5 or v1-stray) points win single bins →
+  the "popping" bmason flagged.
+- **Infeasibility gaps are real and now rendered as line breaks** (res ratio > 1.35): e.g.
+  **spiral+mid cannot be sculpted to skirt ≤ 10% between ~11 and ~55 mas** — negative robust
+  saturates (−2…−0.8 beams identical) and best skirt bottoms out at 0.14–0.21, precisely
+  memo 121's "bottom out at ~16%" phenomenon. Its imaging curve is genuinely sparse/gappy,
+  not under-sampled.
+- **`curvegen/refine.py`** — targeted adaptive refinement: wherever the imaging curve jumps
+  > 0.25 in eta between adjacent resolutions (excluding infeasibility gaps), measure ~6
+  bracketing (robust, taper) points per jump (robust ±0.2, taper ×/÷1.22, midpoints), up to 3
+  rounds / 60-point budget, on top of the resumable sweep results. Core: one round, +24 pts,
+  worst step 0.76 → 0.24. All 6 refined to worst steps 0.19–0.29.
+- **Skirt relaxation (bmason, 6 Jul 2026): angular resolution is the PRIMARY requirement.**
+  Where no (robust, taper) combo reaches skirt ≤ 0.10 at the requested resolution (e.g.
+  spiral+mid ~11–55 mas, bottoming out at 0.14–0.21), do NOT exclude/leave a gap and do NOT
+  distort resolution: relax the criterion to the best achievable skirt there, and FLAG it.
+  Implemented in `CurveLibrary.solve(relax=True)` (default; `ObservingRequest.skirt_relax`),
+  surfaced as `Candidate.warnings` (new field, non-fatal, printed as "note" lines in
+  `.table()`), and in the report's imaging curves (hollow triangles + tooltip). 3 new
+  regression tests (28 total).
+
+### Handoff state (6 Jul 2026 — moving to a bigger platform for the next round)
+Everything needed to resume is committed; see **README.md** for environment + commands.
+- **Works now:** `sa_select` end-to-end on bootstrap data (28 tests green); `curvegen`
+  v2.1 curves for the homogeneous set {core-inner, core, spiral, mid, core+spiral,
+  spiral+mid} — 2-D lattice + refinement, skirt-relaxed imaging curves, local HTML report.
+- **Not in git (regenerable):** simulated MSes, tclean work dirs, `curvegen/reports/`.
+  `sweep.py <sa>` re-simulates and skips all recorded points — cheap to rebuild anywhere.
+- **Final curve state:** 1299 samples. Imaging curves: strict segments smooth (max eta step
+  0.24–0.31); **relaxed segments** (best-achievable skirt, e.g. 31/66 pts for core+spiral,
+  55/96 for spiral+mid) still have ~0.5 steps because `refine.py` ran before relaxation
+  landed. **First cheap task on the new platform:** re-run `refine.py` for all 6 (it now
+  imports the relaxed `build_curve`, so it will target those segments), then `collect.py` +
+  `make_report.py`.
+- **Next round (more compute):** (1) heterogeneous subarrays core+mid & main — sculpt targets
+  must track the higher-resolution component (don't taper away the long spacings); imsize
+  15000 makes these hours-per-lattice on a laptop; (2) extend toward the full memo-121
+  subarray list (incl. Long — remember spurious-shorts filtering — and SBA, D=6 m, no taper);
+  (3) swap `sa_select`'s default data from bootstrap to Rev F once coverage suffices;
+  (4) LaTeX memo (T7); (5) denser noise-free eta? (open question: single noise realization).
 
 ### Implementation decisions (5 Jul 2026, M2/T5 build)
 - **`curvegen/`** at repo root (CASA-dependent, kept out of `sa_select/` so query time stays

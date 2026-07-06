@@ -63,6 +63,11 @@ class ObservingRequest:
     imaging: bool = True              # True: apply PSF-skirt constraint
     beam_margin: float = 0.05         # fractional tolerance on achieved beam
     skirt_threshold: float = 0.10     # max PSF level at r = 1 FWHM (imaging only)
+    skirt_relax: bool = True          # if the threshold is unachievable at the
+                                      # requested resolution, fall back to the
+                                      # best achievable skirt (flagged) rather
+                                      # than excluding the subarray -- angular
+                                      # resolution is the primary requirement
     optimize: str = "antenna_hours"   # built-in heuristic name, see heuristics.py
     delta_v: Optional[float] = None   # channel width for line sensitivity (m/s);
                                       # None -> calculator's continuum default
@@ -121,7 +126,9 @@ class Candidate:
 
     subarray: SubarrayInfo
     feasible: bool = False
-    reasons: List[str] = field(default_factory=list)
+    reasons: List[str] = field(default_factory=list)    # fatal exclusions
+    warnings: List[str] = field(default_factory=list)   # non-fatal caveats
+                                                        # (e.g. relaxed skirt)
 
     # imaging solution (None until filled in)
     resolution: Optional[float] = None    # achieved beam FWHM (arcsec) at request freq

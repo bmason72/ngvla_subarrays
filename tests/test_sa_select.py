@@ -417,3 +417,44 @@ class TestEndToEndSmoke(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSkirtRelaxation(SyntheticLibraryTestCase):
+    """Angular resolution is the primary requirement (bmason, 6 Jul 2026):
+    when no beam at the requested resolution reaches the skirt threshold,
+    solve() relaxes to the best achievable skirt there and flags it, rather
+    than excluding the subarray (memo 121's 'bottom out at ~16%' cases)."""
+
+    def setUp(self):
+        self.lib = self.make_library(
+            subarray_rows=[["testA", "testA", 10, 100.0, 1000.0, 0.85, "testA", ""]],
+            sample_rows=[
+                # both fail the 0.10 threshold; the 0.16-skirt one is the
+                # best achievable and cheaper than the 0.30 one
+                ["testA", "1.0", "1.8", "0.16", "briggs", "-0.5", "0.5", "30.0", "best_achievable", ""],
+                ["testA", "1.0", "1.2", "0.30", "natural", "", "0.6", "30.0", "cheap_but_messy", ""],
+            ],
+        )
+
+    def test_relaxed_solution_returned_and_flagged(self):
+        sample, msg = self.lib.solve("testA", resolution=1.0, freq_ghz=30.0,
+                                     skirt_threshold=0.10, relax=True)
+        self.assertIsNotNone(sample)
+        self.assertEqual(sample.skirt, 0.16)     # best achievable, not cheapest
+        self.assertIn("relaxed", msg)
+
+    def test_strict_mode_still_excludes(self):
+        sample, msg = self.lib.solve("testA", resolution=1.0, freq_ghz=30.0,
+                                     skirt_threshold=0.10, relax=False)
+        self.assertIsNone(sample)
+
+    def test_selector_marks_relaxation_as_warning_not_exclusion(self):
+        req = ObservingRequest(resolution=1.0, frequency=30.0, imaging=True)
+        res = select_subarrays(req, library=self.lib)
+        c = res.candidates[0]
+        self.assertTrue(c.feasible)
+        self.assertTrue(c.warnings and "relaxed" in c.warnings[0])
+        req_strict = ObservingRequest(resolution=1.0, frequency=30.0,
+                                      imaging=True, skirt_relax=False)
+        res2 = select_subarrays(req_strict, library=self.lib)
+        self.assertFalse(res2.candidates[0].feasible)

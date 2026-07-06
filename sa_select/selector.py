@@ -59,6 +59,7 @@ class SelectionResult:
             rows.append(dict(
                 subarray=c.subarray.name, n_ant=c.subarray.n_ant,
                 feasible=c.feasible, reasons="; ".join(c.reasons),
+                warnings="; ".join(c.warnings),
                 resolution_arcsec=c.resolution, eta=c.eta,
                 weighting=c.weighting, robust=c.robust,
                 taper_arcsec=c.taper, skirt=c.skirt, las_arcsec=c.las,
@@ -88,6 +89,9 @@ class SelectionResult:
                             fmt(c.antenna_hours)))
         if not self.feasible:
             lines.append("(no feasible subarray)")
+        for c in self.feasible:
+            for w in c.warnings:
+                lines.append("note      %-12s : %s" % (c.subarray.name, w))
         for c in self.infeasible:
             lines.append("excluded  %-12s : %s"
                          % (c.subarray.name, "; ".join(c.reasons)))
@@ -131,10 +135,13 @@ def select_subarrays(request: ObservingRequest,
         sample, msg = library.solve(info.name, request.resolution,
                                     request.frequency,
                                     beam_margin=request.beam_margin,
-                                    skirt_threshold=skirt_thr)
+                                    skirt_threshold=skirt_thr,
+                                    relax=request.skirt_relax)
         if sample is None:
             c.reasons.append(msg)
         else:
+            if msg != "ok":
+                c.warnings.append(msg)          # e.g. relaxed skirt criterion
             s = library.scale_sample(sample, request.frequency)
             c.resolution, c.eta, c.skirt = s.resolution, s.eta, s.skirt
             c.weighting, c.robust, c.taper = s.weighting, s.robust, s.taper

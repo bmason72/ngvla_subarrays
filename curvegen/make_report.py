@@ -26,29 +26,55 @@ ORDER = ["core", "spiral", "mid", "core+spiral", "spiral+mid", "core+mid",
 DEFERRED = ["core+mid", "main"]     # heterogeneous; reworked later (PLAN.md)
 
 
-BIN_DEX = 0.03      # resolution bin width for the curve, in dex (~7%)
+ETA_CAP = 5.0        # curves are not meaningful above this (user decision)
+BEAM_TOL = 0.05      # +-5% beam tolerance, the selector's own default
+GRID_DEX = 0.01      # target-resolution grid spacing for the sliding window
 
 
 def build_curve(samples, skirt_max=None):
-    """The operational min-eta curve: per resolution bin, the cheapest way to
-    make that beam (optionally restricted to sculpted beams, skirt <= max).
+    """The operational min-eta curve: at each target resolution, the cheapest
+    way to make that beam within the +-5% tolerance (optionally restricted
+    to sculpted beams, skirt <= max).
 
-    Each resolution is its own requirement, so the reduction is simply the
-    minimum eta within narrow log-spaced resolution bins -- the memo-style
-    taperability curve, traced by whatever branch is cheapest locally.
+    This is exactly the question the selection tool answers, evaluated on a
+    fine log grid of target resolutions with a SLIDING window (adjacent
+    targets share samples), so the curve only moves when the actual optimum
+    changes.  Consecutive targets won by the same sample are collapsed.
+
+    Angular resolution is the primary requirement: where nothing under the
+    skirt threshold exists at some resolution, the criterion is RELAXED to
+    the best achievable skirt there (memo 121's 'partial' cases) and the
+    point is flagged relaxed=True, rather than leaving a hole in the curve.
     """
     import math
-    if skirt_max is not None:
-        samples = [s for s in samples if s["skirt"] is not None
-                   and s["skirt"] <= skirt_max]
+    samples = [s for s in samples if s["eta"] <= ETA_CAP]
     if not samples:
         return []
-    best = {}
-    for s in samples:
-        b = int(math.floor(math.log10(s["res"]) / BIN_DEX))
-        if b not in best or s["eta"] < best[b]["eta"]:
-            best[b] = s
-    return sorted(best.values(), key=lambda s: s["res"])
+    half = math.log10(1 + BEAM_TOL)
+    lo = math.log10(min(s["res"] for s in samples))
+    hi = math.log10(max(s["res"] for s in samples))
+    curve, prev = [], None
+    x = lo
+    while x <= hi + 1e-9:
+        win = [s for s in samples if abs(math.log10(s["res"]) - x) <= half]
+        if skirt_max is None:
+            pool, relaxed = win, False
+        else:
+            win = [s for s in win if s["skirt"] is not None]
+            pool = [s for s in win if s["skirt"] <= skirt_max]
+            relaxed = False
+            if not pool and win:            # relax to best achievable skirt
+                best_skirt = min(s["skirt"] for s in win)
+                pool = [s for s in win if s["skirt"] <= best_skirt * 1.15]
+                relaxed = True
+        if pool:
+            best = min(pool, key=lambda s: s["eta"])
+            key = (best["weighting"], best["robust"], best["taper"])
+            if key != prev:
+                curve.append(dict(best, relaxed=relaxed))
+                prev = key
+        x += GRID_DEX
+    return sorted(curve, key=lambda s: s["res"])
 
 
 def build_heatmap(samples, imaging_curve):
@@ -93,7 +119,7 @@ def main(out_path):
     samples_by = {name: [] for name in ORDER}
     with open(os.path.join(REPO, "sa_select", "data", "revf_curves.csv")) as f:
         for r in csv.DictReader(f):
-            samples_by[r["subarray"]].append(dict(
+            s = dict(
                 res=float(r["resolution_arcsec_30ghz"]) * 1e3,   # mas
                 eta=float(r["eta"]),
                 skirt=float(r["skirt"]) if r["skirt"] else None,
@@ -101,7 +127,9 @@ def main(out_path):
                 robust=float(r["robust"]) if r["robust"] else None,
                 taper=float(r["taper_arcsec_30ghz"]) * 1e3
                       if r["taper_arcsec_30ghz"] else 0.0,
-            ))
+            )
+            if s["eta"] <= ETA_CAP:      # the eta > ~5 regime is not of interest
+                samples_by[r["subarray"]].append(s)
 
     las = {}
     with open(os.path.join(REPO, "sa_select", "data", "subarrays.csv")) as f:

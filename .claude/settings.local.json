@@ -36,7 +36,10 @@
       "Bash(/Applications/CASA.app/Contents/MacOS/python3 sweep.py core-inner --limit 6)",
       "Bash(grep -vE \"WARN|^$\")",
       "Bash(mkdir -p /Users/bmason/Data/ngvla/sa/curvegen/reports)",
-      "Bash(/Applications/CASA.app/Contents/MacOS/python3 make_report.py reports/revf-curves.html)"
+      "Bash(/Applications/CASA.app/Contents/MacOS/python3 make_report.py reports/revf-curves.html)",
+      "Bash(grep -E \"round|refined|\\\\.\\\\.\\\\.$\")",
+      "Bash(/Applications/CASA.app/Contents/MacOS/python3 refine.py core)",
+      "Bash(/Applications/CASA.app/Contents/MacOS/python3 -m unittest discover -s tests -t .)"
     ]
   }
 }
