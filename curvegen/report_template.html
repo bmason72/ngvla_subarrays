@@ -63,6 +63,42 @@ header .sub { color: var(--ink-2); max-width: 72ch; margin: 0; }
 }
 .card h2 { font-size: 17px; font-weight: 650; margin: 0 0 2px; }
 .card .note { color: var(--ink-2); font-size: 13.5px; margin: 0 0 10px; max-width: 78ch; }
+.calc-form {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
+  gap: 10px 12px; align-items: end; margin: 12px 0 10px;
+}
+.calc-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.calc-field span {
+  color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.03em;
+}
+.calc-field input, .calc-field select {
+  width: 100%; min-height: 36px; border: 1px solid var(--ring);
+  border-radius: 5px; background: var(--page); color: var(--ink);
+  font: inherit; padding: 6px 8px;
+}
+.calc-field input:focus, .calc-field select:focus, .calc-button:focus-visible {
+  outline: 2px solid var(--s-core); outline-offset: 1px;
+}
+.calc-button {
+  min-height: 36px; border: 1px solid var(--ring); border-radius: 5px;
+  background: var(--ink); color: var(--page); font: inherit; font-weight: 650;
+  padding: 6px 12px; cursor: pointer;
+}
+.calc-error {
+  min-height: 1.4em; color: var(--warning); font-size: 13.5px; margin: 2px 0 8px;
+}
+.calc-summary { margin: 4px 0 8px; font-size: 14px; color: var(--ink-2); }
+.calc-summary strong { color: var(--ink); }
+.series-swatch {
+  display: inline-block; width: 9px; height: 9px; border-radius: 2px;
+  margin-right: 6px; vertical-align: -1px;
+}
+.calc-flags { color: var(--ink-2); font-size: 12.5px; }
+.calc-reasons { color: var(--ink-2); font-size: 13.5px; margin: 8px 0 0; }
+.calc-reasons li { margin-bottom: 4px; }
+.calc-caveat { margin-top: 10px !important; }
+#calc-table th:first-child, #calc-table td:first-child { text-align: right; }
+#calc-table th:nth-child(2), #calc-table td:nth-child(2) { text-align: left; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0 4px; }
 .legend .chip {
   display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
@@ -105,20 +141,66 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   <p class="sub">Sensitivity cost (&eta;, the image rms relative to natural weighting) versus achieved
   resolution at the 30&thinsp;GHz reference frequency, measured from noise simulations of each Rev&thinsp;F
   subarray (4&thinsp;h track, dec&thinsp;+24&deg;) over a grid of Briggs robust and uv-taper values.
-  The <em>imaging</em> curves admit only beams whose PSF skirt &mdash; the azimuthally averaged PSF level at
-  a radius of one FWHM (memo&thinsp;65 metric&thinsp;2b) &mdash; is &le;&thinsp;10% (memo&thinsp;121 criterion).</p>
+  The <em>imaging</em> curves constrain the PSF skirt &mdash; the azimuthally averaged PSF level at
+  a radius of one FWHM (memo&thinsp;65 metric&thinsp;2b) &mdash; to &le;&thinsp;10% (memo&thinsp;121 criterion)
+  where that is cheap, trading skirt against &eta; one-for-one up to a skirt of 25% where it is not.</p>
 </header>
 
 <div class="tiles" id="tiles"></div>
 
+<div class="card" id="subarray-calculator">
+  <h2>Subarray calculator</h2>
+  <p class="note">Evaluates the same tabulated engine curves shown below; no server, all client-side.</p>
+  <form class="calc-form" id="calc-form">
+    <label class="calc-field"><span>Frequency [GHz]</span>
+      <input id="calc-freq" name="freq" type="number" min="1.2" max="116" step="0.01" value="30" inputmode="decimal">
+    </label>
+    <label class="calc-field"><span>Resolution [&Prime;]</span>
+      <input id="calc-res" name="resolution" type="number" min="0" step="0.001" value="0.01" inputmode="decimal">
+    </label>
+    <label class="calc-field"><span>Bandwidth [MHz]</span>
+      <input id="calc-bandwidth" name="bandwidth" type="number" min="0" step="1" value="1000" inputmode="decimal">
+    </label>
+    <label class="calc-field"><span>LAS [&Prime;]</span>
+      <input id="calc-las" name="las" type="number" min="0" step="0.001" placeholder="optional" inputmode="decimal">
+    </label>
+    <label class="calc-field"><span>Observation type</span>
+      <select id="calc-obs" name="obs">
+        <option value="imaging" selected>imaging</option>
+        <option value="pointsource">point source</option>
+      </select>
+    </label>
+    <label class="calc-field"><span>Desired sensitivity [&micro;Jy/beam]</span>
+      <input id="calc-sens" name="sens" type="number" min="0" step="0.1" value="10" inputmode="decimal">
+    </label>
+    <label class="calc-field"><span>Rank by</span>
+      <select id="calc-rank" name="rank">
+        <option value="antenna_hours" selected>antenna hours</option>
+        <option value="time">observing time</option>
+      </select>
+    </label>
+    <button class="calc-button" type="submit">Compute</button>
+  </form>
+  <div class="calc-error" id="calc-error" role="alert" aria-live="polite"></div>
+  <div class="calc-summary" id="calc-summary"></div>
+  <div class="tablewrap"><table id="calc-table"></table></div>
+  <details id="calc-infeasible"><summary>Infeasible subarrays</summary>
+    <ul class="calc-reasons" id="calc-reasons"></ul>
+  </details>
+  <p class="note calc-caveat">Times assume the memo-96 sensitivity model (natural-weighting anchor x
+  curve eta), 1-h/1-MHz tabulated basis, single pointing, no overheads; spectral-line vs continuum
+  band-averaging differences are not modeled.</p>
+</div>
+
 <div class="card">
-  <h2>Imaging curves (PSF skirt &le; 10%)</h2>
-  <p class="note">Minimum &eta; at each target resolution (&plusmn;5% beam tolerance, the selection
-  tool&rsquo;s own window) among sculpted beams, trimmed at &eta;&thinsp;=&thinsp;5. Angular resolution
-  is the primary requirement: <strong>hollow triangles</strong> mark resolutions where no
-  (robust,&thinsp;taper) combination reaches a 10% skirt and the criterion is relaxed to the best
-  achievable value there (cf. memo&thinsp;121&rsquo;s &ldquo;bottom out at &sim;16%&rdquo; cases,
-  e.g. spiral+mid between &sim;11 and &sim;55&thinsp;mas) &mdash; hover for the achieved skirt.
+  <h2>Imaging curves (&eta;&ndash;skirt trade about a 10% skirt target)</h2>
+  <p class="note">At each target resolution the curve minimizes
+  <em>&eta; + max(0, skirt &minus; 0.10)</em> over beams with skirt &le; 25% &mdash; i.e. a beam
+  with skirt above 10% wins only if it saves more &eta; than the one-for-one trade charges
+  (curves are computed by the shared interpolation engine, continuous in resolution).
+  Angular resolution remains the primary requirement: <strong>hollow triangles</strong> mark
+  beams whose skirt exceeds 10% (accepted under the trade, or &mdash; where even 25% is
+  unreachable &mdash; relaxed to the best achievable value; hover for the achieved skirt).
   Dashed verticals mark each subarray&rsquo;s LAS at 30&thinsp;GHz; the core-bearing subarrays share
   b<sub>min</sub> and hence a common LAS. This is the operational look-up view for imaging projects
   (the memo&thinsp;76 figure&thinsp;1 analog).</p>
@@ -177,9 +259,9 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 <div class="card">
   <h2>Caveats &amp; status</h2>
   <ul class="caveats">
-    <li><strong>core+mid and main are deferred</strong> &mdash; their two-component beams need sculpt
+    <li><strong>core+mid is omitted from this report</strong> &mdash; its two-component beam needs sculpt
         targets anchored to the higher-resolution component (the v1 sweep found false minima there).
-        Color slots are reserved; curves will drop in without re-mapping the others.</li>
+        The color slot is reserved; curves can drop in without re-mapping the others.</li>
     <li><strong>core-inner</strong> is memo 121&rsquo;s CoreInner (57 antennas), taken here as the
         innermost 57 core antennas by radius from the core centroid &mdash; an assumed membership
         rule, to be verified against Viviana&rsquo;s list.</li>
@@ -202,7 +284,7 @@ const DATA = __DATA__;
 const SLOT = {"core":"--s-core","spiral":"--s-spiral","mid":"--s-mid",
   "core+spiral":"--s-core-spiral","spiral+mid":"--s-spiral-mid",
   "core+mid":"--s-core-mid","main":"--s-main","core-inner":"--s-core-inner"};
-const css = name => `var(${SLOT[name]})`;
+const css = name => SLOT[name] ? `var(${SLOT[name]})` : 'var(--muted)';
 const ACTIVE = DATA.order.filter(n => (DATA.samples[n]||[]).length);
 
 const fmtRes = mas => mas >= 1000 ? (mas/1000).toPrecision(3) + '″'
@@ -221,6 +303,326 @@ function svgEl(tag, attrs) {
   for (const k in attrs) e.setAttribute(k, attrs[k]);
   return e;
 }
+
+// in-page subarray calculator -------------------------------------------------
+const CALC_BEAM_MARGIN = 0.05;
+const CALC_RECEIVER_BANDS = [[1.2, 50.5], [70.0, 116.0]];
+
+function finitePositive(x) {
+  return Number.isFinite(x) && x > 0;
+}
+
+function trimZeros(s) {
+  return s.replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '');
+}
+
+function fmtSig(x, digits=3) {
+  if (!Number.isFinite(x)) return '—';
+  if (x === 0) return '0';
+  const sign = x < 0 ? '-' : '';
+  const ax = Math.abs(x);
+  const exp = Math.floor(Math.log10(ax));
+  const scale = Math.pow(10, exp - digits + 1);
+  const rounded0 = Math.round(ax / scale) * scale;
+  const exp2 = Math.floor(Math.log10(rounded0));
+  if (exp2 >= 6 || exp2 <= -4)
+    return sign + rounded0.toExponential(digits - 1).replace(/\.?0+e/, 'e');
+  const decimals = Math.max(0, digits - 1 - exp2);
+  return sign + trimZeros(rounded0.toFixed(decimals));
+}
+
+function fmtDuration(hours) {
+  if (!Number.isFinite(hours)) return '—';
+  const seconds = hours * 3600;
+  if (seconds < 60) return fmtSig(seconds) + ' s';
+  const minutes = hours * 60;
+  if (minutes < 60) return fmtSig(minutes) + ' min';
+  if (hours < 48) return fmtSig(hours) + ' h';
+  return fmtSig(hours / 24) + ' d';
+}
+
+function fmtArcsecFromMas(mas) {
+  return fmtSig(mas / 1000) + '″';
+}
+
+function inReceiverBand(freq) {
+  return CALC_RECEIVER_BANDS.some(([lo, hi]) => freq >= lo && freq <= hi);
+}
+
+function readCalcNumber(id, label, errors, optional=false) {
+  const el = document.getElementById(id);
+  const raw = el ? el.value.trim() : '';
+  if (optional && raw === '') return null;
+  const value = Number(raw);
+  if (!finitePositive(value)) {
+    errors.push(label + ' must be a number greater than 0.');
+    return null;
+  }
+  return value;
+}
+
+function readCalcRequest() {
+  const errors = [];
+  const freq = readCalcNumber('calc-freq', 'Frequency', errors);
+  const resolution = readCalcNumber('calc-res', 'Resolution', errors);
+  const bandwidth = readCalcNumber('calc-bandwidth', 'Bandwidth', errors);
+  const las = readCalcNumber('calc-las', 'LAS', errors, true);
+  const sensitivity = readCalcNumber('calc-sens', 'Desired sensitivity', errors);
+  if (freq !== null && !inReceiverBand(freq))
+    errors.push('Frequency must be in 1.2-50.5 or 70-116 GHz; 50.5-70 GHz is the receiver gap.');
+  return errors.length ? {errors} : {request: {
+    freq, resolution, bandwidth, las, sensitivity,
+    obs: document.getElementById('calc-obs').value,
+    rank: document.getElementById('calc-rank').value,
+  }};
+}
+
+function compareKeys(a, b) {
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] < b[i]) return -1;
+    if (a[i] > b[i]) return 1;
+  }
+  return 0;
+}
+
+function curveObjective(p, obs) {
+  if (obs !== 'imaging') return p.eta;
+  const skirt = Number.isFinite(p.skirt) ? p.skirt : 0.10;
+  return p.eta + Math.max(0, skirt - 0.10);
+}
+
+function lookupCurvePoint(name, obs, resRefMas) {
+  const curves = obs === 'pointsource' ? DATA.pointsource : DATA.imaging;
+  const curve = curves && Array.isArray(curves[name]) ? curves[name] : [];
+  if (!curve.length) return {reason: 'no curve data tabulated for this subarray'};
+  const lo = resRefMas * (1 - CALC_BEAM_MARGIN);
+  const hi = resRefMas * (1 + CALC_BEAM_MARGIN);
+  let best = null, bestKey = null;
+  for (const p of curve) {
+    if (!p || !finitePositive(Number(p.res)) || !finitePositive(Number(p.eta))) continue;
+    if (p.res < lo || p.res > hi) continue;
+    const key = [
+      curveObjective(p, obs),
+      p.eta,
+      Math.abs(Math.log(p.res / resRefMas)),
+    ];
+    if (!best || compareKeys(key, bestKey) < 0) {
+      best = p; bestKey = key;
+    }
+  }
+  return best ? {point: best} : {reason: 'no beam within ±5% of request'};
+}
+
+function interpolateSigma(name, freq) {
+  const table = DATA.sens && DATA.sens[name];
+  const freqs = table && Array.isArray(table.freq_ghz) ? table.freq_ghz : [];
+  const sigmas = table && Array.isArray(table.sigma_nat_ujy) ? table.sigma_nat_ujy : [];
+  if (!freqs.length || freqs.length !== sigmas.length)
+    return {reason: 'missing sensitivity table'};
+
+  for (let i = 0; i < freqs.length; i++) {
+    const f = Number(freqs[i]);
+    if (!Number.isFinite(f)) continue;
+    if (Math.abs(f - freq) <= Math.max(1e-9, Math.abs(freq) * 1e-10)) {
+      const s = Number(sigmas[i]);
+      return finitePositive(s) ? {sigma: s} : {reason: 'outside receiver bands'};
+    }
+  }
+
+  for (let i = 0; i < freqs.length - 1; i++) {
+    const f0 = Number(freqs[i]), f1 = Number(freqs[i + 1]);
+    if (!Number.isFinite(f0) || !Number.isFinite(f1)) continue;
+    if (!(f0 <= freq && freq <= f1)) continue;
+    const s0 = Number(sigmas[i]), s1 = Number(sigmas[i + 1]);
+    if (!finitePositive(s0) || !finitePositive(s1)) return {reason: 'outside receiver bands'};
+    const u = Math.log(freq / f0) / Math.log(f1 / f0);
+    return {sigma: Math.exp((1 - u) * Math.log(s0) + u * Math.log(s1))};
+  }
+  return {reason: 'outside receiver bands'};
+}
+
+function tcleanText(p, freq) {
+  const parts = [p.weighting || 'unknown'];
+  if (p.weighting === 'briggs' && Number.isFinite(Number(p.robust)))
+    parts.push('robust ' + Number(p.robust).toFixed(2));
+  const taperMas = finitePositive(Number(p.taper)) ? Number(p.taper) * 30 / freq : 0;
+  parts.push(taperMas > 0 ? 'taper ' + fmtRes(taperMas) : 'no taper');
+  return parts.join('; ');
+}
+
+function flagInfo(p) {
+  const flags = [], notes = [];
+  if (p.traded) {
+    flags.push('traded');
+    notes.push('Skirt above 10% accepted under the 1:1 eta-skirt trade.');
+  }
+  if (p.relaxed) {
+    flags.push('relaxed');
+    notes.push('No beam in the request window reaches the trade cap; best achievable skirt used.');
+  }
+  return {text: flags.join(', '), title: notes.join(' ')};
+}
+
+function evaluateSubarray(name, request, order) {
+  const reasons = [];
+  const resRefMas = request.resolution * 1000 * (request.freq / 30);
+  const las = DATA.las && DATA.las[name];
+  const nAnt = las ? Number(las.n_ant) : NaN;
+  if (!finitePositive(nAnt)) reasons.push('missing antenna metadata');
+
+  const curve = lookupCurvePoint(name, request.obs, resRefMas);
+  if (!curve.point) reasons.push(curve.reason);
+
+  if (request.las !== null) {
+    if (!las || !finitePositive(Number(las.mas))) {
+      reasons.push('missing LAS metadata');
+    } else {
+      const lasAtFreqMas = Number(las.mas) * 30 / request.freq;
+      const wantMas = request.las * 1000;
+      if (lasAtFreqMas < wantMas)
+        reasons.push('LAS too small (' + fmtArcsecFromMas(lasAtFreqMas) +
+          ' < ' + fmtArcsecFromMas(wantMas) + ' requested)');
+    }
+  }
+
+  const sens = interpolateSigma(name, request.freq);
+  if (!sens.sigma) reasons.push(sens.reason);
+
+  if (reasons.length) return {name, feasible: false, reasons, order};
+
+  const eta = Number(curve.point.eta);
+  const tHours = Math.pow(eta * sens.sigma / request.sensitivity, 2) / request.bandwidth;
+  const antennaHours = tHours * nAnt;
+  if (!finitePositive(tHours) || !finitePositive(antennaHours))
+    return {name, feasible: false, reasons: ['sensitivity calculation failed'], order};
+  return {name, feasible: true, point: curve.point, tHours, antennaHours, nAnt, order};
+}
+
+function clearNode(el) {
+  while (el.firstChild) el.removeChild(el.firstChild);
+}
+
+function addCell(tr, text, title) {
+  const td = document.createElement('td');
+  td.textContent = text;
+  if (title) td.title = title;
+  tr.append(td);
+  return td;
+}
+
+function addSubarrayCell(tr, name) {
+  const td = document.createElement('td');
+  const swatch = document.createElement('span');
+  swatch.className = 'series-swatch';
+  swatch.style.background = css(name);
+  td.append(swatch, document.createTextNode(name));
+  tr.append(td);
+}
+
+function renderCalcSummary(summaryEl, winner) {
+  clearNode(summaryEl);
+  if (!winner) {
+    summaryEl.textContent = 'No feasible subarray for this request.';
+    return;
+  }
+  const name = document.createElement('strong');
+  name.textContent = winner.name;
+  summaryEl.append('Best: ', name, ' — ', fmtDuration(winner.tHours),
+    ' observing time, ', fmtSig(winner.antennaHours), ' antenna h.');
+}
+
+function renderCalcTable(table, feasible, request) {
+  clearNode(table);
+  const header = document.createElement('tr');
+  ['rank', 'subarray', 'observing time', 'antenna hours', 'eta', 'skirt',
+   'tclean parameters', 'flags'].forEach(label => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    header.append(th);
+  });
+  table.append(header);
+  if (!feasible.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 8;
+    td.style.textAlign = 'left';
+    td.textContent = 'No feasible subarray.';
+    tr.append(td);
+    table.append(tr);
+    return;
+  }
+  feasible.forEach((row, i) => {
+    const p = row.point;
+    const tr = document.createElement('tr');
+    addCell(tr, String(i + 1));
+    addSubarrayCell(tr, row.name);
+    addCell(tr, fmtDuration(row.tHours));
+    addCell(tr, fmtSig(row.antennaHours) + ' h');
+    addCell(tr, fmtSig(Number(p.eta)));
+    addCell(tr, Number.isFinite(Number(p.skirt)) ? fmtSig(100 * Number(p.skirt)) + '%' : '—');
+    addCell(tr, tcleanText(p, request.freq));
+    const flags = flagInfo(p);
+    const flagCell = addCell(tr, flags.text || '—', flags.title);
+    flagCell.className = 'calc-flags';
+    table.append(tr);
+  });
+}
+
+function renderInfeasible(details, list, rows) {
+  const summary = details.querySelector('summary');
+  summary.textContent = 'Infeasible subarrays (' + rows.length + ')';
+  clearNode(list);
+  if (!rows.length) {
+    const li = document.createElement('li');
+    li.textContent = 'None.';
+    list.append(li);
+    return;
+  }
+  rows.forEach(row => {
+    const li = document.createElement('li');
+    li.textContent = row.name + ': ' + row.reasons.join('; ');
+    list.append(li);
+  });
+}
+
+function renderCalcError(errors) {
+  document.getElementById('calc-error').textContent = errors.join(' ');
+  clearNode(document.getElementById('calc-summary'));
+  clearNode(document.getElementById('calc-table'));
+  renderInfeasible(document.getElementById('calc-infeasible'),
+                   document.getElementById('calc-reasons'), []);
+}
+
+function runSubarrayCalculator() {
+  const read = readCalcRequest();
+  if (read.errors) {
+    renderCalcError(read.errors);
+    return;
+  }
+  document.getElementById('calc-error').textContent = '';
+  const request = read.request;
+  const order = Array.isArray(DATA.order) ? DATA.order : [];
+  const rows = order.map((name, i) => evaluateSubarray(name, request, i));
+  const feasible = rows.filter(r => r.feasible);
+  const infeasible = rows.filter(r => !r.feasible);
+  const key = request.rank === 'time' ? 'tHours' : 'antennaHours';
+  feasible.sort((a, b) => (a[key] - b[key]) || (a.nAnt - b.nAnt) || (a.order - b.order));
+  renderCalcSummary(document.getElementById('calc-summary'), feasible[0]);
+  renderCalcTable(document.getElementById('calc-table'), feasible, request);
+  renderInfeasible(document.getElementById('calc-infeasible'),
+                   document.getElementById('calc-reasons'), infeasible);
+}
+
+(function subarrayCalculator() {
+  const form = document.getElementById('calc-form');
+  if (!form) return;
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+    runSubarrayCalculator();
+  });
+  document.getElementById('calc-rank').addEventListener('change', runSubarrayCalculator);
+  runSubarrayCalculator();
+})();
 
 // log-x, log-y curve chart --------------------------------------------------
 function curveChart(el, curves, opts) {
@@ -272,21 +674,23 @@ function curveChart(el, curves, opts) {
     svg.append(lb);
   }
 
-  // series -- the line breaks where consecutive optima are > 35% apart in
-  // resolution: a genuine sculpt-infeasible band, not to be interpolated
+  // series -- curves are dense grids (0.01 dex spacing) from the shared
+  // interpolation engine; the line breaks where consecutive grid points are
+  // more than ~2 grid steps apart: a genuine coverage gap, not interpolated
   const endLabels = [];
   for (const name of ACTIVE) {
     const pts = curves[name]; if (!pts || !pts.length) continue;
     const g = svgEl('g', {'class': 'series-g', 'data-series': name});
     let path = '';
     pts.forEach((p, i) => {
-      const gap = i && p.res / pts[i - 1].res > 1.35;
+      const gap = i && p.res / pts[i - 1].res > 1.055;
       path += (i && !gap ? 'L' : 'M') + X(p.res).toFixed(1) + ' ' +
               Y(p.eta).toFixed(1);
     });
     g.append(svgEl('path', {d: path, fill: 'none', stroke: css(name),
                             'stroke-width': 2, 'stroke-linejoin': 'round'}));
     for (const p of pts) {
+      if (!p.marker) continue;   // tooltip markers only at engine-flagged points
       let m;
       if (opts.marker === 'triangle') {
         const x = X(p.res), y = Y(p.eta);
@@ -294,9 +698,11 @@ function curveChart(el, curves, opts) {
       } else {
         m = svgEl('circle', {cx: X(p.res), cy: Y(p.eta), r: 3.5});
       }
-      // relaxed-skirt optima (10% unachievable at this resolution) are hollow
-      m.setAttribute('fill', p.relaxed ? 'var(--surface)' : css(name));
-      m.setAttribute('stroke', p.relaxed ? css(name) : 'var(--surface)');
+      // non-strict optima are hollow: traded (skirt accepted under the
+      // 1-for-1 eta-skirt trade) or relaxed (even the trade cap unreachable)
+      const hollow = p.relaxed || p.traded;
+      m.setAttribute('fill', hollow ? 'var(--surface)' : css(name));
+      m.setAttribute('stroke', hollow ? css(name) : 'var(--surface)');
       m.setAttribute('stroke-width', 1.5);
       m.setAttribute('class', 'mark');
       const hit = svgEl('circle', {cx: X(p.res), cy: Y(p.eta), r: 10,
@@ -327,7 +733,8 @@ function ttHtml(name, p) {
     : `briggs robust ${p.robust.toFixed(2)}` + (p.taper ? `, taper ${fmtRes(p.taper)}` : '');
   return `<b>${name}</b><br>beam ${fmtRes(p.res)}<br>η = ${p.eta.toFixed(2)}` +
          `<br>skirt ${p.skirt === null ? '—' : (100*p.skirt).toFixed(1) + '%'}` +
-         (p.relaxed ? ' <b>(relaxed — 10% unachievable here)</b>' : '') +
+         (p.relaxed ? ' <b>(relaxed — even the 25% trade cap unachievable here)</b>'
+          : p.traded ? ' <b>(traded — skirt &gt;10% accepted under the 1:1 η-skirt trade)</b>' : '') +
          `<br>${pars}`;
 }
 

@@ -278,6 +278,93 @@ User feedback on v1 (all implemented):
   `.table()`), and in the report's imaging curves (hollow triangles + tooltip). 3 new
   regression tests (28 total).
 
+### TACC round (6 Jul 2026, evening — resumed on Stampede3)
+Environment: see `casaLocation.md` (modular CASA 6.7.5 venv in `$WORK` + `casapy`
+wrapper; the previously-noted monolithic install is broken). 28/28 tests pass.
+- **Homogeneous set refreshed:** all 6 MSes re-simulated; relaxation-aware
+  `refine.py` re-run per the handoff plan (core-inner/core/spiral/mid converged at
+  worst in-band eta step ≤ 0.24; core+spiral & spiral+mid refined their relaxed
+  segments).
+- **Heterogeneous rework implemented (core+mid, main):** per bmason's directive
+  (sculpt resolutions track the higher-resolution component) + a Codex design
+  review: (a) **beam cap** — points with beam > coarsest component's native beam
+  (core 0.710″ @30 GHz) get `status="capped"` (measured but never collected — the
+  v1 false-minima leak), rows prune after **two consecutive** capped points
+  (beam-fit-discontinuity guard); (b) `N_TAPERS_HETERO = 18` (2.5-dex taper range);
+  (c) `refine.py` also chases resolution jumps (not just eta jumps) for these two
+  (plateau transitions can hide there); (d) v1 `core_mid.csv` archived to
+  `results/v1-attic/`. Full lattices (≤228 pts, ~2.3 min/pt at imsize 15000)
+  running. TODO when trusted: drop them from `DEFERRED` in `collect.py` +
+  `make_report.py`.
+
+### HANDOFF STATE (7 Jul 2026 — read this first)
+
+**Where things stand.** All 7 offered subarrays (core-inner, core, spiral,
+mid, core+spiral, spiral+mid, main) have complete v2 lattices + cheap-cell
+fills + refinement; curves come from the shared engine (`sa_select/envelope.py`,
+row+column edge interpolation, eta–skirt 1:1 trade about skirt 0.10 up to
++0.15 span). Report: `curvegen/reports/revf-curves.html` (dense engine curves,
+in-page subarray calculator card). core+mid measured but DROPPED from the
+offered set (bmason). 52+ tests green (`casapy -m unittest discover -s tests -t .`).
+
+**In flight / open items (owner: next agent):**
+1. **memo-121 campaign**: long, spiral+core-outer, mid+spiral+core-outer
+   swept+filled (done, in `curvegen/results/`, not yet offered). The 4 heavy
+   long-combos (mid+long, spiral+mid+long, main+long,
+   long+mid+spiral+core-outer) are in `curvegen/campaign_long.sbatch` —
+   **bmason must `sbatch` it from a login node** (compute nodes can't).
+   After: QA each (beam caps honored, 0 failed), add rows to
+   `sa_select/data/subarrays.csv` (calc_name; N.B. **Long's b_min/LAS needs
+   spurious-shorts filtering**, cf. `artifacts/saUtil.py` ~150 m cut) — collect
+   auto-includes offered subarrays only, then re-collect + regen report.
+2. **Edge-interpolation probe: HYPOTHESIS CONFIRMED (7 Jul 2026).** The
+   residual imaging-curve steps sat at winners pinned at skirt≈0.249; probe
+   measurements at r=−0.6 (main) and r=0.6 (spiral+mid) found admissible
+   interior points (skirt 0.23–0.24) exactly at the step resolutions — the
+   steps were artifacts of edge-only interpolation under the skirt
+   constraint (the |d| cross-term bound does NOT hold for the constrained
+   problem; interiors can be admissible when both cell edges are not).
+   With the probe rows measured: spiral+mid worst imaging step 0.16→0.10;
+   main's 13.3-mas step gone (a smaller same-mechanism instance remains at
+   ~9.5 mas, 0.26). **Recommended next engine work: interior-bilinear
+   candidates along the trade-cap contour** — the probe is the evidence; a
+   cheaper stopgap is probing r=±0.6-style intermediate rows wherever a
+   winner rides the cap.
+3. **Calculator verification**: codex built the in-page calculator
+   (template card; test gate passed). Reference numbers to verify the JS
+   against (30 GHz, 0.01", imaging, 1000 MHz, 10 uJy/beam): main eta 1.891 →
+   t 53.5 s, 3.19 ant-hr; spiral+mid eta 1.237 → 106 s, 2.94 ant-hr; mid
+   eta 1.618 → 0.24 h, 11.0 ant-hr. Open the report in a browser and check.
+4. **Memo**: `memo/ngvla_sa_selection.tex` compiles (8 pp); needs bmason
+   read + real figures (placeholders marked).
+5. **Nothing committed since yesterday's v2.1 commit** — large working tree
+   (engine, trade, campaign, calculator). Commit at the next milestone.
+
+**Context for another model/agent**: CLAUDE.md (repo guide) → this PLAN →
+`curve_anomaly_postmortem.md` (why the engine is what it is) →
+`mstroh_comparison.md` (external validation) → `casaLocation.md` (TACC env:
+casapy wrapper, quota/TempLattice gotchas) → `memo/` (the write-up) →
+`codex-bridge/` + `tmp/codex/tasks/` (second-model consult/build transcripts).
+
+### Curve-anomaly post-mortem + shared engine (6 Jul 2026, TACC evening)
+bmason flagged pop-ups/drop-outs in both curve types (e.g. spiral+mid ptsrc
+17.8 mas; mid imaging 8.08 mas; core+spiral imaging 103–118 mas sawtooth).
+Post-mortem (`curve_anomaly_postmortem.md`): NOT noise — hard ±5% window +
+hard skirt threshold + window-local relaxation applied to a quantized lattice
+(mechanisms M1–M3, M3b, M4a–d; census: 14 anomalies, all composite configs;
+codex critique folded in). **Fix implemented (bmason-approved):**
+`sa_select/envelope.py` — shared piecewise row-interpolation engine
+(non-extrapolating, taper-adjacent segments only, one eta-cap policy,
+−0.0/dup hygiene, continuous best-achievable-skirt relaxation, interpolated
+answers flagged with measured anchors) now drives BOTH `CurveLibrary.solve()`
+and `make_report.build_curve` (dense 0.01-dex grid curves; markers gated).
+All named anomalies fixed (e.g. 17.8 mas: eta 1.54→1.07; 11.7 mas drop-out
+1.00→1.50-relaxed; 114 mas sawtooth → strict 1.50 at skirt 0.100 exactly).
+43 tests green (15 new, incl. real-data regressions). Known residual:
+robust-direction staircase at the fine end (~0.14 steps) — second-wave 2-D
+interpolation / contour sampling if wanted. collect.py: skips in-flight
+parallel shards; dedupes + canonicalizes robust on output.
+
 ### Handoff state (6 Jul 2026 — moving to a bigger platform for the next round)
 Everything needed to resume is committed; see **README.md** for environment + commands.
 - **Works now:** `sa_select` end-to-end on bootstrap data (28 tests green); `curvegen`
@@ -392,6 +479,13 @@ high effort. Plumbing/IO/CLI → mid model, medium effort.
 
 ## 13. Gotchas log
 
+- **TACC (Stampede3):** `$HOME` quota is 14 GB — `curvegen/ms` & `work` are
+  symlinks into `$SCRATCH/ngvla_curvegen/`, and sweeps must run with **cwd on
+  scratch** because CASA writes multi-GB `TempLattice*` scratch images to the
+  process cwd (two quota blowouts on 6 Jul 2026 before this was pinned down;
+  invoke as `cd $SCRATCH/... && casapy $repo/curvegen/sweep.py <sa>` — imports
+  resolve from the script dir). casatools also clashes with TACC's Intel oneAPI
+  `LD_LIBRARY_PATH` — always use the `casapy` wrapper (`casaLocation.md`).
 - `.venv/` has **only pip** (no numpy/scipy). Use CASA's Python
   (`/Applications/CASA.app/Contents/MacOS/python3`) or install deps into the venv.
 - Git repo initialized 5 Jul 2026 (branch `main`); commit at milestones. `.gitignore` excludes

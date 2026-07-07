@@ -23,8 +23,11 @@ Run (from the curvegen/ directory, CASA's python3):
 
 import argparse
 import csv
+import glob
+import json
 import os
 import shutil
+import sys
 import time
 import traceback
 
@@ -33,7 +36,7 @@ import casatools
 from casatasks import tclean, casalog
 
 from config import (SUBARRAYS, IMSIZE, OVERSAMPLE, WORK_DIR, RESULTS_DIR,
-                    SEEDS, ETA_CAP, grid_rows)
+                    SEEDS, ETA_CAP, BEAM_CAP_ARCSEC, grid_rows)
 from simulate import make_ms
 from measure import beam_arcsec, image_rms, psf_skirt
 
@@ -50,24 +53,109 @@ def point_key(weighting, robust, taper_mas):
     return "%s_%.2f_%.3f" % (weighting, float(robust), float(taper_mas))
 
 
-def read_results(results_path):
+def result_shards(results_path):
+    """Shard files belonging to a canonical results CSV."""
+    return sorted(glob.glob(results_path + ".shard_*.csv"))
+
+
+def _warn_bad_row(path, line_num, why):
+    print("warning: skipping malformed result row in %s line %s: %s"
+          % (path, line_num, why), file=sys.stderr)
+
+
+def _validated_key(row, path, line_num, strict):
+    if row.get(None) is not None:
+        if strict:
+            raise ValueError("extra CSV fields in %s line %s" % (path, line_num))
+        _warn_bad_row(path, line_num, "wrong field count")
+        return None
+    missing = [f for f in FIELDS if row.get(f) is None]
+    if missing:
+        if strict:
+            raise ValueError("missing CSV fields in %s line %s" % (path, line_num))
+        _warn_bad_row(path, line_num, "wrong field count")
+        return None
+    try:
+        return point_key(row["weighting"], row["robust"], row["taper_mas"])
+    except Exception as e:
+        if strict:
+            raise
+        _warn_bad_row(path, line_num, str(e))
+        return None
+
+
+def read_results(results_path, extra_paths=None, strict=True):
     """{key: row} for every point already recorded (ok, failed or skipped)."""
     rows = {}
-    if os.path.isfile(results_path):
-        with open(results_path, newline="") as f:
-            for row in csv.DictReader(f):
-                rows[point_key(row["weighting"], row["robust"],
-                               row["taper_mas"])] = row
+    for i, path in enumerate([results_path] + list(extra_paths or [])):
+        if os.path.isfile(path):
+            with open(path, newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    key = _validated_key(row, path, reader.line_num, strict)
+                    if key is None:
+                        continue
+                    if (i == 0 or key not in rows
+                            or (rows[key].get("status") == "skipped"
+                                and row.get("status") != "skipped")):
+                        rows[key] = row
     return rows
 
 
 def append_row(results_path, row):
     new = not os.path.isfile(results_path)
+    dirname = os.path.dirname(results_path)
+    if dirname:
+        os.makedirs(dirname, exist_ok=True)
     with open(results_path, "a", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
         if new:
             w.writeheader()
         w.writerow(row)
+
+
+def parse_row_spec(spec):
+    """argparse converter for --only-row values like 'briggs:-1.2'."""
+    try:
+        weighting, robust = spec.split(":", 1)
+        robust = float(robust)
+    except ValueError:
+        raise argparse.ArgumentTypeError("expected W:R, e.g. briggs:-1.2")
+    if weighting not in ("natural", "briggs"):
+        raise argparse.ArgumentTypeError("weighting must be natural or briggs")
+    return weighting, robust
+
+
+def load_points_file(path):
+    """Load explicit lattice points for --points-file.
+
+    JSON files may contain either [weighting, robust, taper_mas] triples or
+    dictionaries with those field names.  CSV files use the same field names.
+    """
+    points = []
+    if path.endswith(".csv"):
+        with open(path, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                points.append((row["weighting"], row["robust"],
+                               row["taper_mas"]))
+    else:
+        with open(path) as f:
+            data = json.load(f)
+        for item in data:
+            if isinstance(item, dict):
+                points.append((item["weighting"], item["robust"],
+                               item["taper_mas"]))
+            else:
+                weighting, robust, taper = item
+                points.append((weighting, robust, taper))
+
+    out = []
+    for weighting, robust, taper in points:
+        if weighting not in ("natural", "briggs"):
+            raise RuntimeError("bad points-file weighting: %s" % weighting)
+        out.append((weighting, float(robust), float(taper)))
+    return out
 
 
 def advise_cell(vis, oversample=OVERSAMPLE):
@@ -89,7 +177,8 @@ def cell_string(cell_arcsec):
 
 
 class Sweep:
-    def __init__(self, subarray, limit=None):
+    def __init__(self, subarray, limit=None, record_path=None,
+                 include_shards=False):
         self.subarray = subarray
         self.limit = limit
         self.n_run = 0
@@ -99,13 +188,21 @@ class Sweep:
         legacy = os.path.join(RESULTS_DIR, subarray.replace("+", "_") + ".csv")
         if os.path.isfile(legacy):
             self.results_path = legacy
+        self.record_path = record_path or self.results_path
         os.makedirs(RESULTS_DIR, exist_ok=True)
-        self.rows = read_results(self.results_path)
+        extra = []
+        if include_shards:
+            extra = result_shards(self.results_path)
+            if self.record_path != self.results_path and self.record_path not in extra:
+                extra.append(self.record_path)
+        self.rows = read_results(self.results_path, extra_paths=extra,
+                                 strict=not include_shards)
         self.vis = None
         self.workdir = os.path.join(
             WORK_DIR, subarray.replace("+", "_").replace("-", "_"))
         self.imsize = IMSIZE[subarray]
         self.cell = None
+        self.beam_cap = BEAM_CAP_ARCSEC.get(subarray)
 
     # -- lazy CASA setup so --dry-run stays cheap ------------------------- #
     def ensure_ready(self):
@@ -118,13 +215,24 @@ class Sweep:
                   % (self.imsize, self.cell))
 
     def record(self, row):
-        append_row(self.results_path, row)
+        append_row(self.record_path, row)
         self.rows[point_key(row["weighting"], row["robust"],
                             row["taper_mas"])] = row
 
     def measured(self, weighting, robust, taper):
         row = self.rows.get(point_key(weighting, robust, taper))
         return row if row and row["status"] == "ok" else None
+
+    def natural_row_measurements(self):
+        """Recorded ok natural-row points, keyed by taper in mas."""
+        out = {}
+        for row in self.rows.values():
+            if row["status"] == "ok" and row["weighting"] == "natural":
+                out[float(row["taper_mas"])] = row
+        return out
+
+    def row_complete(self, weighting, robust, tapers):
+        return all(point_key(weighting, robust, t) in self.rows for t in tapers)
 
     # -- run one lattice point --------------------------------------------- #
     def run_point(self, weighting, robust, taper_mas):
@@ -153,13 +261,19 @@ class Sweep:
             res_geo = float(np.sqrt(bmaj * bmin))
             sigma = image_rms(name + ".image")
             skirt, _ = psf_skirt(name + ".psf", res_geo)
+            # beyond the beam cap the point is a measured diagnostic, not
+            # usable curve data (collect.py exports only status="ok")
+            status, err = "ok", ""
+            if self.beam_cap is not None and res_geo > self.beam_cap:
+                status = "capped"
+                err = "beam %.4g > cap %.4g arcsec" % (res_geo, self.beam_cap)
             row = dict(subarray=self.subarray, weighting=weighting,
                        robust=robust, taper_mas=taper_mas, imsize=self.imsize,
                        cell_arcsec="%.6g" % cell_pt,
                        bmaj_arcsec="%.6g" % bmaj, bmin_arcsec="%.6g" % bmin,
                        bpa_deg="%.4g" % bpa, res_geo_arcsec="%.6g" % res_geo,
                        sigma_dirty="%.6g" % sigma, skirt="%.4g" % skirt,
-                       status="ok", error="",
+                       status=status, error=err,
                        elapsed_s="%.1f" % (time.time() - t0))
         except Exception as e:
             traceback.print_exc()
@@ -187,33 +301,73 @@ class Sweep:
                          error=why, elapsed_s=""))
 
     # -- the sweep ----------------------------------------------------------- #
-    def run(self, dry_run=False):
+    def ensure_seeds(self, dry_run=False, require_existing=False):
         # seeds first: they anchor the grid and the eta reference
         for weighting, robust, taper in SEEDS:
             if not self.measured(weighting, robust, taper):
+                key = point_key(weighting, robust, taper)
+                if require_existing:
+                    raise RuntimeError("seed point missing or failed: %s" % key)
                 if dry_run:
-                    print("  seed pending:", point_key(weighting, robust, taper))
-                    return
+                    print("  seed pending:", key)
+                    return None
                 if self.run_point(weighting, robust, taper) is None:
-                    return                       # --limit exhausted
+                    return None                  # --limit exhausted
         nat = self.measured(*SEEDS[0])
         fine = self.measured(*SEEDS[1])
         if not (nat and fine):
-            print("seed point failed -- fix before sweeping"); return
+            if require_existing:
+                raise RuntimeError("seed point failed -- fix before sweeping")
+            print("seed point failed -- fix before sweeping"); return None
+        return nat, fine
+
+    def prepare_lattice(self, dry_run=False, require_existing=False,
+                        announce=True):
+        seeds = self.ensure_seeds(dry_run=dry_run,
+                                  require_existing=require_existing)
+        if seeds is None:
+            return None
+        nat, fine = seeds
         sigma_nat = float(nat["sigma_dirty"])
         res_nat = float(nat["res_geo_arcsec"]) * 1e3     # mas
         res_fine = float(fine["res_geo_arcsec"]) * 1e3
-        rows = grid_rows(res_fine, res_nat)
+        rows = grid_rows(res_fine, res_nat, self.subarray)
         n_total = sum(len(t) for _, _, t in rows)
         n_have = len(self.rows)
-        print("%s: lattice %d points (res_fine %.4g mas, res_nat %.4g mas); "
-              "%d already recorded" % (self.subarray, n_total, res_fine,
-                                       res_nat, n_have))
+        if announce:
+            print("%s: lattice %d points (res_fine %.4g mas, res_nat %.4g mas); "
+                  "%d already recorded" % (self.subarray, n_total, res_fine,
+                                           res_nat, n_have))
+        return sigma_nat, res_fine, res_nat, rows
+
+    def select_rows(self, rows, only_row):
+        if only_row is None:
+            return rows
+        weighting, robust = only_row
+        out = [r for r in rows
+               if r[0] == weighting and abs(float(r[1]) - robust) < 1e-9]
+        if not out:
+            raise RuntimeError("row %s:%.2f is not in the lattice"
+                               % (weighting, robust))
+        return out
+
+    def run(self, dry_run=False, only_row=None, require_seeds=None):
+        if require_seeds is None:
+            require_seeds = only_row is not None
+        prepared = self.prepare_lattice(dry_run=dry_run,
+                                        require_existing=require_seeds)
+        if prepared is None:
+            return False
+        sigma_nat, _res_fine, _res_nat, rows = prepared
+        rows = self.select_rows(rows, only_row)
         if dry_run:
-            return
+            return True
         nat_row = {}          # taper -> natural-row measurement, filled first
+        if only_row is not None and only_row[0] == "briggs":
+            nat_row = self.natural_row_measurements()
         for weighting, robust, tapers in rows:
             capped = None
+            n_over_cap = 0    # consecutive beam-capped points in this row
             for taper in tapers:
                 if capped:
                     self.skip_point(weighting, robust, taper, capped)
@@ -221,7 +375,17 @@ class Sweep:
                 row = self.run_point(weighting, robust, taper)
                 if row is None:
                     print("stopping: --limit reached"); return
+                if row["status"] == "capped":
+                    print("    beam %s\"  CAPPED (> %.3g\")  (%ss)"
+                          % (row["res_geo_arcsec"], self.beam_cap,
+                             row["elapsed_s"]))
+                    n_over_cap += 1
+                    if n_over_cap >= 2:
+                        capped = ("beam cap %.3g arcsec exceeded earlier in row"
+                                  % self.beam_cap)
+                    continue
                 if row["status"] == "ok":
+                    n_over_cap = 0
                     eta = float(row["sigma_dirty"]) / sigma_nat
                     print("    beam %s\"  eta %.3f  skirt %s  (%ss)"
                           % (row["res_geo_arcsec"], eta, row["skirt"],
@@ -242,9 +406,49 @@ class Sweep:
                             capped = "converged to natural+taper edge"
         n_ok = sum(1 for r in self.rows.values() if r["status"] == "ok")
         n_skip = sum(1 for r in self.rows.values() if r["status"] == "skipped")
+        n_cap = sum(1 for r in self.rows.values() if r["status"] == "capped")
         n_fail = sum(1 for r in self.rows.values() if r["status"] == "failed")
-        print("%s done: %d ok, %d skipped (eta cap), %d failed"
-              % (self.subarray, n_ok, n_skip, n_fail))
+        print("%s done: %d ok, %d skipped, %d beam-capped, %d failed"
+              % (self.subarray, n_ok, n_skip, n_cap, n_fail))
+        return True
+
+    def run_points(self, points, allow_skipped=False):
+        """Run an explicit point list with no row-walk pruning.
+
+        This is for targeted fill-in jobs.  Normal resumability still holds:
+        ok/failed/capped points are never re-run.  When allow_skipped=True,
+        a selected skipped point is deliberately superseded by a new appended
+        measurement row; unselected skipped points remain untouched.
+        """
+        prepared = self.prepare_lattice(require_existing=True, announce=False)
+        if prepared is None:
+            return False
+        lattice = set()
+        for weighting, robust, tapers in prepared[3]:
+            for taper in tapers:
+                lattice.add(point_key(weighting, robust, taper))
+
+        ok = True
+        for weighting, robust, taper in points:
+            key = point_key(weighting, robust, taper)
+            if key not in lattice:
+                raise RuntimeError("points-file point is not in lattice: %s" % key)
+            row = self.rows.get(key)
+            if row is not None:
+                if row["status"] == "skipped" and allow_skipped:
+                    print("  %s superseding recorded skipped row" % key)
+                    del self.rows[key]
+                else:
+                    print("  %s already status=%s; skipping"
+                          % (key, row["status"]))
+                    continue
+            row = self.run_point(weighting, robust, taper)
+            if row is None:
+                ok = False
+                break
+            if row["status"] == "failed":
+                ok = False
+        return ok
 
 
 if __name__ == "__main__":
@@ -253,5 +457,28 @@ if __name__ == "__main__":
     ap.add_argument("--limit", type=int, default=None,
                     help="run at most N new points")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--only-row", type=parse_row_spec,
+                    help="run only one lattice row, e.g. briggs:-1.2")
+    ap.add_argument("--points-file",
+                    help="run only explicit weighting/robust/taper points")
+    ap.add_argument("--shard",
+                    help="append newly recorded points to this CSV")
     args = ap.parse_args()
-    Sweep(args.subarray, limit=args.limit).run(dry_run=args.dry_run)
+    if args.points_file and args.only_row:
+        ap.error("--points-file cannot be combined with --only-row")
+    include_shards = bool(args.only_row or args.shard or args.points_file)
+    sweep = Sweep(args.subarray, limit=args.limit, record_path=args.shard,
+                  include_shards=include_shards)
+    try:
+        if args.points_file:
+            if args.dry_run:
+                ap.error("--dry-run is not supported with --points-file")
+            ok = sweep.run_points(load_points_file(args.points_file),
+                                  allow_skipped=True)
+        else:
+            ok = sweep.run(dry_run=args.dry_run, only_row=args.only_row)
+    except RuntimeError as e:
+        print("error:", e, file=sys.stderr)
+        sys.exit(1)
+    if (args.only_row or args.points_file) and not ok:
+        sys.exit(1)

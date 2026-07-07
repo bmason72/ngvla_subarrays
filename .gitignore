@@ -24,3 +24,20 @@ taperability-*/
 *.pb/
 *.sumwt/
 curvegen/reports/
+
+# claude-codex bridge
+codex-bridge/
+tmp/codex/
+
+# user-local Claude Code permission grants (machine-specific)
+.claude/settings.local.json
+# scratch symlinks (TACC): match the symlinks themselves, not just dir contents
+curvegen/ms
+curvegen/work
+
+# external delivery (contains nested git repos; see mstroh_comparison.md)
+mstroh/
+._codex-bridge
+# transient run logs and in-flight parallel shards
+curvegen/results/*.log
+curvegen/results/*.csv.shard_*

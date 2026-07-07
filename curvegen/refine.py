@@ -18,12 +18,18 @@ Run (from curvegen/, CASA's python3):
 
 import argparse
 
-from config import SUBARRAYS
+from config import SUBARRAYS, BEAM_CAP_ARCSEC
 from sweep import Sweep, point_key
 from make_report import build_curve, ETA_CAP
 
 SKIRT_MAX = 0.10
 GAP_RATIO = 1.35          # res jumps beyond this are infeasibility gaps
+# For homogeneous subarrays, res jumps > GAP_RATIO are treated as genuine
+# sculpt-infeasibility gaps (e.g. spiral+mid) and NOT refined.  For the
+# heterogeneous ones (in BEAM_CAP_ARCSEC) the beam(taper) mapping crosses a
+# sharp spike-to-plateau transition that can leave real resolution holes
+# even where eta is smooth, so there res jumps ARE refinement targets
+# (bounded by the same rounds/budget).
 
 
 def samples_from(sweep):
@@ -71,12 +77,14 @@ def candidates_between(a, b):
 
 def refine(subarray, rounds=3, max_step=0.25, budget=60):
     sweep = Sweep(subarray)
+    chase_res_jumps = subarray in BEAM_CAP_ARCSEC
     n_new_total = 0
     for rnd in range(1, rounds + 1):
         curve = build_curve(samples_from(sweep), SKIRT_MAX)
         jumps = [(a, b) for a, b in zip(curve, curve[1:])
-                 if abs(b["eta"] - a["eta"]) > max_step
-                 and b["res"] / a["res"] <= GAP_RATIO]
+                 if (abs(b["eta"] - a["eta"]) > max_step
+                     and b["res"] / a["res"] <= GAP_RATIO)
+                 or (chase_res_jumps and b["res"] / a["res"] > GAP_RATIO)]
         if not jumps:
             print("round %d: no eta jumps > %.2g left -- done" % (rnd, max_step))
             break

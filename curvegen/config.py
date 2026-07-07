@@ -33,10 +33,16 @@ COMPONENT_CFGS = {
     "core": "RevF_Core_2025_01_27_xyz.cfg",
     "spiral": "RevF_Spiral_2025_01_16_xyz.cfg",
     "mid": "RevF_MidSitesPreferred_2025_01_16_xyz.cfg",
+    "long": "RevF_Long_2025_01_16_xyz.cfg",
 }
 
 # 'core-inner' is memo 121's CoreInner: the innermost 57 of the core's 114
-# antennas (selected by radius from the core centroid in build_configs.py).
+# antennas by radius from the core centroid; 'core-outer' is the other 57
+# (memo 121's 'outer50core').  Both membership rules verified against
+# Stroh's delivered configs.  The memo-121 campaign set (7 Jul 2026) adds
+# 'long' and its combinations; note Long includes small ~3-antenna clusters
+# with ~100 m internal baselines -- physical, kept in the sims, but they
+# must be FILTERED when computing b_min/LAS (see saUtil.filter_spurious_shorts).
 SUBARRAYS = {
     "core-inner": ["core-inner"],
     "core": ["core"],
@@ -46,9 +52,18 @@ SUBARRAYS = {
     "core+mid": ["core", "mid"],
     "spiral+mid": ["spiral", "mid"],
     "main": ["core", "spiral", "mid"],
+    # memo-121 campaign additions
+    "core-outer": ["core-outer"],             # seeds only (cap anchor)
+    "long": ["long"],
+    "mid+long": ["mid", "long"],
+    "spiral+mid+long": ["spiral", "mid", "long"],
+    "main+long": ["core", "spiral", "mid", "long"],
+    "spiral+core-outer": ["spiral", "core-outer"],
+    "mid+spiral+core-outer": ["mid", "spiral", "core-outer"],
+    "long+mid+spiral+core-outer": ["long", "mid", "spiral", "core-outer"],
 }
 
-# the relatively homogeneous set we are getting right first
+# the relatively homogeneous set we got right first (v2)
 RUN_SET = ["core-inner", "core", "spiral", "mid", "core+spiral", "spiral+mid"]
 
 IMSIZE = {
@@ -60,6 +75,17 @@ IMSIZE = {
     "spiral+mid": 8192,
     "core+mid": 15000,
     "main": 15000,
+    # campaign: long-baseline combos need the spike sampled at fine cell
+    # while the plateau/taper branch reaches the beam cap (adaptive cell
+    # handles the coarse end); outerCore combos mirror their non-outer kin
+    "core-outer": 4096,
+    "long": 8192,
+    "mid+long": 15000,
+    "spiral+mid+long": 15000,
+    "main+long": 15000,
+    "spiral+core-outer": 8192,
+    "mid+spiral+core-outer": 15000,
+    "long+mid+spiral+core-outer": 15000,
 }
 
 ROBUST_LIST = [round(r, 2) for r in np.arange(-2.0, 2.01, 0.4)]
@@ -67,6 +93,36 @@ N_TAPERS = 14        # log-spaced taper count per row
 TAPER_LO_X = 0.3     # taper range: TAPER_LO_X * res(robust=-2) ...
 TAPER_HI_X = 20.0    # ... TAPER_HI_X * res(natural)
 ETA_CAP = 5.0        # stop extending a row once eta exceeds this
+
+# Heterogeneous subarrays (v2 rework of the v1 "bonkers" failure): beams
+# coarser than the coarsest component's own native beam are always better
+# made with that component subarray -- reaching them from the composite
+# means tapering away the long spacings (low eta but a false economy, the
+# v1 sculpt-curve false minima).  Points whose measured beam exceeds the
+# cap are recorded status="capped" (measurements kept for diagnostics but
+# never collected into the curve data), and a row is pruned after two
+# consecutive capped points (two, not one, to ride out clean-beam-fit
+# discontinuities at the spike-to-plateau transition).  The cap is the
+# coarsest component's natural beam: Rev F core at 30 GHz = 0.710"
+# (measured, results/core.csv; hardcoded so config never depends on
+# generated results at import time).
+BEAM_CAP_ARCSEC = {
+    "core+mid": 0.710,
+    "main": 0.710,
+    # memo-121 campaign combos: cap = the coarsest component's (or largest
+    # contained offered subarray's) measured native beam at 30 GHz
+    "mid+long": 0.00296,                 # mid native (measured)
+    "spiral+mid+long": 0.0111,           # spiral+mid native (measured)
+    "main+long": 0.0212,                 # main native (measured)
+    # outerCore combos: cap = core-outer native 0.4908" (measured 7 Jul 2026)
+    "spiral+core-outer": 0.491,
+    "mid+spiral+core-outer": 0.491,
+    "long+mid+spiral+core-outer": 0.491,
+}
+# Their fine-to-coarse dynamic range is ~2.5 dex (vs ~1.3 homogeneous) and
+# the beam(taper) mapping crosses a sharp spike-to-plateau transition, so
+# sample tapers more densely.
+N_TAPERS_HETERO = 18
 
 # simulation parameters (identical to Viviana's pipeline for comparability)
 SIM = dict(
@@ -89,21 +145,23 @@ RESULTS_DIR = os.path.join(REPO, "curvegen", "results")
 SEEDS = [("natural", 2.0, 0.0), ("briggs", -2.0, 0.0)]
 
 
-def taper_list_mas(res_fine_mas, res_nat_mas):
+def taper_list_mas(res_fine_mas, res_nat_mas, n_tapers=N_TAPERS):
     """Log-spaced tapers anchored to the subarray's measured resolutions."""
     lo = TAPER_LO_X * res_fine_mas
     hi = TAPER_HI_X * res_nat_mas
     return [round(float(t), 3) for t in
-            np.logspace(np.log10(lo), np.log10(hi), N_TAPERS)]
+            np.logspace(np.log10(lo), np.log10(hi), n_tapers)]
 
 
-def grid_rows(res_fine_mas, res_nat_mas):
+def grid_rows(res_fine_mas, res_nat_mas, subarray=None):
     """The full sweep lattice: [(weighting, robust, [tapers ascending]), ...].
 
     Every row starts at taper 0; the sweep walks tapers in order and prunes
-    the row once eta > ETA_CAP.
+    the row once eta > ETA_CAP (and, for heterogeneous subarrays, once the
+    beam exceeds BEAM_CAP_ARCSEC).
     """
-    tapers = [0.0] + taper_list_mas(res_fine_mas, res_nat_mas)
+    n_tapers = N_TAPERS_HETERO if subarray in BEAM_CAP_ARCSEC else N_TAPERS
+    tapers = [0.0] + taper_list_mas(res_fine_mas, res_nat_mas, n_tapers)
     rows = [("natural", 2.0, tapers)]
     for r in ROBUST_LIST:
         rows.append(("briggs", r, tapers))

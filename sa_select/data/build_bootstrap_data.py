@@ -121,7 +121,8 @@ SUBARRAY_COMPONENTS = {
     "spiral": ["spiral"],
     "mid": ["mid"],
     "core+spiral": ["core", "spiral"],
-    "core+mid": ["core", "mid"],
+    # core+mid: measured (curvegen/results) but dropped from the offered set
+    # (bmason, 6 Jul 2026): no science case; poor uv coverage without spiral
     "spiral+mid": ["spiral", "mid"],
     "main": ["core", "spiral", "mid"],
 }

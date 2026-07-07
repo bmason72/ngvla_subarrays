@@ -81,23 +81,38 @@ with _in_calculator_dir():
 #: N_ant for every subarray key the calculator itself knows about.
 _N_ANT_TABLE = {name: int(info["N_ant"]) for name, info in _SUBARRAY_TABLE.items()}
 
-#: core+mid isn't in the calculator's tables; it's synthesized (see module docstring).
-#: 114 (core) + 46 (mid) = 160, cross-checked against _N_ANT_TABLE in the self-test below.
-CORE_MID_N_ANT = 160
-_CORE_MID_DONOR = "main"
+#: Subarrays absent from the calculator's tables are synthesized by donor rescaling
+#: from `main`: for same-band 18-m arrays the per-antenna parameters are band-keyed,
+#: so sigma scales exactly as 1/sqrt(N(N-1)) (verified in the self-test).  The value
+#: is the subarray's true N_ant.  (Confusion caveat unchanged: zero at Rev F native
+#: resolutions in the current calculator path.)
+_DONOR = "main"
+_DONOR_N_ANT = {
+    "core+mid": 160,                    # measured but dropped from the offered set
+    "core-inner": 57,
+    "core-outer": 57,
+    "spiral+core-outer": 111,
+    "mid+spiral+core-outer": 157,
+    "spiral+mid+long": 130,
+    "long+mid+spiral+core-outer": 187,
+}
+CORE_MID_N_ANT = _DONOR_N_ANT["core+mid"]   # kept for callers/tests
 
 #: Names natural_rms()/integration_time() accept, in addition to the calculator's own keys.
-KNOWN_CALC_NAMES = sorted(_N_ANT_TABLE) + ["core+mid"]
+KNOWN_CALC_NAMES = sorted(_N_ANT_TABLE) + sorted(_DONOR_N_ANT)
 
 
 def _resolve_calc_name(calc_name):
     """Return (name_to_query_the_calculator_with, n_ant_to_report_as).
 
     n_ant_to_report_as is None when the calculator's own subarray entry is used directly
-    (no rescaling needed); it is an int when we're donor-rescaling (currently: core+mid).
+    (no rescaling needed); it is an int when we're donor-rescaling.  An empty name is
+    kept as a core+mid alias for backward compatibility.
     """
-    if calc_name in ("", "core+mid"):
-        return _CORE_MID_DONOR, CORE_MID_N_ANT
+    if calc_name == "":
+        calc_name = "core+mid"
+    if calc_name in _DONOR_N_ANT:
+        return _DONOR, _DONOR_N_ANT[calc_name]
     if calc_name not in _N_ANT_TABLE:
         raise ValueError(
             "unknown subarray calc_name %r; known names: %s" % (calc_name, KNOWN_CALC_NAMES)

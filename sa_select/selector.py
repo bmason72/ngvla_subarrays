@@ -142,6 +142,8 @@ def select_subarrays(request: ObservingRequest,
         else:
             if msg != "ok":
                 c.warnings.append(msg)          # e.g. relaxed skirt criterion
+            if sample.note:
+                c.warnings.append(sample.note)  # e.g. interpolated parameters
             s = library.scale_sample(sample, request.frequency)
             c.resolution, c.eta, c.skirt = s.resolution, s.eta, s.skirt
             c.weighting, c.robust, c.taper = s.weighting, s.robust, s.taper

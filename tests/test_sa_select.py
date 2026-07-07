@@ -92,13 +92,17 @@ class TestMemo121Validation(unittest.TestCase):
     def test_briggs_imaging_samples_reproduced(self):
         """An imaging request built from a memo-121 briggs/sculpted sample
         should come back feasible on the *same* subarray, with the *same*
-        robust value and eta matching to within 1%."""
+        robust value and eta matching to within 1%.  memo 121 used the hard
+        skirt <= 0.10 criterion, so replay with skirt_relax=False (the
+        tool's default now applies the 1-for-1 eta-skirt trade, which can
+        legitimately find cheaper beams at slightly larger skirt)."""
         for sub, res30, freq_orig, eta_expect, robust_expect in self.BRIGGS_ROWS:
             with self.subTest(subarray=sub, freq=freq_orig, res30=res30):
                 req = ObservingRequest(
                     resolution=_res_at_freq(res30, freq_orig),
                     frequency=freq_orig,
                     imaging=True,
+                    skirt_relax=False,
                 )
                 result = select_subarrays(req, library=self.library)
                 cand = next(c for c in result if c.subarray.name == sub)
@@ -440,8 +444,8 @@ class TestSkirtRelaxation(SyntheticLibraryTestCase):
         sample, msg = self.lib.solve("testA", resolution=1.0, freq_ghz=30.0,
                                      skirt_threshold=0.10, relax=True)
         self.assertIsNotNone(sample)
-        self.assertEqual(sample.skirt, 0.16)     # best achievable, not cheapest
-        self.assertIn("relaxed", msg)
+        self.assertEqual(sample.skirt, 0.16)     # within the 0.25 trade cap
+        self.assertIn("traded", msg)
 
     def test_strict_mode_still_excludes(self):
         sample, msg = self.lib.solve("testA", resolution=1.0, freq_ghz=30.0,
@@ -453,7 +457,7 @@ class TestSkirtRelaxation(SyntheticLibraryTestCase):
         res = select_subarrays(req, library=self.lib)
         c = res.candidates[0]
         self.assertTrue(c.feasible)
-        self.assertTrue(c.warnings and "relaxed" in c.warnings[0])
+        self.assertTrue(c.warnings and "traded" in c.warnings[0])
         req_strict = ObservingRequest(resolution=1.0, frequency=30.0,
                                       imaging=True, skirt_relax=False)
         res2 = select_subarrays(req_strict, library=self.lib)

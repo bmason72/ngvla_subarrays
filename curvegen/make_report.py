@@ -16,65 +16,52 @@ import sys
 
 from config import REPO, RESULTS_DIR
 
+sys.path.insert(0, REPO)                    # for the shared curve engine
+from sa_select.envelope import Envelope, ETA_CAP   # noqa: E402
+
 TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "report_template.html")
 
 # fixed series order & display names (color slots assigned in the template;
 # deferred subarrays keep their slots so colors never re-map)
-ORDER = ["core", "spiral", "mid", "core+spiral", "spiral+mid", "core+mid",
-         "main", "core-inner"]
-DEFERRED = ["core+mid", "main"]     # heterogeneous; reworked later (PLAN.md)
+ORDER = ["core", "spiral", "mid", "core+spiral", "spiral+mid",
+         "main", "core-inner"]   # core+mid measured but dropped (see collect.py)
+DEFERRED = []    # all 8 subarrays live (heterogeneous rework landed 6 Jul 2026)
 
 
-ETA_CAP = 5.0        # curves are not meaningful above this (user decision)
-BEAM_TOL = 0.05      # +-5% beam tolerance, the selector's own default
-GRID_DEX = 0.01      # target-resolution grid spacing for the sliding window
+GRID_DEX = 0.01      # target-resolution grid spacing of the plotted curves
+MARK_EVERY = 8       # cadence of tooltip markers along smooth curve runs
 
 
 def build_curve(samples, skirt_max=None):
-    """The operational min-eta curve: at each target resolution, the cheapest
-    way to make that beam within the +-5% tolerance (optionally restricted
-    to sculpted beams, skirt <= max).
-
-    This is exactly the question the selection tool answers, evaluated on a
-    fine log grid of target resolutions with a SLIDING window (adjacent
-    targets share samples), so the curve only moves when the actual optimum
-    changes.  Consecutive targets won by the same sample are collapsed.
+    """The curve as the shared engine computes it: at each target resolution
+    on a fine log grid, the cheapest interpolated-family operating point at
+    EXACTLY that resolution (see sa_select/envelope.py; this replaced the
+    sliding-window sample min after the 6 Jul 2026 anomaly post-mortem).
 
     Angular resolution is the primary requirement: where nothing under the
     skirt threshold exists at some resolution, the criterion is RELAXED to
     the best achievable skirt there (memo 121's 'partial' cases) and the
-    point is flagged relaxed=True, rather than leaving a hole in the curve.
+    point is flagged relaxed=True.  Real coverage gaps stay gaps.
+
+    Each point carries: the interpolated (weighting, robust, taper), its
+    measured anchor keys (env_keys, for the lattice heatmaps), and a marker
+    flag (tooltip markers at winner changes and every MARK_EVERY points).
     """
-    import math
-    samples = [s for s in samples if s["eta"] <= ETA_CAP]
-    if not samples:
-        return []
-    half = math.log10(1 + BEAM_TOL)
-    lo = math.log10(min(s["res"] for s in samples))
-    hi = math.log10(max(s["res"] for s in samples))
-    curve, prev = [], None
-    x = lo
-    while x <= hi + 1e-9:
-        win = [s for s in samples if abs(math.log10(s["res"]) - x) <= half]
-        if skirt_max is None:
-            pool, relaxed = win, False
-        else:
-            win = [s for s in win if s["skirt"] is not None]
-            pool = [s for s in win if s["skirt"] <= skirt_max]
-            relaxed = False
-            if not pool and win:            # relax to best achievable skirt
-                best_skirt = min(s["skirt"] for s in win)
-                pool = [s for s in win if s["skirt"] <= best_skirt * 1.15]
-                relaxed = True
-        if pool:
-            best = min(pool, key=lambda s: s["eta"])
-            key = (best["weighting"], best["robust"], best["taper"])
-            if key != prev:
-                curve.append(dict(best, relaxed=relaxed))
-                prev = key
-        x += GRID_DEX
-    return sorted(curve, key=lambda s: s["res"])
+    curve = []
+    prev_key, run = None, 0
+    for c in Envelope(samples).curve(skirt_max=skirt_max, grid_dex=GRID_DEX):
+        key = (c.weighting, c.robust, c.relaxed, c.traded)
+        run = run + 1 if key == prev_key else 0
+        curve.append(dict(
+            res=c.res, eta=c.eta, skirt=c.skirt, weighting=c.weighting,
+            robust=c.robust, taper=c.taper, relaxed=c.relaxed,
+            traded=c.traded,
+            marker=(run % MARK_EVERY == 0),
+            env_keys=[(a.weighting, a.robust, a.taper) for a in c.anchors],
+        ))
+        prev_key = key
+    return curve
 
 
 def build_heatmap(samples, imaging_curve):
@@ -89,7 +76,11 @@ def build_heatmap(samples, imaging_curve):
     from collections import Counter
     tcount = Counter(s["taper"] for s in samples)
     tapers = sorted(t for t, c in tcount.items() if t == 0.0 or c >= 6)
-    on_env = {(s["weighting"], s["robust"], s["taper"]) for s in imaging_curve}
+    # a lattice cell is "on the envelope" when it anchors an imaging-curve
+    # interpolant (curve points themselves sit between cells)
+    on_env = set()
+    for s in imaging_curve:
+        on_env.update(tuple(k) for k in s.get("env_keys", []))
 
     def row_label(w, r):
         return "natural" if w == "natural" else "%+.1f" % r
@@ -113,6 +104,47 @@ def build_heatmap(samples, imaging_curve):
         if sum(c is not None for c in cells) >= 3:
             rows.append(dict(label=row_label(w, r), cells=cells))
     return dict(tapers=tapers, rows=rows)
+
+
+def build_sens_table(las):
+    """{subarray: {freq_ghz: [...], sigma_nat_ujy: [...]}} -- natural rms in
+    microJy/beam for 1 h in a 1 MHz channel, per offered subarray, on a
+    0.02-dex grid over the ngVLA receiver ranges (1.2-50.5, 70-116 GHz).
+    Uses the line-mode calculator path (no continuum band re-centering) via
+    sa_select.sensitivity, incl. donor rescaling for subarrays the memo-96
+    calculator lacks."""
+    import csv as _csv
+    import math
+    from sa_select import sensitivity as sens
+
+    calc_names = {}
+    with open(os.path.join(REPO, "sa_select", "data", "subarrays.csv")) as f:
+        for r in _csv.DictReader(f):
+            calc_names[r["name"]] = r["calc_name"].strip() or r["name"]
+
+    freqs = []
+    for lo, hi in ((1.2, 50.5), (70.0, 116.0)):
+        x = math.log10(lo)
+        while 10 ** x < hi:
+            freqs.append(round(10 ** x, 4))
+            x += 0.02
+        freqs.append(hi)
+
+    C_M_S = 2.99792458e8
+    out = {}
+    for name in ORDER:
+        calc = calc_names.get(name, name)
+        sig = []
+        for f_ghz in freqs:
+            try:
+                delta_v = C_M_S * 1e6 / (f_ghz * 1e9)     # 1 MHz channel
+                s = sens.natural_rms(calc, f_ghz, t_obs_hr=1.0,
+                                     delta_v=delta_v)
+                sig.append(round(s * 1e6, 4))             # uJy/beam
+            except ValueError:
+                sig.append(None)                          # outside a band edge
+        out[name] = dict(freq_ghz=freqs, sigma_nat_ujy=sig)
+    return out
 
 
 def main(out_path):
@@ -143,12 +175,20 @@ def main(out_path):
                 n_ant=int(r["n_ant"]))
 
     imaging = {n: build_curve(samples_by[n], 0.10) for n in ORDER}
+    heatmaps = {n: build_heatmap(samples_by[n], imaging[n])
+                for n in ORDER if samples_by[n]}
+    for curve in imaging.values():          # anchors only feed the heatmaps
+        for p in curve:
+            p.pop("env_keys", None)
+    pointsource = {n: build_curve(samples_by[n]) for n in ORDER}
+    for curve in pointsource.values():
+        for p in curve:
+            p.pop("env_keys", None)
     data = dict(order=ORDER, deferred=DEFERRED, las=las, samples=samples_by,
                 imaging=imaging,
-                pointsource={n: build_curve(samples_by[n]) for n in ORDER},
+                pointsource=pointsource,
                 counts={n: len(samples_by[n]) for n in ORDER},
-                heatmaps={n: build_heatmap(samples_by[n], imaging[n])
-                          for n in ORDER if samples_by[n]})
+                heatmaps=heatmaps)
 
     # core+spiral natural-PSF radial profile measured 5 Jul 2026 (subsampled
     # diagnostic dump; regenerate with the snippet in PLAN.md if needed)
@@ -165,6 +205,12 @@ def main(out_path):
              0.042, 0.038, 0.039, 0.039, 0.035, 0.033, 0.036, 0.038, 0.036,
              0.032, 0.029, 0.026, 0.028, 0.024, 0.019, 0.016, 0.016, 0.016,
              0.018, 0.018])
+
+    # natural-weighting point-source rms basis for the in-page calculator:
+    # sigma_nat (Jy/beam) for 1 h on-source in a 1 MHz channel, on a log
+    # frequency grid over the receiver bands.  Scales exactly as
+    # 1/sqrt(bandwidth * time); the page applies the curve engine's eta.
+    data["sens"] = build_sens_table(las)
 
     # QA cross-check vs the sensitivity calculator's native beams
     data["qa"] = [
