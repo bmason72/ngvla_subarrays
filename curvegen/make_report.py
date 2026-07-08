@@ -25,8 +25,12 @@ TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 # fixed series order & display names (color slots assigned in the template;
 # deferred subarrays keep their slots so colors never re-map)
 ORDER = ["core", "spiral", "mid", "core+spiral", "spiral+mid",
-         "main", "core-inner"]   # core+mid measured but dropped (see collect.py)
-DEFERRED = []    # all 8 subarrays live (heterogeneous rework landed 6 Jul 2026)
+         "main", "core-inner",
+         # memo-121 long-baseline + outer-core campaign (added 7 Jul 2026)
+         "long", "mid+long", "spiral+mid+long", "main+long",
+         "spiral+core-outer", "mid+spiral+core-outer",
+         "long+mid+spiral+core-outer"]   # core+mid measured but dropped
+DEFERRED = []    # all campaign subarrays live (7 Jul 2026)
 
 
 GRID_DEX = 0.01      # target-resolution grid spacing of the plotted curves

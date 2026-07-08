@@ -69,6 +69,36 @@ MAX_RES_STEP_COLUMN = 2.0
 TRADE_SLOPE = 1.0
 TRADE_SPAN = 0.15
 
+# Bilinear cell interior (7 Jul 2026).  Row + column segments only sample the
+# lattice EDGES; under the skirt constraint the cheapest beam at a target
+# resolution can sit in a cell INTERIOR (both robust and taper between nodes)
+# -- confirmed by probe measurements at robust +-0.6 that found admissible
+# points (skirt 0.23-0.24, under the trade cap) cheaper than any edge.  A cell
+# is the 2-D bilinear interpolant over four lattice-adjacent corner points
+# {robust r0<r1} x {taper t0<t1}; log(res), log(eta) and skirt are bilinear in
+# the normalized cell coordinates (s along robust, u along taper), which agrees
+# EXACTLY with the row/column interpolants on all four edges and only adds
+# interior operating points.  The engine enumerates the analytic critical
+# points of the constrained problem along the fixed-resolution locus
+# (eta-stationary, skirt-stationary, skirt=threshold crossings -- all closed-
+# form quadratics) plus a deterministic scan+refine for the one transcendental
+# case (the penalized eta+skirt stationary point), then validates each
+# candidate by recomputing (res, skirt, eta).  See the 7 Jul 2026 design
+# consult in PLAN.md sec.13 and tests/test_envelope.py::TestBilinearCells.
+CELL_RES_TOL = 1e-6      # |log(res_candidate/theta)| tolerance for validation
+CELL_SINGULAR = 1e-12    # |C + D s| below this is the iso-resolution singularity
+CELL_DEGEN = 1e-12       # polynomial coefficient magnitude treated as zero
+PENALIZED_SCAN_N = 25    # deterministic samples of the penalized branch per cell
+PENALIZED_REFINE = 40    # golden-section iterations refining the scan minimum
+VERT_SCAN = 64           # samples along an iso-resolution vertical cell branch
+# When a query spans a +-margin beam window (the selector's default 5%), the
+# cheapest cell interior can sit at a resolution INSIDE the band (e.g. riding
+# the trade cap), not only at the band endpoints -- so we scan the band at
+# this many log-spaced resolutions and evaluate the per-resolution-exact cell
+# candidates at each (codex guard, 7 Jul 2026).  margin=0 (the report) stays a
+# single exact evaluation.
+CELL_BAND_SCAN = 32
+
 
 # --------------------------------------------------------------------------- #
 # data model
@@ -109,7 +139,9 @@ class Choice:
 
     @property
     def interpolated(self):
-        return len(self.anchors) == 2
+        # 2 anchors = a row/column edge interpolant; 4 = a bilinear cell
+        # interior; 1 = an exact measured point.
+        return len(self.anchors) >= 2
 
 
 def _canon_robust(weighting, robust):
@@ -246,6 +278,304 @@ def build_segments(points: Sequence[Point]) -> List[Segment]:
 
 
 # --------------------------------------------------------------------------- #
+# bilinear cells (the 2-D interior between four lattice-adjacent corners)
+
+
+def _quad_roots(a, b, c):
+    """Real roots of a*x^2 + b*x + c = 0, with linear and degenerate fallbacks.
+    A near-zero discriminant is treated as a tangent (one double root) so the
+    skirt-contour tangency case is not silently dropped."""
+    if abs(a) <= CELL_DEGEN:
+        if abs(b) <= CELL_DEGEN:
+            return []
+        return [-c / b]
+    disc = b * b - 4 * a * c
+    if disc < 0:
+        return [-b / (2 * a)] if disc > -CELL_DEGEN else []
+    sq = math.sqrt(disc)
+    return [(-b + sq) / (2 * a), (-b - sq) / (2 * a)]
+
+
+class Cell:
+    """Bilinear interpolant over four lattice-adjacent corner Points forming a
+    (robust r0<r1) x (taper t0<t1) rectangle.  Normalized cell coordinates
+    (s in [0,1] along robust, u in [0,1] along taper); log(res), log(eta) and
+    skirt are each bilinear in (s,u):
+
+        F(s,u) = F00 + (F10-F00) s + (F01-F00) u + (F00-F10-F01+F11) s u
+
+    This agrees EXACTLY with the row and column edge interpolants on all four
+    edges (on s=0 both x and e are affine in u, so e is linear in x = the row
+    interpolant; likewise the other edges), so a cell only ADDS interior
+    operating points.  At a target resolution theta the feasible set is the
+    1-D locus {x(s,u)=log theta}; along it the constrained optimum's critical
+    points (eta-stationary, skirt-stationary, skirt=level crossings) are
+    closed-form quadratics, and the one transcendental case (the penalized
+    eta+skirt stationary point) is found by a deterministic scan + refine."""
+
+    __slots__ = ("p00", "p10", "p01", "p11", "r0", "r1", "t0", "t1",
+                 "A", "B", "C", "D", "Ae", "Be", "Ce", "De",
+                 "Ak", "Bk", "Ck", "Dk", "skirt_ok", "_rlo", "_rhi")
+
+    def __init__(self, p00, p10, p01, p11):
+        # corners: p00=(r0,t0)  p10=(r1,t0)  p01=(r0,t1)  p11=(r1,t1)
+        self.p00, self.p10, self.p01, self.p11 = p00, p10, p01, p11
+        self.r0, self.r1 = p00.robust, p10.robust
+        self.t0, self.t1 = p00.taper, p01.taper
+        x00, x10 = math.log(p00.res), math.log(p10.res)
+        x01, x11 = math.log(p01.res), math.log(p11.res)
+        self.A, self.B, self.C = x00, x10 - x00, x01 - x00
+        self.D = x00 - x10 - x01 + x11
+        e00, e10 = math.log(p00.eta), math.log(p10.eta)
+        e01, e11 = math.log(p01.eta), math.log(p11.eta)
+        self.Ae, self.Be, self.Ce = e00, e10 - e00, e01 - e00
+        self.De = e00 - e10 - e01 + e11
+        self.skirt_ok = all(p.skirt is not None
+                            for p in (p00, p10, p01, p11))
+        if self.skirt_ok:
+            k00, k10, k01, k11 = (p00.skirt, p10.skirt, p01.skirt, p11.skirt)
+            self.Ak, self.Bk, self.Ck = k00, k10 - k00, k01 - k00
+            self.Dk = k00 - k10 - k01 + k11
+        else:
+            self.Ak = self.Bk = self.Ck = self.Dk = None
+        rr = [p.res for p in (p00, p10, p01, p11)]
+        # a bilinear surface attains its extrema on the corners, so the cell's
+        # resolution range is exactly the corner range -- a valid quick reject
+        self._rlo, self._rhi = min(rr), max(rr)
+
+    def brackets(self, lo, hi):
+        return self._rhi >= lo and self._rlo <= hi
+
+    def _u_of_s(self, s, xstar):
+        denom = self.C + self.D * s
+        if abs(denom) < CELL_SINGULAR:
+            return None                    # iso-resolution singularity
+        return (xstar - self.A - self.B * s) / denom
+
+    def _skirt(self, s, u):
+        return self.Ak + self.Bk * s + self.Ck * u + self.Dk * s * u
+
+    def _point(self, s, u):
+        """Validated Choice at explicit normalized (s, u) (Codex Q4: recompute
+        (res, eta, skirt) and check every candidate).  None if out of the cell
+        or eta-capped."""
+        if not (0.0 <= s <= 1.0 and 0.0 <= u <= 1.0):
+            return None
+        eta = math.exp(self.Ae + self.Be * s + self.Ce * u + self.De * s * u)
+        if not math.isfinite(eta) or eta > ETA_CAP:
+            return None
+        x = self.A + self.B * s + self.C * u + self.D * s * u
+        skirt = self._skirt(s, u) if self.skirt_ok else None
+        robust = round(self.r0 + (self.r1 - self.r0) * s, 3)
+        if self.t0 > 0 and self.t1 > 0:
+            taper = math.exp((1 - u) * math.log(self.t0)
+                             + u * math.log(self.t1))
+        else:
+            taper = (1 - u) * self.t0 + u * self.t1
+        return Choice(math.exp(x), eta, skirt, "briggs", robust, taper,
+                      (self.p00, self.p10, self.p01, self.p11))
+
+    def _make(self, s, xstar):
+        """Validated Choice on the res=theta locus, i.e. at (s, u(s))."""
+        if not (0.0 <= s <= 1.0):
+            return None
+        u = self._u_of_s(s, xstar)
+        if u is None:
+            return None
+        c = self._point(s, u)
+        if c is None:
+            return None
+        if abs(math.log(c.res) - xstar) > CELL_RES_TOL * max(1.0, abs(xstar)):
+            return None
+        return c
+
+    def _valid_intervals(self, xstar):
+        """Sub-intervals of s in [0,1] where u(s) in [0,1] and the sign of
+        (C+D s) does not flip (no singularity crossing).  Used to scan the
+        penalized branch (Codex Q4: split at the singularity)."""
+        breaks = {0.0, 1.0}
+        if abs(self.D) > CELL_DEGEN:              # singularity C + D s = 0
+            breaks.add(-self.C / self.D)
+        if abs(self.B) > CELL_DEGEN:              # u(s) = 0
+            breaks.add((xstar - self.A) / self.B)
+        bd = self.B + self.D
+        if abs(bd) > CELL_DEGEN:                  # u(s) = 1
+            breaks.add((xstar - self.A - self.C) / bd)
+        pts = sorted(b for b in breaks if 0.0 <= b <= 1.0)
+        intervals = []
+        for a, b in zip(pts, pts[1:]):
+            if b - a < 1e-9:
+                continue
+            u = self._u_of_s(0.5 * (a + b), xstar)
+            if u is not None and 0.0 <= u <= 1.0:
+                intervals.append((a, b))
+        return intervals
+
+    def interior_candidates(self, theta, cap=None, skirt_kink=None,
+                            slope=TRADE_SLOPE):
+        """Interior operating points on the res=theta locus that can be the
+        constrained minimum.  Emits eta-stationary points always; if the cell
+        has skirt at all corners, also skirt-stationary points (for relaxed
+        best-achievable skirt), skirt=cap / skirt=skirt_kink crossings, and --
+        when both cap and skirt_kink are given -- the penalized-branch min.
+        Callers filter by their own skirt cap; every point is validated."""
+        if theta < self._rlo * (1 - 1e-9) or theta > self._rhi * (1 + 1e-9):
+            return []
+        xstar = math.log(theta)
+        out = []
+
+        def add(s):
+            c = self._make(s, xstar)
+            if c is not None:
+                out.append(c)
+
+        L = xstar - self.A
+        # eta-stationary: alpha D s^2 + 2 alpha C s + (beta C - gamma D) = 0
+        alpha = self.Be * self.D - self.De * self.B
+        beta = self.Ae * self.D + self.Be * self.C + self.De * L - self.Ce * self.B
+        gamma = self.Ae * self.C + self.Ce * L
+        for s in _quad_roots(alpha * self.D, 2 * alpha * self.C,
+                             beta * self.C - gamma * self.D):
+            add(s)
+
+        if self.skirt_ok:
+            alphak = self.Bk * self.D - self.Dk * self.B
+            betak = (self.Ak * self.D + self.Bk * self.C
+                     + self.Dk * L - self.Ck * self.B)
+            gammak = self.Ak * self.C + self.Ck * L
+            # skirt-stationary (best-achievable-skirt minima for relaxation)
+            for s in _quad_roots(alphak * self.D, 2 * alphak * self.C,
+                                 betak * self.C - gammak * self.D):
+                add(s)
+            # skirt = level crossings (feasibility edge and trade kink)
+            for lv in (cap, skirt_kink):
+                if lv is None:
+                    continue
+                for s in _quad_roots(alphak, betak - lv * self.D,
+                                     gammak - lv * self.C):
+                    add(s)
+            # penalized-branch stationary point (transcendental -> numeric)
+            if cap is not None and skirt_kink is not None:
+                self._penalized_min(xstar, cap, skirt_kink, slope, out)
+
+        # iso-resolution vertical branch (Codex Q4/guard): when the singular
+        # column s0 = -C/D lies in the cell AND the locus numerator vanishes
+        # there, the whole line s=s0 is at res=theta -- the u(s) parametrization
+        # misses it.  Sample it directly along u.
+        if abs(self.D) > CELL_DEGEN:
+            s0 = -self.C / self.D
+            if (0.0 <= s0 <= 1.0
+                    and abs(xstar - self.A - self.B * s0)
+                    <= CELL_RES_TOL * max(1.0, abs(xstar))):
+                for i in range(VERT_SCAN + 1):
+                    c = self._point(s0, i / VERT_SCAN)
+                    if c is not None:
+                        out.append(c)
+        return out
+
+    def _penalized_min(self, xstar, cap, skirt_kink, slope, out):
+        """Minimize J = eta + slope*max(0, skirt-skirt_kink) along the locus
+        where skirt is in (skirt_kink, cap] (the traded regime).  Deterministic
+        scan then golden-section refine around the best sample (Codex Q5: do
+        not assume unimodality globally; refine locally around a scanned low)."""
+        def Jval(s):
+            c = self._make(s, xstar)
+            if c is None or c.skirt is None:
+                return None
+            if not (skirt_kink - 1e-12 < c.skirt <= cap + 1e-12):
+                return None
+            return c.eta + slope * max(0.0, c.skirt - skirt_kink)
+
+        for a, b in self._valid_intervals(xstar):
+            best_s, best_j, step = None, None, (b - a) / PENALIZED_SCAN_N
+            for i in range(PENALIZED_SCAN_N + 1):
+                s = a + step * i
+                j = Jval(s)
+                if j is not None and (best_j is None or j < best_j):
+                    best_j, best_s = j, s
+            if best_s is None:
+                continue
+            lo, hi = max(a, best_s - step), min(b, best_s + step)
+            phi = 0.5 * (math.sqrt(5) - 1)
+            c1, c2 = hi - phi * (hi - lo), lo + phi * (hi - lo)
+            for _ in range(PENALIZED_REFINE):
+                j1, j2 = Jval(c1), Jval(c2)
+                if j1 is None or j2 is None:
+                    break
+                if j1 < j2:
+                    hi, c2 = c2, c1
+                    c1 = hi - phi * (hi - lo)
+                else:
+                    lo, c1 = c1, c2
+                    c2 = lo + phi * (hi - lo)
+            add_s = 0.5 * (lo + hi)
+            c = self._make(add_s, xstar)
+            if c is not None:
+                out.append(c)
+
+
+def build_cells(points: Sequence[Point]) -> List["Cell"]:
+    """Bilinear cells from briggs points.  A cell spans (robust r0<r1) x
+    (taper t0<t1) with all four corners measured.  To stay EXACTLY consistent
+    with the 1-D row/column interpolants (so a cell can never undercut a more
+    accurate edge fit), each of the four edges must be free of intervening
+    measured points -- i.e. r0,r1 are consecutive among the robusts carrying
+    taper t0 (and t1), and t0,t1 are consecutive among the tapers measured at
+    robust r0 (and r1).  This handles the refined/probed lattice, where extra
+    points along one row/column would otherwise make a naive corner grid
+    inconsistent, and it keeps cells minimal (never bridging a measured node).
+    The same lattice-step gates as the edge segments apply; natural rows have
+    no robust coordinate and are excluded (as they are from columns)."""
+    has: Dict[Tuple[float, float], Point] = {}
+    tkey: Dict[float, float] = {}
+    for p in points:
+        if p.weighting != "briggs":
+            continue
+        tk = round(p.taper, 6)
+        has.setdefault((p.robust, tk), p)            # dupes already dropped
+        tkey.setdefault(tk, p.taper)
+    robusts = sorted({r for r, _ in has})
+    tapers_of = {r: sorted(tk for (rr, tk) in has if rr == r)
+                 for r in robusts}
+    robusts_of: Dict[float, List[float]] = {}
+    for (r, tk) in has:
+        robusts_of.setdefault(tk, []).append(r)
+    for tk in robusts_of:
+        robusts_of[tk].sort()
+
+    cells = []
+    for i, r0 in enumerate(robusts):
+        for r1 in robusts[i + 1:]:
+            if r1 - r0 > MAX_ROBUST_GAP:
+                break                                # robusts are sorted
+            shared = sorted(set(tapers_of[r0]) & set(tapers_of[r1]))
+            for t0, t1 in zip(shared, shared[1:]):
+                a0, a1 = tkey[t0], tkey[t1]
+                if a0 > 0.0 and a1 / a0 > MAX_TAPER_STEP:
+                    continue                          # pruned-hole taper step
+                # edge cleanliness: no measured point interior to any edge
+                if (any(t0 < tt < t1 for tt in tapers_of[r0])
+                        or any(t0 < tt < t1 for tt in tapers_of[r1])):
+                    continue                          # a row edge is not clean
+                if (any(r0 < rr < r1 for rr in robusts_of[t0])
+                        or any(r0 < rr < r1 for rr in robusts_of[t1])):
+                    continue                          # a column edge is not clean
+                p00, p10 = has[(r0, t0)], has[(r1, t0)]
+                p01, p11 = has[(r0, t1)], has[(r1, t1)]
+                zt = ZERO_TAPER_RES_STEP if a0 == 0.0 else MAX_RES_STEP
+                if (max(p00.res, p01.res) / min(p00.res, p01.res) > zt
+                        or max(p10.res, p11.res) / min(p10.res, p11.res) > zt):
+                    continue                          # taper-direction res step
+                if (max(p00.res, p10.res) / min(p00.res, p10.res)
+                        > MAX_RES_STEP_COLUMN
+                        or max(p01.res, p11.res) / min(p01.res, p11.res)
+                        > MAX_RES_STEP_COLUMN):
+                    continue                          # robust-direction res step
+                cells.append(Cell(p00, p10, p01, p11))
+    return cells
+
+
+# --------------------------------------------------------------------------- #
 # the engine
 
 
@@ -255,6 +585,7 @@ class Envelope:
     def __init__(self, samples: Sequence):
         self.points = build_points(samples)
         self.segments = build_segments(self.points)
+        self.cells = build_cells(self.points)
 
     def coverage(self) -> Optional[Tuple[float, float]]:
         if not self.points:
@@ -289,6 +620,38 @@ class Envelope:
                 for r in seg.skirt_crossings(skirt_max):
                     if lo <= r <= hi:
                         out.append(seg.at(r))
+        out.extend(self._cell_candidates(lo, hi, cap=skirt_max))
+        return out
+
+    def _cell_candidates(self, lo, hi, cap=None, skirt_kink=None,
+                         slope=TRADE_SLOPE) -> List[Choice]:
+        """Interior (bilinear-cell) candidates over [lo, hi], evaluated on the
+        res=lo and res=hi loci.  `cap` filters by the skirt feasibility ceiling
+        (None = point-source, keep all); `skirt_kink` additionally requests the
+        trade-kink crossings and penalized-branch minimum.  See the Cell class.
+        Over a +-margin band the cheapest interior can sit at a resolution
+        INSIDE the band (codex guard), so the band is scanned at CELL_BAND_SCAN
+        log-spaced resolutions and the per-resolution-exact cell candidates are
+        unioned; margin=0 (the report) stays a single exact evaluation.  The
+        scan min converges monotonically to the true band min and is validated
+        against a 2-D band oracle in the tests."""
+        out = []
+        if lo == hi:
+            thetas = (lo,)
+        else:
+            xlo, xhi = math.log(lo), math.log(hi)
+            thetas = [math.exp(xlo + (xhi - xlo) * i / CELL_BAND_SCAN)
+                      for i in range(CELL_BAND_SCAN + 1)]
+        for cell in self.cells:
+            if not cell.brackets(lo, hi):
+                continue
+            for theta in thetas:
+                for c in cell.interior_candidates(theta, cap, skirt_kink,
+                                                  slope):
+                    if cap is not None and (c.skirt is None
+                                            or c.skirt > cap + 1e-12):
+                        continue
+                    out.append(c)
         return out
 
     # -- queries ------------------------------------------------------------ #
@@ -354,6 +717,12 @@ class Envelope:
                     cands.append(seg.at(r))
             cands.extend(self._trade_stationary(seg, lo, hi, skirt_max,
                                                 trade_max, trade_slope))
+        # cell interiors: the skirt_max trade-kink crossings and the penalized
+        # eta+skirt stationary point (the base classes are already in
+        # _candidates via cap=trade_max; these add the kink and traded branch)
+        cands.extend(self._cell_candidates(lo, hi, cap=trade_max,
+                                           skirt_kink=skirt_max,
+                                           slope=trade_slope))
         if cands:
             def J(c):
                 return c.eta + trade_slope * max(0.0, c.skirt - skirt_max)

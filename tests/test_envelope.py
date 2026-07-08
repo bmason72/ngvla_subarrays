@@ -380,3 +380,340 @@ class TestStaircaseRegression(unittest.TestCase):
                 self.assertLess(abs(b.eta - a.eta), 0.16,
                                 "%s staircase step at %.4g mas (%.3f->%.3f)"
                                 % (name, b.res * 1e3, a.eta, b.eta))
+
+
+class TestBilinearCells(unittest.TestCase):
+    """Bilinear cell interior (7 Jul 2026): under the skirt constraint the
+    cheapest beam at a target resolution can lie in a cell interior (both
+    robust and taper between lattice nodes), which the row/column edges miss.
+    Correctness is pinned against an in-test brute-force scan of the exact
+    res=theta locus (independent of the analytic critical-point enumeration)."""
+
+    def _cell_samples(self):
+        # a 2x2 (robust {0.0,0.4}) x (taper {4,6} mas) cell mirroring the probe
+        # scenario: the low-eta corners (r=0.4) have skirt > trade_max (0.25),
+        # so along the res=theta locus the feasible optimum is a genuine
+        # interior point riding the trade cap -- unreachable from any edge.
+        return [
+            pt(10.0, 1.45, 0.14, robust=0.0, taper=4.0),
+            pt(11.5, 1.20, 0.30, robust=0.4, taper=4.0),
+            pt(13.0, 1.55, 0.13, robust=0.0, taper=6.0),
+            pt(15.0, 1.32, 0.28, robust=0.4, taper=6.0),
+        ]
+
+    def _locus_scan(self, cell, theta, imaging, skirt_max=0.10,
+                    trade_max=0.25):
+        # brute-force min over the exact res=theta locus u=u(s)
+        import math
+        xstar = math.log(theta)
+        best = None
+        for i in range(20001):
+            s = i / 20000
+            denom = cell.C + cell.D * s
+            if abs(denom) < 1e-12:
+                continue
+            u = (xstar - cell.A - cell.B * s) / denom
+            if not (0.0 <= u <= 1.0):
+                continue
+            eta = math.exp(cell.Ae + cell.Be * s + cell.Ce * u
+                           + cell.De * s * u)
+            skirt = cell.Ak + cell.Bk * s + cell.Ck * u + cell.Dk * s * u
+            if imaging:
+                if skirt > trade_max:
+                    continue
+                j = eta + max(0.0, skirt - skirt_max)
+            else:
+                j = eta
+            if best is None or j < best:
+                best = j
+        return best
+
+    def test_cell_built(self):
+        env = Envelope(self._cell_samples())
+        self.assertEqual(len(env.cells), 1)
+
+    def test_matches_bruteforce_locus_scan(self):
+        import math
+        env = Envelope(self._cell_samples())
+        cell = env.cells[0]
+        # sweep resolutions the cell covers; engine J must match the scan
+        for i in range(1, 20):
+            theta = cell._rlo * (cell._rhi / cell._rlo) ** (i / 20)
+            for imaging in (False, True):
+                if imaging:
+                    c = env.solve(theta, margin=0.0, skirt_max=0.10,
+                                  relax=True)
+                    ej = None if c is None else c.eta + max(
+                        0.0, (c.skirt or 0.0) - 0.10)
+                else:
+                    c = env.solve(theta, margin=0.0)
+                    ej = None if c is None else c.eta
+                oj = self._locus_scan(cell, theta, imaging)
+                if oj is None:
+                    continue
+                self.assertIsNotNone(c)
+                # engine must not miss a lower-J point the scan found
+                self.assertLessEqual(ej, oj + 5e-3,
+                                     "engine J %.4f > scan %.4f at %.4g "
+                                     "(imaging=%s)" % (ej, oj, theta, imaging))
+                # and engine must not undercut the achievable min
+                self.assertGreaterEqual(ej, oj - 5e-3)
+
+    def test_interior_winner_is_flagged_and_bounded(self):
+        # at a resolution the taper columns cannot reach, the winner is a
+        # genuine cell interior: 4 anchors, robust/taper strictly between nodes
+        env = Envelope(self._cell_samples())
+        c = env.solve(12.0, margin=0.0, skirt_max=0.10, relax=True)
+        self.assertIsNotNone(c)
+        self.assertTrue(c.interpolated)
+        self.assertEqual(len(c.anchors), 4)
+        self.assertTrue(0.0 < c.robust < 0.4)
+        self.assertTrue(4.0 < c.taper < 6.0)
+        self.assertTrue(c.traded)               # rides the trade cap interior
+
+    def _band_oracle(self, cell, lo, hi, imaging, skirt_max=0.10,
+                     trade_max=0.25, n=400):
+        # brute-force min over the 2-D cell region with res in [lo,hi]
+        import math
+        best = None
+        for i in range(n + 1):
+            s = i / n
+            for k in range(n + 1):
+                u = k / n
+                res = math.exp(cell.A + cell.B * s + cell.C * u
+                               + cell.D * s * u)
+                if not (lo <= res <= hi):
+                    continue
+                eta = math.exp(cell.Ae + cell.Be * s + cell.Ce * u
+                               + cell.De * s * u)
+                if eta > 5.0:
+                    continue
+                skirt = cell.Ak + cell.Bk * s + cell.Ck * u + cell.Dk * s * u
+                if imaging:
+                    if skirt > trade_max:
+                        continue
+                    j = eta + max(0.0, skirt - skirt_max)
+                else:
+                    j = eta
+                best = j if best is None else min(best, j)
+        return best
+
+    def test_margin_band_matches_bruteforce(self):
+        # the selector's default +-5% band: the cheapest interior can sit at a
+        # resolution INSIDE the band, not only at the endpoints (codex guard)
+        import math
+        env = Envelope(self._cell_samples())
+        cell = env.cells[0]
+        for i in range(31):
+            theta = cell._rlo * (cell._rhi / cell._rlo) ** (i / 30)
+            lo, hi = theta * 0.95, theta * 1.05
+            for imaging in (False, True):
+                if imaging:
+                    c = env.solve(theta, margin=0.05, skirt_max=0.10,
+                                  relax=True)
+                    ej = None if c is None else c.eta + max(
+                        0.0, (c.skirt or 0.0) - 0.10)
+                else:
+                    c = env.solve(theta, margin=0.05)
+                    ej = None if c is None else c.eta
+                oj = self._band_oracle(cell, lo, hi, imaging)
+                if oj is None:
+                    continue
+                self.assertIsNotNone(c)
+                self.assertLessEqual(ej, oj + 5e-3,
+                                     "band miss at %.4g (imaging=%s): "
+                                     "%.4f > %.4f" % (theta, imaging, ej, oj))
+
+    def test_edge_cleanliness_blocks_inconsistent_cell(self):
+        # an intervening measured taper on one row makes a corner grid
+        # inconsistent with the row interpolant -> that cell must NOT form
+        samples = self._cell_samples() + [
+            pt(11.4, 1.36, 0.155, robust=0.0, taper=5.0),  # interior to s=0 edge
+        ]
+        env = Envelope(samples)
+        # the [4,6] cell is blocked; finer [4,5]/[5,6] cells need r=0.4 @ t=5
+        # (absent) so no cell spans the intervening taper
+        for cell in env.cells:
+            self.assertFalse(cell.t0 < 5.0 < cell.t1,
+                             "cell bridges an intervening measured taper")
+
+    def test_column_edge_cleanliness_blocks_bridging_robust(self):
+        # an intervening measured robust row at a shared taper must prevent a
+        # wide cell from bridging it (the column edge would be inconsistent)
+        samples = [
+            pt(10.0, 1.45, 0.14, robust=0.0, taper=4.0),
+            pt(13.0, 1.55, 0.13, robust=0.0, taper=6.0),
+            pt(11.5, 1.20, 0.30, robust=0.4, taper=4.0),
+            pt(15.0, 1.32, 0.28, robust=0.4, taper=6.0),
+            # intervening robust row present at BOTH shared tapers (4 and 6):
+            pt(10.7, 1.30, 0.22, robust=0.2, taper=4.0),
+            pt(14.0, 1.42, 0.20, robust=0.2, taper=6.0),
+        ]
+        env = Envelope(samples)
+        # no cell may span robust 0.0->0.4 (it would bridge the r=0.2 rows);
+        # only 0.0->0.2 and 0.2->0.4 cells are allowed
+        for cell in env.cells:
+            self.assertFalse(cell.r0 < 0.2 < cell.r1,
+                             "cell bridges an intervening measured robust row")
+        self.assertTrue(env.cells)                 # the finer cells do form
+
+    def test_vertical_branch_enumerated(self):
+        # corner res 10,15,15,10 with theta=sqrt(150): the singular column
+        # s0=0.5 is entirely at res=theta and must be sampled, not dropped
+        import math
+        env = Envelope([pt(10.0, 3.45, 0.20, robust=0.0, taper=4.0),
+                        pt(15.0, 3.50, 0.22, robust=0.4, taper=4.0),
+                        pt(15.0, 3.55, 0.19, robust=0.0, taper=6.0),
+                        pt(10.0, 3.40, 0.21, robust=0.4, taper=6.0)])
+        self.assertEqual(len(env.cells), 1)
+        cands = env.cells[0].interior_candidates(math.sqrt(150.0), cap=0.25,
+                                                 skirt_kink=0.10)
+        # candidates on the singular column (robust ~ 0.2, i.e. s0=0.5) exist
+        self.assertTrue(any(abs(c.robust - 0.2) < 1e-6 for c in cands),
+                        "iso-resolution vertical branch was dropped")
+
+    def test_flat_cell_no_spurious_win(self):
+        # a degenerate cell whose corners are colinear in (res, eta): the
+        # interior must reduce to the edge value (no fabricated lower eta)
+        env = Envelope([pt(10.0, 1.20, 0.20, robust=0.0, taper=4.0),
+                        pt(11.0, 1.20, 0.20, robust=0.4, taper=4.0),
+                        pt(12.0, 1.30, 0.20, robust=0.0, taper=6.0),
+                        pt(13.2, 1.30, 0.20, robust=0.4, taper=6.0)])
+        c = env.solve(11.5, margin=0.0)
+        self.assertIsNotNone(c)
+        self.assertTrue(1.20 - 1e-6 <= c.eta <= 1.30 + 1e-6)
+
+
+@unittest.skipUnless(os.path.isfile(REVF_CSV), "Rev F curve data not present")
+class TestBilinearRealData(unittest.TestCase):
+    """On real Rev F data, the full solve (edges + cells) must equal a
+    brute-force scan of every cell's exact res=theta locus plus the edge
+    segments -- i.e. the analytic enumeration never misses the constrained
+    minimum (pins the 7 Jul 2026 brute-force validation)."""
+
+    def _oracle(self, env, theta, imaging):
+        import math
+        xstar = math.log(theta)
+        best = None
+
+        def take(eta, skirt):
+            nonlocal best
+            if eta > 5.0:
+                return
+            if imaging:
+                if skirt is None or skirt > 0.25:
+                    return
+                j = eta + max(0.0, skirt - 0.10)
+            else:
+                j = eta
+            best = j if best is None else min(best, j)
+
+        for seg in env.segments:
+            if seg.lo <= theta <= seg.hi:
+                cc = seg.at(theta)
+                take(cc.eta, cc.skirt)
+        for cell in env.cells:
+            if not (cell._rlo * (1 - 1e-6) <= theta <= cell._rhi * (1 + 1e-6)):
+                continue
+            for i in range(4001):
+                s = i / 4000
+                denom = cell.C + cell.D * s
+                if abs(denom) < 1e-12:
+                    continue
+                u = (xstar - cell.A - cell.B * s) / denom
+                if not (0.0 <= u <= 1.0):
+                    continue
+                eta = math.exp(cell.Ae + cell.Be * s + cell.Ce * u
+                               + cell.De * s * u)
+                skirt = (cell.Ak + cell.Bk * s + cell.Ck * u + cell.Dk * s * u
+                         if cell.skirt_ok else None)
+                take(eta, skirt)
+        return best
+
+    def test_solve_equals_bruteforce(self):
+        import math
+        lib = CurveLibrary(samples=REVF_CSV)
+        worst = 0.0
+        for name in ("core", "spiral", "mid", "spiral+mid", "main",
+                     "core+spiral", "core-inner"):
+            env = lib.envelope(name)
+            cov = env.coverage()
+            lo, hi = math.log10(cov[0]), math.log10(cov[1])
+            for i in range(41):
+                theta = 10 ** (lo + (hi - lo) * i / 40)
+                for imaging in (False, True):
+                    if imaging:
+                        c = env.solve(theta, margin=0.0, skirt_max=0.10,
+                                      relax=True)
+                        ej = None if c is None else c.eta + max(
+                            0.0, (c.skirt or 0.0) - 0.10)
+                    else:
+                        c = env.solve(theta, margin=0.0)
+                        ej = None if c is None else c.eta
+                    oj = self._oracle(env, theta, imaging)
+                    if ej is None or oj is None:
+                        continue
+                    worst = max(worst, ej - oj)
+        # engine must never do worse than the brute-force scan (beyond the
+        # scan's grid granularity)
+        self.assertLess(worst, 6e-3,
+                        "engine missed a min by %.4f (J)" % worst)
+
+    def _band_oracle(self, env, lo, hi, imaging, n=160):
+        # brute-force 2-D min over every bracketing cell with res in [lo,hi]
+        import math
+        best = None
+        for cell in env.cells:
+            if not (cell._rlo <= hi and cell._rhi >= lo):
+                continue
+            for i in range(n + 1):
+                s = i / n
+                for k in range(n + 1):
+                    u = k / n
+                    res = math.exp(cell.A + cell.B * s + cell.C * u
+                                   + cell.D * s * u)
+                    if not (lo <= res <= hi):
+                        continue
+                    eta = math.exp(cell.Ae + cell.Be * s + cell.Ce * u
+                                   + cell.De * s * u)
+                    if eta > 5.0:
+                        continue
+                    skirt = (cell.Ak + cell.Bk * s + cell.Ck * u
+                             + cell.Dk * s * u if cell.skirt_ok else None)
+                    if imaging:
+                        if skirt is None or skirt > 0.25:
+                            continue
+                        j = eta + max(0.0, skirt - 0.10)
+                    else:
+                        j = eta
+                    best = j if best is None else min(best, j)
+        return best
+
+    def test_margin_band_not_worse_than_cell_bruteforce(self):
+        # the selector's default +-5% band must not miss a cheaper cell
+        # interior at a resolution inside the band (codex guard finding)
+        import math
+        lib = CurveLibrary(samples=REVF_CSV)
+        worst = 0.0
+        for name in ("spiral+mid", "main", "core+spiral"):
+            env = lib.envelope(name)
+            cov = env.coverage()
+            lo, hi = math.log10(cov[0]), math.log10(cov[1])
+            for i in range(21):
+                theta = 10 ** (lo + (hi - lo) * i / 20)
+                blo, bhi = theta * 0.95, theta * 1.05
+                for imaging in (False, True):
+                    if imaging:
+                        c = env.solve(theta, margin=0.05, skirt_max=0.10,
+                                      relax=True)
+                        ej = None if c is None else c.eta + max(
+                            0.0, (c.skirt or 0.0) - 0.10)
+                    else:
+                        c = env.solve(theta, margin=0.05)
+                        ej = None if c is None else c.eta
+                    oj = self._band_oracle(env, blo, bhi, imaging)
+                    if ej is None or oj is None:
+                        continue
+                    worst = max(worst, ej - oj)
+        self.assertLess(worst, 8e-3,
+                        "band solve missed a cell min by %.4f (J)" % worst)

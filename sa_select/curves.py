@@ -197,9 +197,11 @@ class CurveLibrary:
         note, source = "", ""
         anchors = [a.ref for a in choice.anchors]
         if choice.interpolated:
-            note = ("interpolated between measured beams at %.4g and %.4g "
-                    "arcsec (30 GHz)"
-                    % tuple(sorted(a.res for a in choice.anchors)))
+            beams = sorted(a.res for a in choice.anchors)
+            kind = ("within a bilinear (robust, taper) lattice cell"
+                    if len(beams) >= 4 else "between measured beams")
+            note = ("interpolated %s spanning %.4g-%.4g arcsec (30 GHz)"
+                    % (kind, beams[0], beams[-1]))
             source = " <-> ".join(getattr(a, "source", "") or "?"
                                   for a in anchors)
         elif anchors and anchors[0] is not None:

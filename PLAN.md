@@ -299,46 +299,98 @@ wrapper; the previously-noted monolithic install is broken). 28/28 tests pass.
 
 ### HANDOFF STATE (7 Jul 2026 — read this first)
 
-**Where things stand.** All 7 offered subarrays (core-inner, core, spiral,
-mid, core+spiral, spiral+mid, main) have complete v2 lattices + cheap-cell
-fills + refinement; curves come from the shared engine (`sa_select/envelope.py`,
-row+column edge interpolation, eta–skirt 1:1 trade about skirt 0.10 up to
-+0.15 span). Report: `curvegen/reports/revf-curves.html` (dense engine curves,
-in-page subarray calculator card). core+mid measured but DROPPED from the
-offered set (bmason). 52+ tests green (`casapy -m unittest discover -s tests -t .`).
+**Where things stand.** 14 offered subarrays now: the homogeneous set
+(core-inner, core, spiral, mid, core+spiral, spiral+mid, main) PLUS the
+memo-121 long+outer-core campaign (long, mid+long, spiral+mid+long, main+long,
+spiral+core-outer, mid+spiral+core-outer, long+mid+spiral+core-outer). Curves
+come from the shared engine (`sa_select/envelope.py`): row+column edge
+interpolation PLUS **bilinear cell interiors** (7 Jul 2026), eta–skirt 1:1
+trade about skirt 0.10 up to +0.15 span. Report:
+`curvegen/reports/revf-curves.html` (dense engine curves, in-page subarray
+calculator card). core+mid measured but DROPPED from the offered set (bmason).
+62 tests green (`casapy -m unittest discover -s tests -t .`). The homogeneous
+set is refined/smooth; the campaign set is coarser (see item 1 caveats).
 
 **In flight / open items (owner: next agent):**
-1. **memo-121 campaign**: long, spiral+core-outer, mid+spiral+core-outer
-   swept+filled (done, in `curvegen/results/`, not yet offered). The 4 heavy
-   long-combos (mid+long, spiral+mid+long, main+long,
-   long+mid+spiral+core-outer) are in `curvegen/campaign_long.sbatch` —
-   **bmason must `sbatch` it from a login node** (compute nodes can't).
-   After: QA each (beam caps honored, 0 failed), add rows to
-   `sa_select/data/subarrays.csv` (calc_name; N.B. **Long's b_min/LAS needs
-   spurious-shorts filtering**, cf. `artifacts/saUtil.py` ~150 m cut) — collect
-   auto-includes offered subarrays only, then re-collect + regen report.
-2. **Edge-interpolation probe: HYPOTHESIS CONFIRMED (7 Jul 2026).** The
-   residual imaging-curve steps sat at winners pinned at skirt≈0.249; probe
-   measurements at r=−0.6 (main) and r=0.6 (spiral+mid) found admissible
-   interior points (skirt 0.23–0.24) exactly at the step resolutions — the
-   steps were artifacts of edge-only interpolation under the skirt
-   constraint (the |d| cross-term bound does NOT hold for the constrained
-   problem; interiors can be admissible when both cell edges are not).
-   With the probe rows measured: spiral+mid worst imaging step 0.16→0.10;
-   main's 13.3-mas step gone (a smaller same-mechanism instance remains at
-   ~9.5 mas, 0.26). **Recommended next engine work: interior-bilinear
-   candidates along the trade-cap contour** — the probe is the evidence; a
-   cheaper stopgap is probing r=±0.6-style intermediate rows wherever a
-   winner rides the cap.
-3. **Calculator verification**: codex built the in-page calculator
-   (template card; test gate passed). Reference numbers to verify the JS
-   against (30 GHz, 0.01", imaging, 1000 MHz, 10 uJy/beam): main eta 1.891 →
-   t 53.5 s, 3.19 ant-hr; spiral+mid eta 1.237 → 106 s, 2.94 ant-hr; mid
-   eta 1.618 → 0.24 h, 11.0 ant-hr. Open the report in a browser and check.
+1. **memo-121 campaign: DONE + ADDED TO THE REPORT (7 Jul 2026, Opus).**
+   Campaign finished (all 4 heavy long-combos, 0 failed). All 7 new subarrays
+   (long, mid+long, spiral+mid+long, main+long, spiral+core-outer,
+   mid+spiral+core-outer, long+mid+spiral+core-outer) added to
+   `sa_select/data/subarrays.csv` (n_ant/b_min/b_max from the combined
+   `.cfg`s; las_coeff 0.8; calc_name blank→donor-rescaled where the pkl lacks
+   them, all already in `sensitivity._DONOR_N_ANT`) and to `make_report.ORDER`
+   (+7 color slots in `report_template.html`, dataviz-checked for
+   normal-vision separation; 14 categorical colors exceed CVD-distinctness so
+   the report leans on its existing secondary encoding — labels, legend,
+   per-subarray small multiples, data table, interactive highlight).
+   `collect.py` → 3206 samples; report regenerated with the bilinear engine.
+   **bmason authorized adding them (7 Jul); Long b_min is RAW (spurious ~37 m
+   shorts NOT filtered — bmason: "probably not a substantial impact"), so
+   Long-family LAS (~45″) is overstated — flagged in the subarrays.csv note;
+   apply a ~150 m cut if LAS ever binds.** DATA CAVEATS for the new sweeps
+   (they are coarser than the refined homogeneous set, NOT engine issues):
+   Long-family imaging curves are steppy at the fine end (main+long worst
+   adjacent eta step 0.91, spiral+mid+long 0.50 — relaxation↔trade-cap
+   regime transitions with few samples); `long` has ~14 points with eta<1
+   (min 0.965, single-noise-realization scatter). Run `refine.py` on the
+   long-family to smooth them when compute is available.
+2. **Bilinear cell interior: IMPLEMENTED + VALIDATED (7 Jul 2026, Opus).**
+   `sa_select/envelope.py` now adds a 2-D bilinear interpolant over four
+   lattice-adjacent (robust, taper) corner points (`Cell`, `build_cells`,
+   `_cell_candidates`, wired into `_candidates` + `solve`). log(res),
+   log(eta), skirt are bilinear in normalized cell coords (s,u); at a target
+   resolution the constrained optimum's critical points along the res-locus
+   are enumerated analytically (eta-stationary + skirt-stationary +
+   skirt=level crossings = closed-form quadratics; penalized eta+skirt
+   stationary via deterministic scan + golden refine). Cells form ONLY where
+   all four edges are free of intervening measured points, so a cell edge
+   coincides exactly with a row/column segment and can never undercut a more
+   accurate 1-D fit. Design pre-consulted with codex (gpt-5.5 xhigh:
+   confirmed the quadratic reductions; its guards folded in — singularity
+   split, skirt-stationary for relaxation, non-unimodal penalized scan).
+   **Validation:** brute-force 2-D locus-scan oracle on all 7 Rev F
+   subarrays × 161 resolutions → engine J − oracle J = 0.000 (pinned,
+   `TestBilinearRealData`); held-out recovery (drop the probe rows → bilinear
+   reproduces the admissible interior, median interp error 0.18–2.7% eta,
+   ~0.001 skirt in the operating range eta≤3); 58 tests green under casapy
+   (+6 new, `TestBilinearCells`). **Current-data impact is small** because
+   the probe rows are already measured; the value is generalizing the probe
+   (no need to measure every intermediate row) and removing the edge-only
+   deficiency for future/coarser sweeps. **main's residual ~9.5-mas step
+   (0.255) is NOT interpolation error** — the oracle confirms no admissible
+   skirt≤0.25 interior point exists there; it is a genuine trade_max=0.25
+   hard-cap frontier feature (a J-lower point sits at skirt 0.253, excluded
+   by the cap). Smoothing it needs a trade-policy change (bmason) or a
+   targeted measurement, not an engine change.
+3. **Calculator verification: DONE — JS VERIFIED (7 Jul 2026, Opus).**
+   Replicated the report JS numerically against `sa_select` + the memo-96
+   calculator on the report's own embedded DATA (30 GHz, 0.01", imaging,
+   1000 MHz, 10 uJy/beam). Three-way agreement:
+   | SA | sa_select engine | report JS | old handoff ref |
+   |----|----|----|----|
+   | main | eta 1.800 | eta 1.808 | eta 1.891 (STALE) |
+   | spiral+mid | eta 1.237 | eta 1.242 | eta 1.237 ✓ |
+   | mid | eta 1.618 | eta 1.640 | eta 1.618 ✓ |
+   - eta selection: JS matches the envelope engine to ≤1.5% (residual =
+     report's 0.01-dex dense-grid + the JS's own ±5% window re-min; not a
+     logic fork).
+   - σ_nat: JS log-log interpolation at 30 GHz matches
+     `sensitivity.natural_rms` to <0.05% (main 20.42, spiral+mid 43.80,
+     mid 95.79 uJy/beam @ 1h/1MHz).
+   - t/ant-hr formula tHours=(eta·σ/S)²/bw, antHr=tHours·N reproduced.
+   - **The one mismatch (main 1.891) is a STALE reference number**, not a
+     calculator bug: it predates the latest main re-sweep (main.csv
+     13:44 Jul 7). Current authoritative main eta @10 mas ≈ 1.80, which the
+     JS reproduces. spiral+mid & mid refs match the engine exactly.
 4. **Memo**: `memo/ngvla_sa_selection.tex` compiles (8 pp); needs bmason
    read + real figures (placeholders marked).
-5. **Nothing committed since yesterday's v2.1 commit** — large working tree
-   (engine, trade, campaign, calculator). Commit at the next milestone.
+5. **Nothing committed since the v3 commit (19468b1)** — large working tree:
+   bilinear engine (`sa_select/envelope.py`, `curves.py`), +34 envelope tests,
+   14-subarray `subarrays.csv` + `revf_curves.csv`, `make_report.ORDER` + 7
+   report color slots, regenerated `curvegen/reports/revf-curves.html`, PLAN +
+   NEXT_AGENT updates, plus the finished campaign `results/*.csv`. All 62
+   tests green under casapy. **Awaiting bmason's go-ahead to commit** (local
+   rule: commit only when asked).
 
 **Context for another model/agent**: CLAUDE.md (repo guide) → this PLAN →
 `curve_anomaly_postmortem.md` (why the engine is what it is) →
