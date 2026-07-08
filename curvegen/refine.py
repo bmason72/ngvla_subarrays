@@ -20,7 +20,7 @@ import argparse
 
 from config import SUBARRAYS, BEAM_CAP_ARCSEC
 from sweep import Sweep, point_key
-from make_report import build_curve, ETA_CAP
+from make_report import build_curve
 
 SKIRT_MAX = 0.10
 GAP_RATIO = 1.35          # res jumps beyond this are infeasibility gaps
@@ -61,8 +61,13 @@ def candidates_between(a, b):
     cands = set()
     r_mid = round((rob(a) + rob(b)) / 2, 2)
     tapers = sorted({a["taper"], b["taper"]})
-    t_mid = round((tapers[0] * tapers[1]) ** 0.5, 3) if tapers[0] > 0 \
-        else round(tapers[1] / 2, 3)
+    if len(tapers) == 1:
+        # same taper (a robust-direction jump): bracket in robust only
+        t_mid = tapers[0]
+    elif tapers[0] > 0:
+        t_mid = round((tapers[0] * tapers[1]) ** 0.5, 3)   # geometric mean
+    else:
+        t_mid = round(tapers[1] / 2, 3)                    # 0 -> first taper
     cands.add(("briggs", r_mid, t_mid))
     for s in (a, b):
         r, t = rob(s), s["taper"]

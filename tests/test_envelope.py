@@ -26,6 +26,26 @@ def pt(res, eta, skirt, weighting="briggs", robust=0.0, taper=0.0):
                 robust=robust, taper=taper)
 
 
+def threshold_pick(pts, imaging, s0=0.10):
+    """Reference threshold-relax selection over a set of (eta, skirt) points
+    (skirt not None): point-source = min eta; imaging = min-eta among
+    skirt<=s0 if any (meets criterion), else min-skirt (best PSF, tie by eta,
+    relaxed).  Returns (eta, skirt, relaxed) or None.  Mirrors envelope.solve's
+    default policy -- no eta censoring (the engine reports what it finds)."""
+    if not pts:
+        return None
+    if not imaging:
+        return (min(e for e, _ in pts), None, False)
+    strict = [(e, s) for e, s in pts if s <= s0 + 1e-12]
+    if strict:
+        e, s = min(strict, key=lambda t: t[0])
+        return (e, s, False)
+    smin = min(s for _, s in pts)
+    e, s = min([(e, s) for e, s in pts if s <= smin + 1e-6],
+               key=lambda t: t[0])
+    return (e, s, True)
+
+
 class TestHygiene(unittest.TestCase):
 
     def test_signed_zero_robust_is_one_branch(self):
@@ -34,10 +54,12 @@ class TestHygiene(unittest.TestCase):
         self.assertEqual(len(pts), 1)          # exact duplicate dropped
         self.assertEqual(pts[0].robust, 0.0)
 
-    def test_eta_cap_applied(self):
+    def test_no_eta_censoring(self):
+        # the engine reports what it finds: build_points keeps eta > ETA_CAP
+        # (ETA_CAP is a compute-grid/plotting bound only; bmason 8 Jul 2026)
         pts = build_points([pt(10.0, 1.0, 0.2), pt(20.0, ETA_CAP + 1, 0.2,
                                                    taper=5.0)])
-        self.assertEqual(len(pts), 1)
+        self.assertEqual(len(pts), 2)
 
 
 class TestSegments(unittest.TestCase):
@@ -135,11 +157,11 @@ class TestRelaxationContinuity(unittest.TestCase):
         ])
 
     def test_no_dropout_inside_family_hole(self):
-        # sculpt family (skirt ~0.17 <= trade cap) must win the trade over
-        # the cheap 0.31-skirt family (beyond the cap): no eta-1.0 drop-out
+        # no skirt <= 0.10 here, so threshold-relax returns the BEST achievable
+        # skirt: the sculpt family (~0.17), NOT the cheap 0.31-skirt family --
+        # so no eta-1.0 drop-out (the M3 regression).
         c = self.env.solve(11.7, margin=0.0, skirt_max=0.10, relax=True)
-        self.assertTrue(c.traded)
-        self.assertFalse(c.relaxed)
+        self.assertTrue(c.relaxed)                # best achievable, not <=0.10
         self.assertLess(c.skirt, 0.25)            # sculpt family, not 0.31
         self.assertGreater(c.eta, 1.3)            # not the eta-1.0 drop-out
 
@@ -155,9 +177,10 @@ class TestRelaxationContinuity(unittest.TestCase):
 
 
 class TestEtaSkirtTrade(unittest.TestCase):
-    """bmason's 1-for-1 eta-skirt trade (6 Jul 2026): a strict beam only wins
-    when pushing the skirt under 0.10 costs less eta than the trade charges.
-    Pins the residual 8.18/44.9 mas 'strict island' spikes."""
+    """The retired 1-for-1 eta-skirt trade, now `mode="legacy_trade"` only
+    (superseded 8 Jul 2026 by threshold-relax; see TestThresholdRelax).  A
+    strict beam wins only when pushing skirt under 0.10 costs less eta than the
+    trade charges."""
 
     def setUp(self):
         self.env = Envelope([
@@ -170,7 +193,8 @@ class TestEtaSkirtTrade(unittest.TestCase):
         ])
 
     def test_trade_beats_expensive_strict(self):
-        c = self.env.solve(8.0, margin=0.0, skirt_max=0.10, relax=True)
+        c = self.env.solve(8.0, margin=0.0, skirt_max=0.10, relax=True,
+                           mode="legacy_trade")
         # J(strict) ~ 1.89; J(traded) ~ 1.48 + 0.055 = 1.53 -> traded wins
         self.assertTrue(c.traded)
         self.assertEqual(c.robust, -0.2)
@@ -184,13 +208,63 @@ class TestEtaSkirtTrade(unittest.TestCase):
             pt(8.4, 1.46, 0.160, robust=-0.2, taper=4.9),
         ])
         # J(strict) ~ 1.49 < J(traded) ~ 1.47 + 0.055 = 1.52
-        c = env.solve(8.0, margin=0.0, skirt_max=0.10, relax=True)
+        c = env.solve(8.0, margin=0.0, skirt_max=0.10, relax=True,
+                      mode="legacy_trade")
         self.assertFalse(c.traded)
         self.assertEqual(c.robust, -2.0)
 
     def test_relax_false_is_pure_threshold(self):
         c = self.env.solve(8.0, margin=0.0, skirt_max=0.10, relax=False)
         self.assertEqual(c.robust, -2.0)          # only the strict family
+
+
+class TestThresholdRelax(unittest.TestCase):
+    """The default threshold-relax policy (bmason 8 Jul 2026): meet skirt<=s0
+    with the cheapest beam where achievable, else report the BEST achievable
+    skirt (min-skirt) flagged relaxed -- never trade skirt away for eta."""
+
+    def test_meets_criterion_with_cheapest_feasible(self):
+        # both the -2 (skirt 0.095) and -0.2 (skirt 0.155) families exist;
+        # only -2 meets 0.10, so it wins even though -0.2 is cheaper in eta
+        env = Envelope([
+            pt(7.9, 1.90, 0.095, robust=-2.0, taper=6.5),
+            pt(8.4, 1.85, 0.105, robust=-2.0, taper=6.9),
+            pt(7.9, 1.48, 0.155, robust=-0.2, taper=4.6),
+            pt(8.4, 1.46, 0.160, robust=-0.2, taper=4.9),
+        ])
+        c = env.solve(8.0, margin=0.0, skirt_max=0.10, relax=True)
+        self.assertFalse(c.relaxed)               # criterion met
+        self.assertEqual(c.robust, -2.0)          # the skirt<=0.10 family
+        self.assertLessEqual(c.skirt, 0.10 + 1e-9)
+
+    def test_relaxes_to_min_skirt_not_min_eta(self):
+        # nothing <= 0.10: return the best-PSF (min-skirt) beam, not the
+        # cheaper high-skirt one
+        env = Envelope([
+            pt(7.9, 1.90, 0.150, robust=-2.0, taper=6.5),
+            pt(8.4, 1.85, 0.150, robust=-2.0, taper=6.9),
+            pt(7.9, 1.20, 0.240, robust=0.4, taper=3.0),
+            pt(8.4, 1.18, 0.245, robust=0.4, taper=3.2),
+        ])
+        c = env.solve(8.0, margin=0.0, skirt_max=0.10, relax=True)
+        self.assertTrue(c.relaxed)
+        self.assertAlmostEqual(c.skirt, 0.150, places=2)   # min-skirt
+        self.assertEqual(c.robust, -2.0)          # not the eta-1.18 / 0.245 one
+
+    def test_no_relaxed_eta_gate(self):
+        # no eta censoring: a best-skirt beam ABOVE ETA_CAP (eta ~6, >25x
+        # natural time) is still reported in the relaxed regime rather than
+        # dropped in favor of a cheap high-skirt beam (bmason 8 Jul 2026)
+        env = Envelope([
+            pt(7.9, 6.20, 0.150, robust=-2.0, taper=6.5),
+            pt(8.4, 6.00, 0.150, robust=-2.0, taper=6.9),
+            pt(7.9, 1.05, 0.300, robust=1.2, taper=1.0),
+            pt(8.4, 1.05, 0.300, robust=1.2, taper=1.1),
+        ])
+        c = env.solve(8.0, margin=0.0, skirt_max=0.10, relax=True)
+        self.assertTrue(c.relaxed)
+        self.assertAlmostEqual(c.skirt, 0.150, places=2)   # best PSF wins
+        self.assertGreater(c.eta, 5.0)            # reported despite eta > cap
 
 
 @unittest.skipUnless(os.path.isfile(REVF_CSV), "Rev F curve data not present")
@@ -236,16 +310,14 @@ class TestRevFRegressions(unittest.TestCase):
                                  % (name, b.res, b.eta, a.eta, c.eta))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class TestGuardReviewRegressions(unittest.TestCase):
     """Pins for the 6 Jul 2026 codex guard-review findings."""
 
     def test_relaxed_message_reports_true_best_skirt(self):
-        # beyond the trade cap: cheapest relaxed-pool point (skirt 0.35) !=
-        # true best (0.30); the public message must cite the true best
+        # no skirt <= 0.10: threshold-relax returns the BEST achievable skirt
+        # (0.30, min-skirt), not the cheaper high-skirt point (0.34); the
+        # public message cites the achieved best
         import tempfile, csv as _csv
         d = tempfile.mkdtemp()
         sub = os.path.join(d, "subarrays.csv")
@@ -266,8 +338,8 @@ class TestGuardReviewRegressions(unittest.TestCase):
                         "0.6", "30.0", "cheapest_in_pool", ""])
         lib = CurveLibrary(subarrays=sub, samples=smp)
         sample, msg = lib.solve("testA", 1.0, 30.0, skirt_threshold=0.10)
-        self.assertEqual(sample.skirt, 0.34)      # cheapest within 1.15x best
-        self.assertIn("best achievable is 0.3", msg)
+        self.assertEqual(sample.skirt, 0.30)      # min-skirt (best PSF)
+        self.assertIn("best achievable skirt is 0.3", msg)
 
 
 class TestBeamCapPruning(unittest.TestCase):
@@ -401,12 +473,11 @@ class TestBilinearCells(unittest.TestCase):
             pt(15.0, 1.32, 0.28, robust=0.4, taper=6.0),
         ]
 
-    def _locus_scan(self, cell, theta, imaging, skirt_max=0.10,
-                    trade_max=0.25):
-        # brute-force min over the exact res=theta locus u=u(s)
+    def _locus_scan(self, cell, theta, imaging):
+        # threshold-policy reference over the exact res=theta locus u=u(s)
         import math
         xstar = math.log(theta)
-        best = None
+        pts = []
         for i in range(20001):
             s = i / 20000
             denom = cell.C + cell.D * s
@@ -418,64 +489,57 @@ class TestBilinearCells(unittest.TestCase):
             eta = math.exp(cell.Ae + cell.Be * s + cell.Ce * u
                            + cell.De * s * u)
             skirt = cell.Ak + cell.Bk * s + cell.Ck * u + cell.Dk * s * u
-            if imaging:
-                if skirt > trade_max:
-                    continue
-                j = eta + max(0.0, skirt - skirt_max)
-            else:
-                j = eta
-            if best is None or j < best:
-                best = j
-        return best
+            pts.append((eta, skirt))
+        return threshold_pick(pts, imaging)
 
     def test_cell_built(self):
         env = Envelope(self._cell_samples())
         self.assertEqual(len(env.cells), 1)
 
     def test_matches_bruteforce_locus_scan(self):
-        import math
+        # engine (edges + analytic cell candidates) must match a dense
+        # locus scan under the threshold policy, at every resolution
         env = Envelope(self._cell_samples())
         cell = env.cells[0]
-        # sweep resolutions the cell covers; engine J must match the scan
         for i in range(1, 20):
             theta = cell._rlo * (cell._rhi / cell._rlo) ** (i / 20)
             for imaging in (False, True):
-                if imaging:
-                    c = env.solve(theta, margin=0.0, skirt_max=0.10,
-                                  relax=True)
-                    ej = None if c is None else c.eta + max(
-                        0.0, (c.skirt or 0.0) - 0.10)
-                else:
-                    c = env.solve(theta, margin=0.0)
-                    ej = None if c is None else c.eta
-                oj = self._locus_scan(cell, theta, imaging)
-                if oj is None:
+                c = (env.solve(theta, margin=0.0, skirt_max=0.10, relax=True)
+                     if imaging else env.solve(theta, margin=0.0))
+                oref = self._locus_scan(cell, theta, imaging)
+                if oref is None:
                     continue
                 self.assertIsNotNone(c)
-                # engine must not miss a lower-J point the scan found
-                self.assertLessEqual(ej, oj + 5e-3,
-                                     "engine J %.4f > scan %.4f at %.4g "
-                                     "(imaging=%s)" % (ej, oj, theta, imaging))
-                # and engine must not undercut the achievable min
-                self.assertGreaterEqual(ej, oj - 5e-3)
+                oeta, oskirt, orelaxed = oref
+                self.assertAlmostEqual(c.eta, oeta, delta=5e-3,
+                                       msg="eta at %.4g (imaging=%s)"
+                                       % (theta, imaging))
+                if imaging:
+                    self.assertEqual(bool(c.relaxed), orelaxed,
+                                     "regime at %.4g" % theta)
+                    if orelaxed:
+                        self.assertAlmostEqual(c.skirt, oskirt, delta=5e-3)
 
     def test_interior_winner_is_flagged_and_bounded(self):
-        # at a resolution the taper columns cannot reach, the winner is a
-        # genuine cell interior: 4 anchors, robust/taper strictly between nodes
-        env = Envelope(self._cell_samples())
-        c = env.solve(12.0, margin=0.0, skirt_max=0.10, relax=True)
+        # skirt<=0.10 on the r=0 side, >0.10 on the r=0.4 side: the 0.10
+        # contour crosses the cell interior, so the cheapest beam MEETING
+        # skirt<=0.10 is a genuine interior point (robust & taper between nodes)
+        env = Envelope([pt(10.0, 1.70, 0.06, robust=0.0, taper=4.0),
+                        pt(11.3, 1.20, 0.16, robust=0.4, taper=4.0),
+                        pt(13.0, 1.72, 0.05, robust=0.0, taper=6.0),
+                        pt(15.0, 1.22, 0.15, robust=0.4, taper=6.0)])
+        c = env.solve(10.5555, margin=0.0, skirt_max=0.10, relax=True)
         self.assertIsNotNone(c)
-        self.assertTrue(c.interpolated)
-        self.assertEqual(len(c.anchors), 4)
+        self.assertEqual(len(c.anchors), 4)         # bilinear cell interior
+        self.assertFalse(c.relaxed)                 # meets the criterion
+        self.assertLessEqual(c.skirt, 0.10 + 1e-6)  # on the s0 contour
         self.assertTrue(0.0 < c.robust < 0.4)
         self.assertTrue(4.0 < c.taper < 6.0)
-        self.assertTrue(c.traded)               # rides the trade cap interior
 
-    def _band_oracle(self, cell, lo, hi, imaging, skirt_max=0.10,
-                     trade_max=0.25, n=400):
-        # brute-force min over the 2-D cell region with res in [lo,hi]
+    def _band_oracle(self, cell, lo, hi, imaging, n=400):
+        # threshold-policy reference over the 2-D cell region, res in [lo,hi]
         import math
-        best = None
+        pts = []
         for i in range(n + 1):
             s = i / n
             for k in range(n + 1):
@@ -486,43 +550,38 @@ class TestBilinearCells(unittest.TestCase):
                     continue
                 eta = math.exp(cell.Ae + cell.Be * s + cell.Ce * u
                                + cell.De * s * u)
-                if eta > 5.0:
-                    continue
                 skirt = cell.Ak + cell.Bk * s + cell.Ck * u + cell.Dk * s * u
-                if imaging:
-                    if skirt > trade_max:
-                        continue
-                    j = eta + max(0.0, skirt - skirt_max)
-                else:
-                    j = eta
-                best = j if best is None else min(best, j)
-        return best
+                pts.append((eta, skirt))
+        return threshold_pick(pts, imaging)
 
     def test_margin_band_matches_bruteforce(self):
-        # the selector's default +-5% band: the cheapest interior can sit at a
-        # resolution INSIDE the band, not only at the endpoints (codex guard)
-        import math
+        # the selector's default +-5% band: the min-eta feasible (or best-skirt
+        # relaxed) point can sit at a resolution INSIDE the band (codex guard)
         env = Envelope(self._cell_samples())
         cell = env.cells[0]
         for i in range(31):
             theta = cell._rlo * (cell._rhi / cell._rlo) ** (i / 30)
             lo, hi = theta * 0.95, theta * 1.05
             for imaging in (False, True):
-                if imaging:
-                    c = env.solve(theta, margin=0.05, skirt_max=0.10,
-                                  relax=True)
-                    ej = None if c is None else c.eta + max(
-                        0.0, (c.skirt or 0.0) - 0.10)
-                else:
-                    c = env.solve(theta, margin=0.05)
-                    ej = None if c is None else c.eta
-                oj = self._band_oracle(cell, lo, hi, imaging)
-                if oj is None:
+                c = (env.solve(theta, margin=0.05, skirt_max=0.10, relax=True)
+                     if imaging else env.solve(theta, margin=0.05))
+                oref = self._band_oracle(cell, lo, hi, imaging)
+                if oref is None:
                     continue
                 self.assertIsNotNone(c)
-                self.assertLessEqual(ej, oj + 5e-3,
+                oeta, oskirt, orelaxed = oref
+                # engine's eta must not exceed the band reference (a 400^2 grid
+                # slightly under-resolves, so allow a small tolerance)
+                self.assertLessEqual(c.eta, oeta + 8e-3,
                                      "band miss at %.4g (imaging=%s): "
-                                     "%.4f > %.4f" % (theta, imaging, ej, oj))
+                                     "%.4f > %.4f" % (theta, imaging, c.eta,
+                                                      oeta))
+                # relaxed: the reported skirt must be no worse than the band
+                # scan's best achievable (guards the scan-slice granularity)
+                if imaging and orelaxed and bool(c.relaxed):
+                    self.assertLessEqual((c.skirt or 0.0), oskirt + 8e-3,
+                                         "band skirt miss at %.4g: %.4f > %.4f"
+                                         % (theta, c.skirt or 0.0, oskirt))
 
     def test_edge_cleanliness_blocks_inconsistent_cell(self):
         # an intervening measured taper on one row makes a corner grid
@@ -592,26 +651,16 @@ class TestBilinearRealData(unittest.TestCase):
     minimum (pins the 7 Jul 2026 brute-force validation)."""
 
     def _oracle(self, env, theta, imaging):
+        # threshold-policy reference over segments@theta + cell loci@theta
         import math
         xstar = math.log(theta)
-        best = None
-
-        def take(eta, skirt):
-            nonlocal best
-            if eta > 5.0:
-                return
-            if imaging:
-                if skirt is None or skirt > 0.25:
-                    return
-                j = eta + max(0.0, skirt - 0.10)
-            else:
-                j = eta
-            best = j if best is None else min(best, j)
-
+        pts = []
         for seg in env.segments:
             if seg.lo <= theta <= seg.hi:
                 cc = seg.at(theta)
-                take(cc.eta, cc.skirt)
+                if cc.skirt is not None or not imaging:
+                    pts.append((cc.eta, cc.skirt if cc.skirt is not None
+                                else 0.0))
         for cell in env.cells:
             if not (cell._rlo * (1 - 1e-6) <= theta <= cell._rhi * (1 + 1e-6)):
                 continue
@@ -625,15 +674,19 @@ class TestBilinearRealData(unittest.TestCase):
                     continue
                 eta = math.exp(cell.Ae + cell.Be * s + cell.Ce * u
                                + cell.De * s * u)
-                skirt = (cell.Ak + cell.Bk * s + cell.Ck * u + cell.Dk * s * u
-                         if cell.skirt_ok else None)
-                take(eta, skirt)
-        return best
+                if cell.skirt_ok:
+                    pts.append((eta, cell.Ak + cell.Bk * s + cell.Ck * u
+                                + cell.Dk * s * u))
+                elif not imaging:
+                    pts.append((eta, 0.0))
+        return threshold_pick(pts, imaging)
 
     def test_solve_equals_bruteforce(self):
+        # engine (analytic edges + cell candidates) must match the dense
+        # reference under the threshold policy, at every resolution
         import math
         lib = CurveLibrary(samples=REVF_CSV)
-        worst = 0.0
+        worst_eta, worst_skirt, regime_mismatch = 0.0, 0.0, 0
         for name in ("core", "spiral", "mid", "spiral+mid", "main",
                      "core+spiral", "core-inner"):
             env = lib.envelope(name)
@@ -642,78 +695,156 @@ class TestBilinearRealData(unittest.TestCase):
             for i in range(41):
                 theta = 10 ** (lo + (hi - lo) * i / 40)
                 for imaging in (False, True):
+                    c = (env.solve(theta, margin=0.0, skirt_max=0.10,
+                                   relax=True) if imaging
+                         else env.solve(theta, margin=0.0))
+                    oref = self._oracle(env, theta, imaging)
+                    if c is None or oref is None:
+                        continue
+                    oeta, oskirt, orelaxed = oref
+                    worst_eta = max(worst_eta, abs(c.eta - oeta))
                     if imaging:
-                        c = env.solve(theta, margin=0.0, skirt_max=0.10,
-                                      relax=True)
-                        ej = None if c is None else c.eta + max(
-                            0.0, (c.skirt or 0.0) - 0.10)
-                    else:
-                        c = env.solve(theta, margin=0.0)
-                        ej = None if c is None else c.eta
-                    oj = self._oracle(env, theta, imaging)
-                    if ej is None or oj is None:
-                        continue
-                    worst = max(worst, ej - oj)
-        # engine must never do worse than the brute-force scan (beyond the
-        # scan's grid granularity)
-        self.assertLess(worst, 6e-3,
-                        "engine missed a min by %.4f (J)" % worst)
+                        if bool(c.relaxed) != orelaxed:
+                            regime_mismatch += 1
+                        elif orelaxed:
+                            worst_skirt = max(worst_skirt,
+                                              abs((c.skirt or 0.0) - oskirt))
+        self.assertLess(worst_eta, 6e-3,
+                        "engine eta off reference by %.4f" % worst_eta)
+        self.assertLess(worst_skirt, 6e-3,
+                        "relaxed skirt off reference by %.4f" % worst_skirt)
+        self.assertEqual(regime_mismatch, 0, "strict/relaxed regime mismatch")
 
-    def _band_oracle(self, env, lo, hi, imaging, n=160):
-        # brute-force 2-D min over every bracketing cell with res in [lo,hi]
-        import math
-        best = None
-        for cell in env.cells:
-            if not (cell._rlo <= hi and cell._rhi >= lo):
-                continue
-            for i in range(n + 1):
-                s = i / n
-                for k in range(n + 1):
-                    u = k / n
-                    res = math.exp(cell.A + cell.B * s + cell.C * u
-                                   + cell.D * s * u)
-                    if not (lo <= res <= hi):
-                        continue
-                    eta = math.exp(cell.Ae + cell.Be * s + cell.Ce * u
-                                   + cell.De * s * u)
-                    if eta > 5.0:
-                        continue
-                    skirt = (cell.Ak + cell.Bk * s + cell.Ck * u
-                             + cell.Dk * s * u if cell.skirt_ok else None)
-                    if imaging:
-                        if skirt is None or skirt > 0.25:
-                            continue
-                        j = eta + max(0.0, skirt - 0.10)
-                    else:
-                        j = eta
-                    best = j if best is None else min(best, j)
-        return best
+    @staticmethod
+    def _better(a, b):
+        # threshold ordering of (relaxed, eta, skirt): strict beats relaxed;
+        # within strict lower eta; within relaxed lower skirt then eta.
+        # returns True if a is no worse than b (within tol).
+        ra, ea, sa = a
+        rb, eb, sb = b
+        if ra != rb:
+            return (not ra)                      # strict (relaxed False) wins
+        if not ra:
+            return ea <= eb + 6e-3
+        return (sa <= sb + 6e-3) or (abs(sa - sb) <= 6e-3 and ea <= eb + 6e-3)
 
-    def test_margin_band_not_worse_than_cell_bruteforce(self):
-        # the selector's default +-5% band must not miss a cheaper cell
-        # interior at a resolution inside the band (codex guard finding)
+    def test_margin_band_finds_interior_optimum(self):
+        # the +-5% band answer must be no worse (threshold ordering) than the
+        # best over a fine resolution scan of the band via the trusted
+        # per-resolution solver -- i.e. the band search finds interior optima
         import math
         lib = CurveLibrary(samples=REVF_CSV)
-        worst = 0.0
         for name in ("spiral+mid", "main", "core+spiral"):
             env = lib.envelope(name)
             cov = env.coverage()
             lo, hi = math.log10(cov[0]), math.log10(cov[1])
             for i in range(21):
                 theta = 10 ** (lo + (hi - lo) * i / 20)
-                blo, bhi = theta * 0.95, theta * 1.05
-                for imaging in (False, True):
-                    if imaging:
-                        c = env.solve(theta, margin=0.05, skirt_max=0.10,
-                                      relax=True)
-                        ej = None if c is None else c.eta + max(
-                            0.0, (c.skirt or 0.0) - 0.10)
-                    else:
-                        c = env.solve(theta, margin=0.05)
-                        ej = None if c is None else c.eta
-                    oj = self._band_oracle(env, blo, bhi, imaging)
-                    if ej is None or oj is None:
+                for imaging in (True, False):
+                    band = env.solve(theta, margin=0.05,
+                                     skirt_max=0.10 if imaging else None,
+                                     relax=True)
+                    if band is None:
                         continue
-                    worst = max(worst, ej - oj)
-        self.assertLess(worst, 8e-3,
-                        "band solve missed a cell min by %.4f (J)" % worst)
+                    ba = (bool(band.relaxed), band.eta, band.skirt or 0.0)
+                    # reference: threshold-best over a fine scan of [.95,1.05]
+                    best = None
+                    for j in range(21):
+                        th = theta * (0.95 + 0.10 * j / 20)
+                        c = env.solve(th, margin=0.0,
+                                      skirt_max=0.10 if imaging else None,
+                                      relax=True)
+                        if c is None:
+                            continue
+                        cand = (bool(c.relaxed), c.eta, c.skirt or 0.0)
+                        if best is None or self._better(cand, best):
+                            best = cand
+                    if best is None:
+                        continue
+                    self.assertTrue(self._better(ba, best),
+                                    "%s band answer %s worse than scan best %s "
+                                    "at %.4g (imaging=%s)"
+                                    % (name, ba, best, theta, imaging))
+
+
+class TestRefineCandidates(unittest.TestCase):
+    """curvegen/refine.py candidates_between must not IndexError on a
+    same-taper (robust-direction) jump -- the tapers[1] crash that killed
+    main+long refinement (8 Jul 2026)."""
+
+    def test_same_taper_jump_no_indexerror(self):
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), "curvegen"))
+        try:
+            import importlib
+            refine = importlib.import_module("refine")
+        except ImportError as e:
+            self.skipTest("curvegen/refine.py needs CASA here: %s" % e)
+            return
+        a = dict(weighting="briggs", robust=-0.4, taper=3.5)
+        b = dict(weighting="briggs", robust=-0.8, taper=3.5)   # same taper
+        cands = refine.candidates_between(a, b)                # must not crash
+        self.assertTrue(cands)
+        # a robust-midpoint at the shared taper is offered
+        self.assertTrue(any(w == "briggs" and abs(t - 3.5) < 1e-6
+                            for (w, r, t) in cands))
+
+
+@unittest.skipUnless(os.path.isfile(REVF_CSV), "Rev F curve data not present")
+class TestReportSelectorParity(unittest.TestCase):
+    """The report calculator (JS) reads the pre-built imaging curve and picks
+    by the threshold policy over the +-5% window; the selector calls the engine
+    directly.  This replicates the JS window pick over the same curve and
+    checks it tracks the engine (guards future JS/engine drift -- codex finding
+    8 Jul 2026)."""
+
+    def _js_pick(self, curve, res_ref, obs):
+        import math
+        lo, hi = res_ref * 0.95, res_ref * 1.05
+        win = [c for c in curve if lo <= c.res <= hi]
+        if not win:
+            return None
+        if obs != "imaging":
+            return min(win, key=lambda c: c.eta)
+        strict = [c for c in win if not c.relaxed]
+        if strict:
+            return min(strict, key=lambda c: c.eta)
+        return min(win, key=lambda c: ((c.skirt if c.skirt is not None
+                                        else 1e9), c.eta))
+
+    def test_js_window_pick_tracks_engine(self):
+        import math
+        lib = CurveLibrary(samples=REVF_CSV)
+        worst, hard_mism, n = 0.0, 0, 0
+        for name in ("core", "spiral", "mid", "core+spiral", "spiral+mid",
+                     "main", "core-inner"):
+            env = lib.envelope(name)
+            curve = env.curve(skirt_max=0.10, grid_dex=0.01)  # the DATA.imaging
+            cov = env.coverage()
+            lo, hi = math.log10(cov[0]), math.log10(cov[1])
+            for i in range(15):
+                theta = 10 ** (lo + (hi - lo) * i / 14)
+                jp = self._js_pick(curve, theta, "imaging")
+                c = env.solve(theta, margin=0.05, skirt_max=0.10, relax=True)
+                if jp is None or c is None or c.eta > 3.0:
+                    continue          # coarse near-cap end is not of interest
+                n += 1
+                worst = max(worst, abs(jp.eta - c.eta))
+                # a strict/relaxed flip is benign at the skirt SEAM (both skirts
+                # ~0.10); only count it if it's a genuine (non-seam) mismatch
+                if bool(jp.relaxed) != bool(c.relaxed):
+                    js_s = jp.skirt if jp.skirt is not None else 0.10
+                    en_s = c.skirt if c.skirt is not None else 0.10
+                    if min(abs(js_s - 0.10), abs(en_s - 0.10)) > 0.01:
+                        hard_mism += 1
+        # the JS window pick (over the pre-built 0.01-dex curve) and the
+        # continuous engine solve agree to the grid discretization -- ~0.1 eta
+        # at the steepest spots (the report is a quick-look; the Python
+        # selector is authoritative); regime agrees except at the skirt seam
+        self.assertGreater(n, 50)
+        self.assertLess(worst, 0.12, "JS/engine eta drift %.3f" % worst)
+        self.assertEqual(hard_mism, 0, "JS/engine hard regime mismatch")
+
+
+if __name__ == "__main__":
+    unittest.main()

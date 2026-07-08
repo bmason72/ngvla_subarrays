@@ -164,7 +164,12 @@ def main(out_path):
                 taper=float(r["taper_arcsec_30ghz"]) * 1e3
                       if r["taper_arcsec_30ghz"] else 0.0,
             )
-            if s["eta"] <= ETA_CAP:      # the eta > ~5 regime is not of interest
+            # DISPLAY trim only: the eta > ~5 regime (>25x natural time) is
+            # not of interest for the plots.  The engine/selector itself does
+            # NOT censor by ETA_CAP (see envelope.build_points) -- so at those
+            # extreme resolutions the Python tool still reports a solution
+            # where this report shows none.
+            if s["eta"] <= ETA_CAP:
                 samples_by[r["subarray"]].append(s)
 
     las = {}

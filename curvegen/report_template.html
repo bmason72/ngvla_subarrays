@@ -154,8 +154,10 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   resolution at the 30&thinsp;GHz reference frequency, measured from noise simulations of each Rev&thinsp;F
   subarray (4&thinsp;h track, dec&thinsp;+24&deg;) over a grid of Briggs robust and uv-taper values.
   The <em>imaging</em> curves constrain the PSF skirt &mdash; the azimuthally averaged PSF level at
-  a radius of one FWHM (memo&thinsp;65 metric&thinsp;2b) &mdash; to &le;&thinsp;10% (memo&thinsp;121 criterion)
-  where that is cheap, trading skirt against &eta; one-for-one up to a skirt of 25% where it is not.</p>
+  a radius of one FWHM (memo&thinsp;65 metric&thinsp;2b) &mdash; to &le;&thinsp;10% (memo&thinsp;121 criterion):
+  at each resolution the cheapest (min-&eta;) beam meeting the criterion is shown, and where no beam
+  can (the dense-core arrays bottom out above 10%) the <em>best achievable</em> skirt is reported and
+  flagged (hollow), never trading resolution away.</p>
 </header>
 
 <div class="tiles" id="tiles"></div>
@@ -205,14 +207,13 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 </div>
 
 <div class="card">
-  <h2>Imaging curves (&eta;&ndash;skirt trade about a 10% skirt target)</h2>
-  <p class="note">At each target resolution the curve minimizes
-  <em>&eta; + max(0, skirt &minus; 0.10)</em> over beams with skirt &le; 25% &mdash; i.e. a beam
-  with skirt above 10% wins only if it saves more &eta; than the one-for-one trade charges
-  (curves are computed by the shared interpolation engine, continuous in resolution).
-  Angular resolution remains the primary requirement: <strong>hollow triangles</strong> mark
-  beams whose skirt exceeds 10% (accepted under the trade, or &mdash; where even 25% is
-  unreachable &mdash; relaxed to the best achievable value; hover for the achieved skirt).
+  <h2>Imaging curves (cheapest beam meeting a 10% skirt, else best achievable)</h2>
+  <p class="note">At each target resolution the curve shows the minimum-&eta; beam whose PSF skirt
+  &le;&thinsp;10% (the memo&thinsp;121 criterion), computed by the shared interpolation engine
+  (continuous in resolution). Angular resolution is the primary requirement: where <em>no</em> beam
+  reaches 10% (the dense-core arrays bottom out higher), the criterion is relaxed to the
+  <em>best achievable</em> skirt and <strong>hollow triangles</strong> mark those points (they do
+  NOT meet the criterion; hover for the achieved skirt).
   Dashed verticals mark each subarray&rsquo;s LAS at 30&thinsp;GHz; the core-bearing subarrays share
   b<sub>min</sub> and hence a common LAS. This is the operational look-up view for imaging projects
   (the memo&thinsp;76 figure&thinsp;1 analog).</p>
@@ -394,40 +395,33 @@ function readCalcRequest() {
   }};
 }
 
-function compareKeys(a, b) {
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] < b[i]) return -1;
-    if (a[i] > b[i]) return 1;
-  }
-  return 0;
-}
-
-function curveObjective(p, obs) {
-  if (obs !== 'imaging') return p.eta;
-  const skirt = Number.isFinite(p.skirt) ? p.skirt : 0.10;
-  return p.eta + Math.max(0, skirt - 0.10);
-}
-
 function lookupCurvePoint(name, obs, resRefMas) {
+  // Mirrors envelope.solve's threshold policy over the pre-built curve points
+  // inside the +-5% window: point-source -> min eta; imaging -> min-eta among
+  // points MEETING the skirt criterion (relaxed=false), else the best
+  // achievable skirt (min-skirt, tie by eta).  The DATA.imaging curve is
+  // already the engine's per-resolution threshold answer, so this just picks
+  // the cheapest admissible one in the window.
   const curves = obs === 'pointsource' ? DATA.pointsource : DATA.imaging;
   const curve = curves && Array.isArray(curves[name]) ? curves[name] : [];
   if (!curve.length) return {reason: 'no curve data tabulated for this subarray'};
   const lo = resRefMas * (1 - CALC_BEAM_MARGIN);
   const hi = resRefMas * (1 + CALC_BEAM_MARGIN);
-  let best = null, bestKey = null;
-  for (const p of curve) {
-    if (!p || !finitePositive(Number(p.res)) || !finitePositive(Number(p.eta))) continue;
-    if (p.res < lo || p.res > hi) continue;
-    const key = [
-      curveObjective(p, obs),
-      p.eta,
-      Math.abs(Math.log(p.res / resRefMas)),
-    ];
-    if (!best || compareKeys(key, bestKey) < 0) {
-      best = p; bestKey = key;
-    }
-  }
-  return best ? {point: best} : {reason: 'no beam within ±5% of request'};
+  const win = curve.filter(p => p && finitePositive(Number(p.res))
+    && finitePositive(Number(p.eta)) && p.res >= lo && p.res <= hi);
+  if (!win.length) return {reason: 'no beam within ±5% of request'};
+  const minEta = pts => pts.reduce((a, b) => (b.eta < a.eta ? b : a));
+  if (obs !== 'imaging') return {point: minEta(win)};
+  const strict = win.filter(p => !p.relaxed);   // meets skirt <= s0
+  if (strict.length) return {point: minEta(strict)};
+  // relaxed: best achievable skirt (min-skirt), ties broken by eta
+  const sk = p => (Number.isFinite(Number(p.skirt)) ? Number(p.skirt) : Infinity);
+  const best = win.reduce((a, b) => {
+    if (sk(b) < sk(a) - 1e-9) return b;
+    if (sk(a) < sk(b) - 1e-9) return a;
+    return b.eta < a.eta ? b : a;
+  });
+  return {point: best};
 }
 
 function interpolateSigma(name, freq) {
@@ -469,13 +463,12 @@ function tcleanText(p, freq) {
 
 function flagInfo(p) {
   const flags = [], notes = [];
-  if (p.traded) {
-    flags.push('traded');
-    notes.push('Skirt above 10% accepted under the 1:1 eta-skirt trade.');
-  }
   if (p.relaxed) {
     flags.push('relaxed');
-    notes.push('No beam in the request window reaches the trade cap; best achievable skirt used.');
+    notes.push('No beam here meets the skirt criterion; the best achievable '
+      + 'skirt (' + (Number.isFinite(Number(p.skirt))
+        ? (100 * Number(p.skirt)).toFixed(0) + '%' : 'n/a')
+      + ') is reported. Does NOT meet the criterion.');
   }
   return {text: flags.join(', '), title: notes.join(' ')};
 }
@@ -715,9 +708,9 @@ function curveChart(el, curves, opts) {
       } else {
         m = svgEl('circle', {cx: X(p.res), cy: Y(p.eta), r: 3.5});
       }
-      // non-strict optima are hollow: traded (skirt accepted under the
-      // 1-for-1 eta-skirt trade) or relaxed (even the trade cap unreachable)
-      const hollow = p.relaxed || p.traded;
+      // relaxed optima (no beam here meets the skirt criterion; best
+      // achievable skirt reported) are drawn hollow
+      const hollow = p.relaxed;
       m.setAttribute('fill', hollow ? 'var(--surface)' : css(name));
       m.setAttribute('stroke', hollow ? css(name) : 'var(--surface)');
       m.setAttribute('stroke-width', 1.5);
@@ -750,15 +743,18 @@ function ttHtml(name, p) {
     : `briggs robust ${p.robust.toFixed(2)}` + (p.taper ? `, taper ${fmtRes(p.taper)}` : '');
   return `<b>${name}</b><br>beam ${fmtRes(p.res)}<br>η = ${p.eta.toFixed(2)}` +
          `<br>skirt ${p.skirt === null ? '—' : (100*p.skirt).toFixed(1) + '%'}` +
-         (p.relaxed ? ' <b>(relaxed — even the 25% trade cap unachievable here)</b>'
-          : p.traded ? ' <b>(traded — skirt &gt;10% accepted under the 1:1 η-skirt trade)</b>' : '') +
+         (p.relaxed ? ' <b>(relaxed — no beam here meets the skirt criterion; '
+          + 'best achievable skirt reported)</b>' : '') +
          `<br>${pars}`;
 }
 
-const XT = [{v:1,l:'1 mas'},{v:10,l:'10 mas'},{v:100,l:'100 mas'},
-            {v:1000,l:'1″'},{v:10000,l:'10″'},{v:60000,l:'60″'}];
+const XT = [{v:0.3,l:'0.3 mas'},{v:1,l:'1 mas'},{v:10,l:'10 mas'},
+            {v:100,l:'100 mas'},{v:1000,l:'1″'},{v:10000,l:'10″'},
+            {v:60000,l:'60″'}];
 const YT = [1,2,4,8,16];
-const optsCommon = {xmin: 1.5, xmax: 80000, ymax: 18, xticks: XT, yticks: YT};
+// xmin covers the LONG-family fine end (long native ~0.30 mas); was 1.5,
+// which clipped most LONG-including subarrays (bmason 8 Jul 2026)
+const optsCommon = {xmin: 0.2, xmax: 80000, ymax: 18, xticks: XT, yticks: YT};
 
 function legend(el, svg) {
   for (const name of DATA.order) {

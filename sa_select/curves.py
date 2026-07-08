@@ -166,15 +166,15 @@ class CurveLibrary:
             if choice.relaxed:
                 best = choice.best_skirt if choice.best_skirt is not None \
                     else choice.skirt
-                return sample, ("relaxed: no beam here reaches skirt <= %.2g "
-                                "(nor the %.2g trade cap); best achievable "
-                                "is %.2g (chosen beam: %.2g)"
-                                % (skirt_threshold,
-                                   skirt_threshold + TRADE_SPAN, best,
-                                   choice.skirt))
-            if choice.traded:
+                return sample, ("relaxed: no beam within the tolerance meets "
+                                "skirt <= %.2g; best achievable skirt is %.2g "
+                                "(reported beam skirt %.2g, eta %.2f) -- does "
+                                "NOT meet the criterion"
+                                % (skirt_threshold, best, choice.skirt,
+                                   choice.eta))
+            if choice.traded:               # only in mode='legacy_trade'
                 return sample, ("traded: skirt %.2g > %.2g accepted under "
-                                "the 1-for-1 eta-skirt trade"
+                                "the 1-for-1 eta-skirt trade (legacy mode)"
                                 % (choice.skirt, skirt_threshold))
             return sample, "ok"
 

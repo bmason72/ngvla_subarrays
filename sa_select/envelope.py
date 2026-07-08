@@ -22,7 +22,8 @@ Conservative rules (post-mortem + Codex review):
     isolated refinement points: MAX_TAPER_STEP / MAX_RES_STEP);
   * NO extrapolation past a row's ends (eta-cap, beam-cap and convergence
     prunes end rows for a reason);
-  * one eta-cap policy (ETA_CAP) for every consumer;
+  * results are not eta-censored -- the engine reports what it finds at every
+    resolution (ETA_CAP is a compute-grid/plotting bound only);
   * hygiene at load: robust -0.0 -> 0.0, exact-duplicate lattice points
     dropped;
   * where the imaging threshold cannot be met, the relaxed criterion uses the
@@ -42,7 +43,11 @@ interpolants, so the search is exact, not gridded).
 import math
 from typing import Dict, List, Optional, Sequence, Tuple
 
-ETA_CAP = 5.0          # curves/answers above this are not meaningful (policy)
+ETA_CAP = 5.0          # ~25x natural observing time: a compute-grid pruning
+#                        and report-plotting bound only.  The engine/selector
+#                        does NOT censor by it (bmason 8 Jul 2026); it is kept
+#                        for `make_report`'s display trim and `config`'s sweep
+#                        pruning.
 RELAX_FACTOR = 1.15    # relaxed pool: skirt <= best_achievable * this
 MAX_TAPER_STEP = 2.05  # max adjacent taper ratio a segment may span
 MAX_RES_STEP = 1.6     # max adjacent resolution ratio a segment may span
@@ -68,6 +73,13 @@ MAX_RES_STEP_COLUMN = 2.0
 # relaxation (flagged) is the fallback.
 TRADE_SLOPE = 1.0
 TRADE_SPAN = 0.15
+# Threshold-relax default (bmason 8 Jul 2026): where skirt <= s0 is not
+# achievable at a resolution, report the BEST achievable skirt (min-skirt),
+# breaking ties in skirt by eta within this tolerance.  No relaxed-specific
+# eta gate -- we report the best PSF found whatever the eta (the engine does
+# not censor by ETA_CAP; that is a compute-grid / plotting notion only).
+# (The retired 1-for-1 trade lives on only as mode="legacy_trade".)
+SKIRT_TIE_TOL = 1e-6
 
 # Bilinear cell interior (7 Jul 2026).  Row + column segments only sample the
 # lattice EDGES; under the skirt constraint the cheapest beam at a target
@@ -220,15 +232,15 @@ class Segment:
 def build_points(samples: Sequence[dict], key=None) -> List[Point]:
     """Samples (mappings or objects with res/eta/skirt/weighting/robust/taper
     attributes) -> hygienic Point list: robust canonicalized, exact duplicate
-    lattice points dropped (first kept), eta-cap applied."""
+    lattice points dropped (first kept).  NO eta cap is applied here -- the
+    engine reports what it finds at every resolution (bmason 8 Jul 2026: don't
+    censor results; ETA_CAP is only a compute-grid / plotting notion)."""
     pts, seen = [], set()
     for s in samples:
         get = s.get if isinstance(s, dict) else lambda k, _s=s: getattr(_s, k)
         ref = s["ref"] if isinstance(s, dict) and "ref" in s else s
         p = Point(get("res"), get("eta"), get("skirt"), get("weighting"),
                   get("robust"), get("taper"), ref=ref)
-        if p.eta > ETA_CAP:
-            continue
         k = (p.weighting, p.robust, round(p.taper, 6))
         if k in seen:
             continue
@@ -362,7 +374,7 @@ class Cell:
         if not (0.0 <= s <= 1.0 and 0.0 <= u <= 1.0):
             return None
         eta = math.exp(self.Ae + self.Be * s + self.Ce * u + self.De * s * u)
-        if not math.isfinite(eta) or eta > ETA_CAP:
+        if not math.isfinite(eta):
             return None
         x = self.A + self.B * s + self.C * u + self.D * s * u
         skirt = self._skirt(s, u) if self.skirt_ok else None
@@ -683,33 +695,62 @@ class Envelope:
         return [c]
 
     def solve(self, theta, margin=0.0, skirt_max=None, relax=True,
-              trade_slope=TRADE_SLOPE, trade_max=None
+              mode="threshold", trade_slope=TRADE_SLOPE, trade_max=None
               ) -> Optional[Choice]:
         """Cheapest way to reach resolution `theta` within +-margin.
 
         Point-source (skirt_max=None): minimum eta.
 
-        Imaging (skirt_max given, relax=True): minimize the eta-skirt trade
-        J = eta + trade_slope*max(0, skirt - skirt_max) over beams with
-        skirt <= trade_max (bmason's 1-for-1 trade, 6 Jul 2026).  A beam
-        with skirt above skirt_max that wins the trade has traded=True.
-        If nothing has skirt <= trade_max, fall back to the best skirt
-        achievable over the interval (relaxed=True, best_skirt set).
+        Imaging (skirt_max = s0 given), mode="threshold" (DEFAULT, bmason
+        8 Jul 2026): resolution is the hard requirement, skirt is a quality
+        target.
+          * STRICT -- if any beam in the window has skirt <= s0, return the
+            cheapest (min-eta) of those.  It MEETS the criterion (relaxed
+            False).
+          * RELAXED -- otherwise return the beam with the BEST ACHIEVABLE
+            skirt in the window (min-skirt; ties broken by eta), flagged
+            relaxed=True with best_skirt set.  No skirt or eta limit is
+            imposed -- we report the best PSF we can find at that resolution
+            whatever the eta (which is reported; the caller judges).  This is
+            distinct from the point-source curve, which returns the min-eta /
+            worst-PSF beam.
+          relax=False makes the threshold hard (strict only, else None).
 
-        relax=False: hard skirt <= skirt_max threshold, no trade.
+        mode="legacy_trade": the retired 1-for-1 eta-skirt trade
+        (J = eta + trade_slope*max(0, skirt - s0) over skirt <= trade_max),
+        kept for diagnostics/comparison only.
+
         Returns None when the families give no answer in the interval.
         """
         lo, hi = theta * (1 - margin), theta * (1 + margin)
-        if skirt_max is None or not relax:
-            cands = self._candidates(lo, hi, skirt_max)
+        if skirt_max is None:
+            cands = self._candidates(lo, hi, None)
             return min(cands, key=lambda c: c.eta) if cands else None
+        if mode == "legacy_trade" and relax:
+            return self._solve_trade(lo, hi, skirt_max, trade_slope, trade_max)
+
+        # strict: the cheapest beam that meets skirt <= s0
+        strict = self._candidates(lo, hi, skirt_max)
+        if strict:
+            return min(strict, key=lambda c: c.eta)     # meets the criterion
+        if not relax:
+            return None                                 # hard threshold
+
+        # relaxed: the best achievable skirt in the window (no eta gate)
+        with_skirt = [c for c in self._candidates(lo, hi, None)
+                      if c.skirt is not None]
+        if not with_skirt:
+            return None                                 # genuine coverage gap
+        best = min(c.skirt for c in with_skirt)
+        pool = [c for c in with_skirt if c.skirt <= best + SKIRT_TIE_TOL]
+        choice = min(pool, key=lambda c: c.eta)         # min-skirt, tie by eta
+        choice.relaxed, choice.best_skirt = True, best
+        return choice
+
+    def _solve_trade(self, lo, hi, skirt_max, trade_slope, trade_max):
+        """Retired 1-for-1 eta-skirt trade (mode='legacy_trade'); see solve."""
         if trade_max is None:
             trade_max = skirt_max + TRADE_SPAN
-
-        # the trade objective over skirt <= trade_max: possible minima are
-        # measured points, interval edges, skirt crossings at trade_max
-        # (feasibility edge) and at skirt_max (penalty kink), plus interior
-        # stationary points of the penalized branch
         cands = self._candidates(lo, hi, trade_max)
         for seg in self.segments:
             for r in seg.skirt_crossings(skirt_max):
@@ -717,9 +758,6 @@ class Envelope:
                     cands.append(seg.at(r))
             cands.extend(self._trade_stationary(seg, lo, hi, skirt_max,
                                                 trade_max, trade_slope))
-        # cell interiors: the skirt_max trade-kink crossings and the penalized
-        # eta+skirt stationary point (the base classes are already in
-        # _candidates via cap=trade_max; these add the kink and traded branch)
         cands.extend(self._cell_candidates(lo, hi, cap=trade_max,
                                            skirt_kink=skirt_max,
                                            slope=trade_slope))
@@ -729,23 +767,20 @@ class Envelope:
             choice = min(cands, key=J)
             choice.traded = choice.skirt > skirt_max + 1e-12
             return choice
-
-        # nothing under trade_max: best achievable skirt over the interval
-        # (continuous in theta), cheapest choice within RELAX_FACTOR of it
         with_skirt = [c for c in self._candidates(lo, hi)
                       if c.skirt is not None]
         if not with_skirt:
             return None
         best = min(c.skirt for c in with_skirt)
         pool = self._candidates(lo, hi, best * RELAX_FACTOR)
-        if not pool:            # numerical edge: fall back to the best point
+        if not pool:
             pool = [min(with_skirt, key=lambda c: c.skirt)]
         choice = min(pool, key=lambda c: c.eta)
         choice.relaxed, choice.best_skirt = True, best
         return choice
 
     def curve(self, skirt_max=None, relax=True, grid_dex=0.01,
-              margin=0.0) -> List[Choice]:
+              margin=0.0, mode="threshold") -> List[Choice]:
         """The full curve on a log grid of target resolutions (gaps where the
         families give no answer).  margin=0 evaluates the pure envelope."""
         cov = self.coverage()
@@ -755,7 +790,7 @@ class Envelope:
         out, x = [], lo
         while x <= hi + 1e-12:
             c = self.solve(10 ** x, margin=margin, skirt_max=skirt_max,
-                           relax=relax)
+                           relax=relax, mode=mode)
             if c is not None:
                 out.append(c)
             x += grid_dex

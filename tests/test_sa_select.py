@@ -444,8 +444,9 @@ class TestSkirtRelaxation(SyntheticLibraryTestCase):
         sample, msg = self.lib.solve("testA", resolution=1.0, freq_ghz=30.0,
                                      skirt_threshold=0.10, relax=True)
         self.assertIsNotNone(sample)
-        self.assertEqual(sample.skirt, 0.16)     # within the 0.25 trade cap
-        self.assertIn("traded", msg)
+        self.assertEqual(sample.skirt, 0.16)     # best achievable (min-skirt)
+        self.assertIn("relaxed", msg)
+        self.assertNotIn("traded", msg)          # threshold policy, not a trade
 
     def test_strict_mode_still_excludes(self):
         sample, msg = self.lib.solve("testA", resolution=1.0, freq_ghz=30.0,
@@ -457,7 +458,7 @@ class TestSkirtRelaxation(SyntheticLibraryTestCase):
         res = select_subarrays(req, library=self.lib)
         c = res.candidates[0]
         self.assertTrue(c.feasible)
-        self.assertTrue(c.warnings and "traded" in c.warnings[0])
+        self.assertTrue(c.warnings and "relaxed" in c.warnings[0])
         req_strict = ObservingRequest(resolution=1.0, frequency=30.0,
                                       imaging=True, skirt_relax=False)
         res2 = select_subarrays(req_strict, library=self.lib)
