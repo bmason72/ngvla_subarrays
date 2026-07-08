@@ -27,9 +27,8 @@ ATTIC = os.path.join(RESULTS_DIR, "attic-uvrange")
 
 
 def result_basenames(sa):
-    """Primary and legacy result filenames for a subarray (cf. sweep.Sweep)."""
-    return {sa.replace("+", "_").replace("-", "_") + ".csv",
-            sa.replace("+", "_") + ".csv"}
+    """Result filename for a subarray (cf. sweep.Sweep.results_path)."""
+    return {sa.replace("+", "_").replace("-", "_") + ".csv"}
 
 
 def offered():

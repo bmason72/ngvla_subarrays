@@ -22,15 +22,13 @@ from sa_select.envelope import Envelope, ETA_CAP   # noqa: E402
 TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "report_template.html")
 
-# fixed series order & display names (color slots assigned in the template;
-# deferred subarrays keep their slots so colors never re-map)
+# fixed series order & display names (color slots assigned in the template)
 ORDER = ["core", "spiral", "mid", "core+spiral", "spiral+mid",
          "main", "core-inner",
          # memo-121 long-baseline + outer-core campaign (added 7 Jul 2026)
          "long", "mid+long", "spiral+mid+long", "main+long",
          "spiral+core-outer", "mid+spiral+core-outer",
          "long+mid+spiral+core-outer"]   # core+mid measured but dropped
-DEFERRED = []    # all campaign subarrays live (7 Jul 2026)
 
 
 GRID_DEX = 0.01      # target-resolution grid spacing of the plotted curves
@@ -193,7 +191,7 @@ def main(out_path):
     for curve in pointsource.values():
         for p in curve:
             p.pop("env_keys", None)
-    data = dict(order=ORDER, deferred=DEFERRED, las=las, samples=samples_by,
+    data = dict(order=ORDER, las=las, samples=samples_by,
                 imaging=imaging,
                 pointsource=pointsource,
                 counts={n: len(samples_by[n]) for n in ORDER},

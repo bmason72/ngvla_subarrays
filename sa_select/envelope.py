@@ -229,7 +229,7 @@ class Segment:
         return [self.a.res * (self.b.res / self.a.res) ** u]
 
 
-def build_points(samples: Sequence[dict], key=None) -> List[Point]:
+def build_points(samples: Sequence[dict]) -> List[Point]:
     """Samples (mappings or objects with res/eta/skirt/weighting/robust/taper
     attributes) -> hygienic Point list: robust canonicalized, exact duplicate
     lattice points dropped (first kept).  NO eta cap is applied here -- the

@@ -187,10 +187,6 @@ class Sweep:
         self.n_run = 0
         self.results_path = os.path.join(
             RESULTS_DIR, subarray.replace("+", "_").replace("-", "_") + ".csv")
-        # keep backward compatibility with v1 result filenames (no '-')
-        legacy = os.path.join(RESULTS_DIR, subarray.replace("+", "_") + ".csv")
-        if os.path.isfile(legacy):
-            self.results_path = legacy
         self.record_path = record_path or self.results_path
         os.makedirs(RESULTS_DIR, exist_ok=True)
         extra = []

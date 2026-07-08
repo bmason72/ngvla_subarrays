@@ -760,8 +760,7 @@ function legend(el, svg) {
   for (const name of DATA.order) {
     const chip = document.createElement('button');
     chip.className = 'chip' + (ACTIVE.includes(name) ? '' : ' pending');
-    const tag = ACTIVE.includes(name) ? ''
-      : (DATA.deferred.includes(name) ? ' (deferred)' : ' (pending)');
+    const tag = ACTIVE.includes(name) ? '' : ' (pending)';
     chip.innerHTML = `<span class="swatch" style="background:${ACTIVE.includes(name)?css(name):'none'}"></span>` +
       name + tag;
     if (ACTIVE.includes(name)) {
@@ -790,10 +789,9 @@ legend(document.getElementById('legend-ps'),
 const nPts = ACTIVE.reduce((a, n) => a + DATA.counts[n], 0);
 const tiles = [
   {v: ACTIVE.length + '<span class="unit"> / ' + DATA.order.length + '</span>',
-   l: 'subarrays swept (homogeneous set complete)'},
+   l: 'subarrays with curve data'},
   {v: String(nPts), l: 'lattice points measured'},
   {v: '0', l: 'failed points', cls: 'ok'},
-  {v: DATA.deferred.join(', '), l: 'deferred (heterogeneous beams; see caveats)'},
 ];
 document.getElementById('tiles').innerHTML = tiles.map(t =>
   `<div class="tile"><div class="v ${t.cls||''}">${t.v}</div><div class="l">${t.l}</div></div>`).join('');

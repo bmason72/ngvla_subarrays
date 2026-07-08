@@ -89,10 +89,6 @@ def valid_result_rows(path):
             yield row
 
 
-def existing_keys(results_path):
-    return set(existing_rows(results_path))
-
-
 def existing_rows(results_path):
     rows = {}
     for row in valid_result_rows(results_path):

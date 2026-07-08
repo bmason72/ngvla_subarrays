@@ -479,9 +479,14 @@ schema}.py` and new files are safe to edit meanwhile (the report path uses
    end to end with the live ngECT path; added `sa_select/README.md`
    (minimal sparse-checkout + usage) and `TestPortability` (subprocess guard
    that the query path imports no CASA + a live-ngECT check). 69 tests green.
-5. **Legacy/unused-code review.** Read-only sweep for dead code / stale
-   artifacts / superseded paths -> a removal-candidate list for bmason. Good
-   codex task.
+5. **Legacy/unused-code review — DONE 8 Jul 2026.** Codex produced a ranked
+   removal list; bmason kept artifacts/, ngvla-taperability-pipeline/, and
+   curves.names()/resolution_range() (provenance/API). Removed the safe dead
+   code across v5-v8: `compareKeys`, unused `ETA_CAP`/`natural_row_measurements`
+   imports, `sweep_parallel.existing_keys`, `build_points(key=)`, `make_report
+   .DEFERRED` + the template's `DATA.deferred`, `sweep.py`'s legacy
+   hyphen-filename fallback; and moved both test files' mid-file `__main__`
+   guards to EOF (they were hiding later test classes from direct execution).
 6. **Report fixes for LONG (diagnosed 8 Jul):**
    (a) **Overview x-range is a FIXED `xmin=1.5, xmax=80000` mas**
    (`report_template.html` optsCommon) — clips the fine end: 117/140 `long`
@@ -535,12 +540,24 @@ re-sweep to regenerate DATA):
 **[FUTURE improvement — multi-node campaign (bmason 8 Jul 2026)]** The
 recompute is single-node (`-N 1`, subarrays looped sequentially).  Subarrays
 are embarrassingly parallel (own MS/CSV/scratch cwd; only collect+report is
-shared), so a Slurm **job array** — one task per subarray (heavy imsize-15000
-ones each on their own node, cheap ones grouped), `prep_recompute` run once
-first, `collect`+`make_report` gated with `--dependency=afterok` — would ~third
-the heavy re-image wall time.  Tradeoff: multi-node queue wait vs 1-node, and
-don't waste an 80-core node on a 10 s backfill.  No sweep-code changes needed.
-[Recompute job LAUNCHED by bmason 8 Jul; QA the results when it lands.]
+shared), so a Slurm **job array** would parallelize the expensive ones.
+**bmason's rule (8 Jul): give any subarray with baselines longer than
+~2x1300 km (2600 km) its OWN node; do everything else on a single node.**
+That set = the LONG-containing subarrays (Long b_max ~8686 km; the next
+longest, mid/main, is ~1273 km < 2600 km): **long, mid+long, spiral+mid+long,
+main+long, long+mid+spiral+core-outer** → 5 own-node tasks; the other 9 share
+one node.  Design: a job array (5 heavy tasks + 1 grouped task), `prep_recompute`
+as a single pre-job, `collect`+`make_report` as a post-job gated with
+`--dependency=afterok`.  No sweep-code changes needed (calls the existing
+scripts).  **Wrinkle to solve first:** `prep_recompute.py` is destructive if
+re-run AFTER a successful recompute — it would re-archive the freshly re-swept
+uvrange CSVs (they're present again) back to attic.  So the array flow needs a
+prep that runs exactly once on the ORIGINAL data (or detects
+already-filtered/full-grid CSVs and skips).  **Deferred (8 Jul): the single-node
+recompute is already in flight, so a multi-node version is a NEXT-recompute
+tool and can't be validated now without colliding with the running job; build
++ validate it before the next full recompute.**  [Recompute job 3287698
+LAUNCHED by bmason 8 Jul; QA when it lands.]
 
 7. **[FUTURE — do not implement now]** Selectable config revisions (revD, revF)
    for both curve generation and the calculator; and per-rev snapshot
