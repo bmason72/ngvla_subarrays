@@ -8,8 +8,11 @@ How a sweep runs (v2 -- see config.py for the grid rationale):
      their beams anchor the subarray's taper grid, and the natural seed's
      rms is the eta = 1 reference;
   2. the lattice is walked row by row (a row = one weighting/robust value,
-     tapers ascending); each point's eta is computed on the fly, and once a
-     row exceeds ETA_CAP the rest of the row is recorded as 'skipped';
+     tapers ascending) and EVERY cell is measured -- the full grid (bmason
+     8 Jul 2026).  The only early-stop is the heterogeneous beam cap: after two
+     consecutive points whose beam exceeds BEAM_CAP_ARCSEC the rest of the row
+     is recorded 'skipped' (a composite tapered into its coarse component's
+     regime is a false economy);
   3. everything is resumable: measured and skipped points are read back
      from results/<subarray>.csv and never re-run, so a killed run or an
      extended grid just picks up where it left off.  Failures are caught
@@ -36,7 +39,7 @@ import casatools
 from casatasks import tclean, casalog
 
 from config import (SUBARRAYS, IMSIZE, OVERSAMPLE, WORK_DIR, RESULTS_DIR,
-                    SEEDS, ETA_CAP, BEAM_CAP_ARCSEC, grid_rows)
+                    SEEDS, BEAM_CAP_ARCSEC, MIN_UVRANGE_M, grid_rows)
 from simulate import make_ms
 from measure import beam_arcsec, image_rms, psf_skirt
 
@@ -203,6 +206,7 @@ class Sweep:
         self.imsize = IMSIZE[subarray]
         self.cell = None
         self.beam_cap = BEAM_CAP_ARCSEC.get(subarray)
+        self.min_uvrange_m = MIN_UVRANGE_M.get(subarray)   # spurious-shorts cut
 
     # -- lazy CASA setup so --dry-run stays cheap ------------------------- #
     def ensure_ready(self):
@@ -222,14 +226,6 @@ class Sweep:
     def measured(self, weighting, robust, taper):
         row = self.rows.get(point_key(weighting, robust, taper))
         return row if row and row["status"] == "ok" else None
-
-    def natural_row_measurements(self):
-        """Recorded ok natural-row points, keyed by taper in mas."""
-        out = {}
-        for row in self.rows.values():
-            if row["status"] == "ok" and row["weighting"] == "natural":
-                out[float(row["taper_mas"])] = row
-        return out
 
     def row_complete(self, weighting, robust, tapers):
         return all(point_key(weighting, robust, t) in self.rows for t in tapers)
@@ -251,12 +247,17 @@ class Sweep:
         name = os.path.join(self.workdir, "pt_" + key)
         uvtaper = [] if taper_mas == 0 else \
             ["%gmarcsec" % taper_mas, "%gmarcsec" % taper_mas, "0deg"]
+        # filter spurious short baselines (LONG's ~3-antenna clusters) so the
+        # beam/rms/skirt come from the real long-baseline uv coverage; applied
+        # uniformly (incl. the natural seed) so eta stays self-consistent
+        uvrange = "" if self.min_uvrange_m is None \
+            else ">%gm" % self.min_uvrange_m
         t0 = time.time()
         try:
             tclean(vis=self.vis, imagename=name, cell=cell_string(cell_pt),
                    imsize=self.imsize, datacolumn="data", weighting=weighting,
-                   robust=robust, uvtaper=uvtaper, niter=0, savemodel="none",
-                   pblimit=-0.02)
+                   robust=robust, uvtaper=uvtaper, uvrange=uvrange, niter=0,
+                   savemodel="none", pblimit=-0.02)
             bmaj, bmin, bpa = beam_arcsec(name + ".image")
             res_geo = float(np.sqrt(bmaj * bmin))
             sigma = image_rms(name + ".image")
@@ -362,9 +363,13 @@ class Sweep:
         rows = self.select_rows(rows, only_row)
         if dry_run:
             return True
-        nat_row = {}          # taper -> natural-row measurement, filled first
-        if only_row is not None and only_row[0] == "briggs":
-            nat_row = self.natural_row_measurements()
+        # FULL-GRID sweep (bmason 8 Jul 2026): every (robust, taper) cell is
+        # measured -- the eta-cap and natural+taper-edge convergence prunes were
+        # removed (they left holes that block bilinear-cell formation and
+        # truncated the now-collected high-eta regime).  The ONLY early-stop is
+        # the heterogeneous beam cap (a physics exclusion: a composite tapered
+        # down into its coarse component's regime is a false economy), after two
+        # consecutive capped points.
         for weighting, robust, tapers in rows:
             capped = None
             n_over_cap = 0    # consecutive beam-capped points in this row
@@ -390,20 +395,6 @@ class Sweep:
                     print("    beam %s\"  eta %.3f  skirt %s  (%ss)"
                           % (row["res_geo_arcsec"], eta, row["skirt"],
                              row["elapsed_s"]))
-                    if weighting == "natural":
-                        nat_row[taper] = row
-                    if eta > ETA_CAP:
-                        capped = "eta cap %.2g exceeded earlier in row" % ETA_CAP
-                    # once a briggs row has converged onto the natural+taper
-                    # edge (same beam, same eta), larger tapers add nothing
-                    nr = nat_row.get(taper)
-                    if weighting == "briggs" and nr and taper > 0:
-                        eta_n = float(nr["sigma_dirty"]) / sigma_nat
-                        res_b = float(row["res_geo_arcsec"])
-                        res_n = float(nr["res_geo_arcsec"])
-                        if (abs(eta / eta_n - 1) < 0.01
-                                and abs(res_b / res_n - 1) < 0.02):
-                            capped = "converged to natural+taper edge"
         n_ok = sum(1 for r in self.rows.values() if r["status"] == "ok")
         n_skip = sum(1 for r in self.rows.values() if r["status"] == "skipped")
         n_cap = sum(1 for r in self.rows.values() if r["status"] == "capped")

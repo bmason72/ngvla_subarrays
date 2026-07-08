@@ -495,6 +495,34 @@ schema}.py` and new files are safe to edit meanwhile (the report path uses
    `candidates_between` did `tapers[1]` on a same-taper (robust-direction) jump
    → IndexError that killed main+long round 3 after +41 pts (rounds 1-2,
    collected); now guarded.
+
+### Recompute campaign staged (8 Jul 2026 — items 1 + 6a + 3, CODE DONE)
+Codex-consulted design (`tmp/codex_sweep.out`). CODE (committed, awaiting a
+re-sweep to regenerate DATA):
+- **Item 1 (full grid):** `sweep.py run()` no longer eta-cap- or convergence-
+  prunes; every (robust, taper) cell is measured. Beam-cap kept for the
+  heterogeneous composites (physics exclusion). `natural_row_measurements` and
+  the `ETA_CAP` import dropped from sweep.py; docstrings/config updated.
+- **Item 6a (spurious shorts):** `config.MIN_UVRANGE_M` = {long, mid+long,
+  spiral+mid+long, long+mid+spiral+core-outer} → **178 m** (LONG's clusters run
+  37–176 m; the real long baselines are at 515 km; core-outer's legit b_min is
+  179 m — so 178 m is the one cut that removes LONG's 30 spurious baselines
+  everywhere AND keeps core-outer). `sweep.run_point` passes `uvrange='>178m'`
+  to tclean (incl. the natural seed → eta consistent). NOT main+long. TODO on
+  re-collect: update subarrays.csv b_min (long 515 km, mid+long 10.1 km,
+  spiral+mid+long 811 m, long+mid+spiral+core-outer 179 m) + note the ngECT
+  anchor is ~3.6% optimistic for `long` (30/435 baselines cut; negligible for
+  combos).
+- **Item 3 (parallelism):** `refine_parallel.py` runs subarrays concurrently
+  (own scratch cwd + CSV); sweep uses `--max-procs 10`. (Codex's further win —
+  sharding the natural row with the Briggs rows now that convergence pruning is
+  gone — deferred.)
+- **Campaign:** `curvegen/recompute.sbatch` (bmason submits from a login node):
+  `prep_recompute.py` (archives the 4 uvrange CSVs to results/attic-uvrange/,
+  strips eta/convergence `skipped` rows from the rest so the full grid
+  re-measures them — dry-checked: 21–48 rows/subarray) → full-grid
+  sweep_parallel+fill of all 14 offered → refine_parallel → collect →
+  make_report. Resumable; prep idempotent. 48 h walltime.
 7. **[FUTURE — do not implement now]** Selectable config revisions (revD, revF)
    for both curve generation and the calculator; and per-rev snapshot
    (single-integration) vs 4-h-track sims. Architecture impact to keep in mind:

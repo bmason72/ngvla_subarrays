@@ -14,13 +14,12 @@ Grid design (v2, after bmason's 5 Jul 2026 review of the v1 curves):
     untapered resolution) up to 20 x the natural beam.  Anchors are read
     from the two seed points, which the sweep runs first; grids are
     therefore per-subarray and self-calibrating.
-  * eta is computed on the fly and rows are pruned once eta > ETA_CAP
-    (points beyond are recorded as skipped): we don't need the eta > ~5
-    regime, and this keeps the lattice tractable.
-
-Only the relatively homogeneous subarrays are swept for now (RUN_SET);
-core+mid and main need a smarter treatment of their two-component beams
-and are deferred (see PLAN.md).
+  * the FULL grid is measured (bmason 8 Jul 2026): the eta-cap and
+    natural+taper-edge convergence prunes were removed so every (robust, taper)
+    cell exists -- pruning left holes that block bilinear-cell formation and
+    truncated the (now-collected) high-eta regime.  ETA_CAP survives only as a
+    plotting/back-of-envelope bound (make_report display, this file's docs).
+    The one early-stop kept is the heterogeneous beam cap (BEAM_CAP_ARCSEC).
 """
 
 import os
@@ -124,6 +123,26 @@ BEAM_CAP_ARCSEC = {
 # sample tapers more densely.
 N_TAPERS_HETERO = 18
 
+# Spurious-short-baseline filter (bmason 8 Jul 2026): the LONG config has small
+# ~3-antenna clusters whose internal baselines run 37-176 m, leaving a bimodal
+# uv distribution (a real ~2900x gap up to the 515 km long baselines) that
+# fragments the LONG-only curve.  Image with uvrange>178 m to filter them.
+# 178 m sits in the 176.2 -> 179.0 m gap: it removes ALL of LONG's 30 spurious
+# baselines while KEEPING core-outer's legitimate baselines (b_min 179.0 m) in
+# long+mid+spiral+core-outer -- a wider cut (e.g. 500 m) would wrongly delete
+# ~65 real core-outer baselines.  NOT applied to main+long: the core's
+# legitimate 42 m baselines live below the cut.  The cut is applied uniformly
+# incl. the natural seed, so eta = rms/natural_rms stays self-consistent, and
+# it reuses the existing MS (only re-imaging is needed).  Filtered b_min (and
+# hence LAS) per subarray: long 515 km, mid+long 10.1 km, spiral+mid+long
+# 811 m, long+mid+spiral+core-outer 179 m -- reflected in subarrays.csv.
+MIN_UVRANGE_M = {
+    "long": 178.0,
+    "mid+long": 178.0,
+    "spiral+mid+long": 178.0,
+    "long+mid+spiral+core-outer": 178.0,
+}
+
 # simulation parameters (identical to Viviana's pipeline for comparability)
 SIM = dict(
     frequency="30GHz",
@@ -156,9 +175,9 @@ def taper_list_mas(res_fine_mas, res_nat_mas, n_tapers=N_TAPERS):
 def grid_rows(res_fine_mas, res_nat_mas, subarray=None):
     """The full sweep lattice: [(weighting, robust, [tapers ascending]), ...].
 
-    Every row starts at taper 0; the sweep walks tapers in order and prunes
-    the row once eta > ETA_CAP (and, for heterogeneous subarrays, once the
-    beam exceeds BEAM_CAP_ARCSEC).
+    Every row starts at taper 0; the sweep measures every cell (full grid).
+    For heterogeneous subarrays the row still stops once the beam exceeds
+    BEAM_CAP_ARCSEC (two consecutive capped points).
     """
     n_tapers = N_TAPERS_HETERO if subarray in BEAM_CAP_ARCSEC else N_TAPERS
     tapers = [0.0] + taper_list_mas(res_fine_mas, res_nat_mas, n_tapers)
