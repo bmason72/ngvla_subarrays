@@ -75,7 +75,10 @@ class TestMemo121Validation(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.library = CurveLibrary()  # the real, shipped bootstrap data
+        # this suite validates the memo-121 BOOTSTRAP replay specifically, so
+        # pin it to the bootstrap table (the CurveLibrary default is now the
+        # authoritative Rev F curves, revf_curves.csv)
+        cls.library = CurveLibrary(samples=BOOTSTRAP_CSV)
 
     def test_bootstrap_csv_is_readable_sanity_check(self):
         # Make sure the hand-picked rows really are in the shipped CSV, so the
@@ -93,9 +96,9 @@ class TestMemo121Validation(unittest.TestCase):
         """An imaging request built from a memo-121 briggs/sculpted sample
         should come back feasible on the *same* subarray, with the *same*
         robust value and eta matching to within 1%.  memo 121 used the hard
-        skirt <= 0.10 criterion, so replay with skirt_relax=False (the
-        tool's default now applies the 1-for-1 eta-skirt trade, which can
-        legitimately find cheaper beams at slightly larger skirt)."""
+        skirt <= 0.10 criterion, so replay with skirt_relax=False (strict);
+        the tool's default threshold-relax would otherwise report a best-
+        achievable skirt where 0.10 is unreachable."""
         for sub, res30, freq_orig, eta_expect, robust_expect in self.BRIGGS_ROWS:
             with self.subTest(subarray=sub, freq=freq_orig, res30=res30):
                 req = ObservingRequest(
@@ -407,7 +410,10 @@ class TestEndToEndSmoke(unittest.TestCase):
     def test_pf3_ksg1_replay(self):
         req = ObservingRequest(resolution=0.005, frequency=80.0,
                                sensitivity=1e-6, imaging=True)
-        result = select_subarrays(req)
+        # a memo-121 BOOTSTRAP replay with bootstrap-specific numbers -- pin it
+        # to the bootstrap library (the default is now the Rev F curves, where
+        # the outer-core campaign subarrays can win this case)
+        result = select_subarrays(req, library=CurveLibrary(samples=BOOTSTRAP_CSV))
 
         self.assertIsNotNone(result.best)
         best = result.best
@@ -417,10 +423,6 @@ class TestEndToEndSmoke(unittest.TestCase):
         self.assertIsNotNone(best.integration_time_hr)
         self.assertAlmostEqual(best.antenna_hours,
                                best.integration_time_hr * best.subarray.n_ant)
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 class TestSkirtRelaxation(SyntheticLibraryTestCase):
@@ -463,3 +465,50 @@ class TestSkirtRelaxation(SyntheticLibraryTestCase):
                                       imaging=True, skirt_relax=False)
         res2 = select_subarrays(req_strict, library=self.lib)
         self.assertFalse(res2.candidates[0].feasible)
+
+
+# =============================================================================
+# E. Portability -- the standalone selector must run from a minimal checkout
+# =============================================================================
+
+class TestPortability(unittest.TestCase):
+    """The selection path must stay CASA-free so it runs on a machine that
+    never ran the sweeps, from a minimal checkout: sa_select/ +
+    ngvla-sensitivity-calculator/ (siblings) + sa_select/data/*.csv, needing
+    only numpy + scipy (bmason 8 Jul 2026, item 4).  Guards against a future
+    edit accidentally importing CASA into the query path."""
+
+    def test_selection_path_imports_no_casa(self):
+        import subprocess
+        import sys
+        code = (
+            "import sys;"
+            "from sa_select.schema import ObservingRequest;"
+            "from sa_select.selector import select_subarrays;"
+            "r=select_subarrays(ObservingRequest(resolution=0.01,"
+            " frequency=30.0, sensitivity=1e-5, imaging=True));"
+            "assert r.best is not None;"
+            "casa=[m for m in sys.modules if m.startswith("
+            "('casatools','casatasks','casac','casampi'))];"
+            "sys.stderr.write('CASA='+repr(casa));"
+            "sys.exit(1 if casa else 0)"
+        )
+        # a fresh subprocess so sibling CASA-importing tests don't pollute
+        # sys.modules; sys.executable is the same interpreter (venv/casapy)
+        p = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT,
+                           capture_output=True, text=True)
+        self.assertEqual(p.returncode, 0,
+                         "selection path imported CASA (%s) -- it must stay "
+                         "CASA-free for the standalone checkout.\n%s"
+                         % (p.stderr, p.stdout))
+
+    def test_live_sensitivity_uses_ngect(self):
+        # the standalone integration time must come from the live ngECT
+        # calculator (not a pre-tabulation): natural_rms invokes it
+        from sa_select import sensitivity as sens
+        rms = sens.natural_rms("main", 30.0, t_obs_hr=1.0, delta_v=1e6)
+        self.assertGreater(rms, 0.0)          # a real ngECT call succeeded
+
+
+if __name__ == "__main__":
+    unittest.main()

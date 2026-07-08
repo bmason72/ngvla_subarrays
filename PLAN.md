@@ -470,6 +470,15 @@ schema}.py` and new files are safe to edit meanwhile (the report path uses
    `sa_select/` + `ngvla-sensitivity-calculator/` (incl. its .pkl) +
    `sa_select/data/*.csv`, needs numpy+scipy, NO CASA** + a portability test.
    Safe to build now (selection layer not used by the refine job).
+   **DONE 8 Jul 2026:** the entry point already existed
+   (`select_subarrays(ObservingRequest)` + `python -m sa_select` CLI, returning
+   ranked candidates with eta/robust/taper/skirt/LAS/t_int/antHrs); the real
+   gap was that `CurveLibrary` still defaulted to the memo-121 BOOTSTRAP table
+   — **swapped the default to `revf_curves.csv`** (the long-standing TODO;
+   bootstrap-replay tests pinned to bootstrap explicitly). Verified CASA-free
+   end to end with the live ngECT path; added `sa_select/README.md`
+   (minimal sparse-checkout + usage) and `TestPortability` (subprocess guard
+   that the query path imports no CASA + a live-ngECT check). 69 tests green.
 5. **Legacy/unused-code review.** Read-only sweep for dead code / stale
    artifacts / superseded paths -> a removal-candidate list for bmason. Good
    codex task.
@@ -523,6 +532,16 @@ re-sweep to regenerate DATA):
   re-measures them — dry-checked: 21–48 rows/subarray) → full-grid
   sweep_parallel+fill of all 14 offered → refine_parallel → collect →
   make_report. Resumable; prep idempotent. 48 h walltime.
+**[FUTURE improvement — multi-node campaign (bmason 8 Jul 2026)]** The
+recompute is single-node (`-N 1`, subarrays looped sequentially).  Subarrays
+are embarrassingly parallel (own MS/CSV/scratch cwd; only collect+report is
+shared), so a Slurm **job array** — one task per subarray (heavy imsize-15000
+ones each on their own node, cheap ones grouped), `prep_recompute` run once
+first, `collect`+`make_report` gated with `--dependency=afterok` — would ~third
+the heavy re-image wall time.  Tradeoff: multi-node queue wait vs 1-node, and
+don't waste an 80-core node on a 10 s backfill.  No sweep-code changes needed.
+[Recompute job LAUNCHED by bmason 8 Jul; QA the results when it lands.]
+
 7. **[FUTURE — do not implement now]** Selectable config revisions (revD, revF)
    for both curve generation and the calculator; and per-rev snapshot
    (single-integration) vs 4-h-track sims. Architecture impact to keep in mind:

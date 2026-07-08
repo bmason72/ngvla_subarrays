@@ -54,8 +54,13 @@ def load_subarrays(path: Optional[str] = None) -> Dict[str, SubarrayInfo]:
 
 
 def load_samples(path: Optional[str] = None) -> Dict[str, List[CurveSample]]:
-    """Read a curve-sample table into {subarray: [CurveSample, ...]}."""
-    path = path or os.path.join(DATA_DIR, "bootstrap_curves.csv")
+    """Read a curve-sample table into {subarray: [CurveSample, ...]}.
+
+    Defaults to the authoritative Rev F curves (revf_curves.csv, produced by
+    curvegen/collect.py).  The older memo-121 bootstrap table
+    (bootstrap_curves.csv) is kept for reference; pass it explicitly to use it.
+    """
+    path = path or os.path.join(DATA_DIR, "revf_curves.csv")
     out: Dict[str, List[CurveSample]] = {}
     with open(path, newline="") as f:
         for row in csv.DictReader(f):
