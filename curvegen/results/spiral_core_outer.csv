@@ -191,42 +191,8 @@ spiral+core-outer,briggs,1.2,2009.312,8192,,,,,,,,skipped,beam cap 0.491 arcsec 
 spiral+core-outer,briggs,1.2,2657.02,8192,,,,,,,,skipped,beam cap 0.491 arcsec exceeded earlier in row,
 spiral+core-outer,briggs,1.6,0.0,8192,0.0106545,0.137059,0.124627,79.27,0.130695,0.000585037,0.2801,ok,,51.1
 spiral+core-outer,briggs,1.6,22.987,8192,0.0106545,0.14621,0.133037,83.6,0.139468,0.000585948,0.275,ok,,49.7
-spiral+core-outer,briggs,1.6,30.397,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,40.196,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,53.153,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,70.287,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,92.945,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,122.906,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,162.525,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,214.915,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,284.194,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,375.805,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,496.947,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,657.139,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,868.97,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,1149.086,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,1519.497,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,2009.312,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,1.6,2657.02,8192,,,,,,,,skipped,converged to natural+taper edge,
 spiral+core-outer,briggs,2.0,0.0,8192,0.0106545,0.138945,0.126464,79.82,0.132558,0.000584986,0.2823,ok,,43.5
 spiral+core-outer,briggs,2.0,22.987,8192,0.0106545,0.147403,0.135821,84.05,0.141494,0.000586144,0.2763,ok,,42.6
-spiral+core-outer,briggs,2.0,30.397,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,40.196,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,53.153,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,70.287,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,92.945,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,122.906,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,162.525,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,214.915,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,284.194,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,375.805,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,496.947,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,657.139,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,868.97,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,1149.086,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,1519.497,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,2009.312,8192,,,,,,,,skipped,converged to natural+taper edge,
-spiral+core-outer,briggs,2.0,2657.02,8192,,,,,,,,skipped,converged to natural+taper edge,
 spiral+core-outer,briggs,-0.4,868.97,8192,0.173794,0.915054,0.88054,-83.53,0.897631,0.00163382,0.04464,capped,beam 0.8976 > cap 0.491 arcsec,49.5
 spiral+core-outer,briggs,-0.4,1149.086,8192,0.229817,1.18287,1.13037,-77.17,1.15632,0.00203888,0.03909,capped,beam 1.156 > cap 0.491 arcsec,54.7
 spiral+core-outer,briggs,-0.4,1519.497,8192,0.303899,1.51799,1.44002,-68.16,1.47849,0.00258202,0.03019,capped,beam 1.478 > cap 0.491 arcsec,58.4

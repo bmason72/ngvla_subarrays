@@ -191,42 +191,8 @@ main,briggs,1.2,293.091,15000,0.0586182,0.651039,0.601022,78.23,0.625531,0.00050
 main,briggs,1.2,424.324,15000,0.0848648,0.780227,0.724012,74.32,0.751594,0.00054539,0.1317,capped,beam 0.7516 > cap 0.71 arcsec,135.0
 main,briggs,1.6,0.0,15000,0.000349731,0.0212277,0.0207756,59.17,0.0210005,0.000306652,0.5663,ok,,164.0
 main,briggs,1.6,0.787,15000,0.000349731,0.0218506,0.0213654,59.39,0.0216066,0.000307174,0.5711,ok,,163.1
-main,briggs,1.6,1.139,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,1.649,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,2.388,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,3.457,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,5.005,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,7.245,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,10.489,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,15.186,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,21.986,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,31.83,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,46.082,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,66.715,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,96.587,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,139.835,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,202.446,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,293.091,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,1.6,424.324,15000,,,,,,,,skipped,converged to natural+taper edge,
 main,briggs,2.0,0.0,15000,0.000349731,0.0214079,0.0209542,59.24,0.0211799,0.000307075,0.5696,ok,,152.9
 main,briggs,2.0,0.787,15000,0.000349731,0.0220363,0.0215493,59.46,0.0217914,0.000307677,0.574,ok,,151.2
-main,briggs,2.0,1.139,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,1.649,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,2.388,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,3.457,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,5.005,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,7.245,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,10.489,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,15.186,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,21.986,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,31.83,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,46.082,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,66.715,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,96.587,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,139.835,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,202.446,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,293.091,15000,,,,,,,,skipped,converged to natural+taper edge,
-main,briggs,2.0,424.324,15000,,,,,,,,skipped,converged to natural+taper edge,
 main,briggs,1.6,1.139,15000,0.000349731,0.0224715,0.0219521,59.57,0.0222103,0.00030837,0.5752,ok,,156.9
 main,briggs,1.6,1.649,15000,0.000349731,0.0236008,0.0230164,59.78,0.0233068,0.000311501,0.5862,ok,,155.3
 main,briggs,1.6,2.388,15000,0.0004776,0.031985,0.03111,42.77,0.0315445,0.000315483,0.5703,ok,,143.5
