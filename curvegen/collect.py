@@ -13,7 +13,7 @@ import csv
 import glob
 import os
 
-from config import RESULTS_DIR, REPO
+from config import RESULTS_DIR, REPO, OVERSAMPLE
 
 
 def offered_subarrays():
@@ -27,22 +27,51 @@ def offered_subarrays():
 OUT = os.path.join(REPO, "sa_select", "data", "revf_curves.csv")
 OUT_FIELDS = ["subarray", "resolution_arcsec_30ghz", "eta", "skirt",
               "weighting", "robust", "taper_arcsec_30ghz", "freq_orig_ghz",
-              "source", "note"]
+              "source", "note", "sample_status"]
+
+
+def check_cell_convention(r, path):
+    """Refuse to publish measurements imaged under a stale cell convention.
+
+    run_point uses cell = max(native, taper_mas/OVERSAMPLE/1e3); Briggs
+    weights depend on the gridded uv density, so a row imaged with a
+    finer-than-adaptive cell is measured under a DIFFERENT weighting
+    convention (the 9 Jul 2026 stale-sculpt-block incident: fake strict
+    islands in the imaging curves).  Hard failure by design -- repair with
+    curvegen/repair_stale_cells.py rather than silently mixing conventions.
+    """
+    taper_mas = float(r["taper_mas"])
+    if taper_mas <= 0 or not r["cell_arcsec"]:
+        return
+    need = taper_mas / OVERSAMPLE / 1e3
+    if float(r["cell_arcsec"]) < need * 0.999:
+        raise RuntimeError(
+            "%s: %s r=%s t=%s imaged with cell %s < adaptive %.6g arcsec "
+            "(stale convention) -- run curvegen/repair_stale_cells.py"
+            % (path, r["weighting"], r["robust"], r["taper_mas"],
+               r["cell_arcsec"], need))
 
 
 def collect_one(path):
+    # capped rows (beam beyond the heterogeneous cap) are collected as
+    # interpolation ANCHORS (sample_status=capped_anchor): they extend row
+    # coverage up to the cap so the offered curve can end exactly there,
+    # but the engine/report/selector never offer a beam beyond the cap
+    # (9 Jul 2026; see PLAN.md and sa_select/schema.py)
     with open(path, newline="") as f:
-        rows = [r for r in csv.DictReader(f) if r["status"] == "ok"]
+        rows = [r for r in csv.DictReader(f)
+                if r["status"] in ("ok", "capped")]
     if not rows:
         return []
-    nat = [r for r in rows
-           if r["weighting"] == "natural" and float(r["taper_mas"]) == 0]
+    nat = [r for r in rows if r["status"] == "ok"
+           and r["weighting"] == "natural" and float(r["taper_mas"]) == 0]
     if not nat:
         raise RuntimeError("%s has no natural/untapered reference point" % path)
     sigma_nat = float(nat[0]["sigma_dirty"])
 
     out, seen = [], set()
     for r in rows:
+        check_cell_convention(r, path)
         taper_mas = float(r["taper_mas"])
         eta = float(r["sigma_dirty"]) / sigma_nat
         # hygiene (post-mortem M4d): -0.0 and 0.0 are one robust value, and
@@ -66,6 +95,7 @@ def collect_one(path):
             source="revf-sim:%s:%s_r%s_t%s" % (r["subarray"], r["weighting"],
                                                r["robust"], r["taper_mas"]),
             note="",
+            sample_status="ok" if r["status"] == "ok" else "capped_anchor",
         ))
     return out
 

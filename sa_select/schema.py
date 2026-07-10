@@ -28,12 +28,20 @@ CSV table: data/subarrays.csv   (one row per subarray)
   calc_name    subarray key understood by the ngVLA sensitivity calculator,
                or '' if the calculator has no entry (e.g. core+mid)
   las_coeff_note  provenance / caveat for las_coeff
+  beam_cap_arcsec_30ghz  heterogeneous beam cap (arcsec at 30 GHz), empty for
+               uncapped subarrays.  Beams coarser than the coarsest component's
+               own native beam are always better made with that component
+               (curvegen/config.BEAM_CAP_ARCSEC), so offered curves / selector
+               answers are clipped here; samples measured beyond the cap serve
+               as interpolation anchors only (9 Jul 2026, see PLAN.md)
 
-CSV table: data/bootstrap_curves.csv   (one row per measured curve *sample*)
+CSV tables: data/revf_curves.csv, data/bootstrap_curves.csv
+  (one row per measured curve *sample*)
   Raw (resolution, eta, skirt) samples; the point-source and imaging "curves"
   are derived from these at query time by curves.py (imaging = only samples
   with skirt <= threshold). Bootstrap samples come from the memo-121 CSVs and
-  are a stand-in until Rev F curves are generated (PLAN.md Track 2).
+  were the stand-in until the Rev F curves (revf_curves.csv, from
+  curvegen/collect.py) were generated (PLAN.md Track 2).
   subarray               canonical name (see above)
   resolution_arcsec_30ghz  beam FWHM scaled to 30 GHz (geometric mean if elliptical)
   eta                    sensitivity-loss factor vs natural weighting (>= 1)
@@ -44,6 +52,10 @@ CSV table: data/bootstrap_curves.csv   (one row per measured curve *sample*)
   freq_orig_ghz          frequency the sample was originally measured at
   source                 provenance, e.g. 'memo121:MainCln.csv:PF3(KSG1).1'
   note                   free-form caveat
+  sample_status          'ok' (default when the column is absent, e.g. the
+                         bootstrap table) or 'capped_anchor': measured beyond
+                         the subarray's beam cap, usable as an interpolation
+                         anchor but never offered as an answer itself
 -------------------------------------------------------------------------------
 """
 
@@ -91,6 +103,7 @@ class SubarrayInfo:
     las_coeff: float
     calc_name: str = ""
     las_coeff_note: str = ""
+    beam_cap_arcsec: Optional[float] = None   # at 30 GHz; None = uncapped
 
     def las_arcsec(self, freq_ghz: float) -> float:
         """Largest angular scale (arcsec) at freq_ghz: las_coeff * lambda / b_min."""
@@ -112,6 +125,7 @@ class CurveSample:
     freq_orig: Optional[float] = None
     source: str = ""
     note: str = ""
+    sample_status: str = "ok"         # 'ok' | 'capped_anchor' (see docstring)
 
 
 @dataclass

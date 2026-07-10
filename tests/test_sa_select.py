@@ -133,6 +133,16 @@ class TestMemo121Validation(unittest.TestCase):
                 )
                 result = select_subarrays(req, library=self.library)
                 cand = next(c for c in result if c.subarray.name == sub)
+                # the beam cap (9 Jul 2026) is deliberate policy the memo-121
+                # era did not have: samples beyond it (main's Rev D-era
+                # natural beam 0.798" vs the Rev F core-native cap 0.710")
+                # are now correctly refused with the cap-specific reason
+                cap = self.library.subarrays[sub].beam_cap_arcsec
+                if cap is not None and res30 * (1 - req.beam_margin) > cap:
+                    self.assertFalse(cand.feasible)
+                    self.assertTrue(any("beam cap" in r for r in cand.reasons),
+                                    msg=cand.reasons)
+                    continue
                 self.assertTrue(cand.feasible, msg=cand.reasons)
                 self.assertLessEqual(cand.eta, eta_expect * 1.0001)  # tiny float slop
 
@@ -160,13 +170,15 @@ class SyntheticLibraryTestCase(unittest.TestCase):
                      "weighting", "robust", "taper_arcsec_30ghz",
                      "freq_orig_ghz", "source", "note"]
 
-    def make_library(self, subarray_rows, sample_rows):
+    def make_library(self, subarray_rows, sample_rows,
+                     subarray_header=None, sample_header=None):
         d = tempfile.mkdtemp()
         self.addCleanup(lambda: __import__("shutil").rmtree(d, ignore_errors=True))
         sub_path = os.path.join(d, "subarrays.csv")
         samp_path = os.path.join(d, "bootstrap_curves.csv")
-        _write_csv(sub_path, self.SUBARRAY_HEADER, subarray_rows)
-        _write_csv(samp_path, self.SAMPLE_HEADER, sample_rows)
+        _write_csv(sub_path, subarray_header or self.SUBARRAY_HEADER,
+                   subarray_rows)
+        _write_csv(samp_path, sample_header or self.SAMPLE_HEADER, sample_rows)
         return CurveLibrary(subarrays=sub_path, samples=samp_path)
 
 
@@ -508,6 +520,73 @@ class TestPortability(unittest.TestCase):
         from sa_select import sensitivity as sens
         rms = sens.natural_rms("main", 30.0, t_obs_hr=1.0, delta_v=1e6)
         self.assertGreater(rms, 0.0)          # a real ngECT call succeeded
+
+
+class TestBeamCapLibrary(SyntheticLibraryTestCase):
+    """Beam-cap semantics at the CurveLibrary level (9 Jul 2026): capped
+    anchors (sample_status=capped_anchor) support interpolation up to the
+    cap in subarrays.csv's beam_cap_arcsec_30ghz, but are never offered,
+    and requests beyond the cap get the cap-specific reason."""
+
+    CAP_SUBARRAY_HEADER = SyntheticLibraryTestCase.SUBARRAY_HEADER + \
+        ["beam_cap_arcsec_30ghz"]
+    CAP_SAMPLE_HEADER = SyntheticLibraryTestCase.SAMPLE_HEADER + \
+        ["sample_status"]
+
+    def setUp(self):
+        # a taper row crossing a 0.025" cap; the 0.030" point is the anchor
+        self.lib = self.make_library(
+            subarray_rows=[["het", "het", 10, 100.0, 1000.0, 0.85, "het", "",
+                            "0.025"]],
+            sample_rows=[
+                ["het", "0.020", "1.2", "0.05", "briggs", "0.5", "0.004",
+                 "30.0", "s1", "", "ok"],
+                ["het", "0.024", "1.3", "0.05", "briggs", "0.5", "0.005",
+                 "30.0", "s2", "", "ok"],
+                ["het", "0.030", "1.5", "0.05", "briggs", "0.5", "0.0065",
+                 "30.0", "s3", "", "capped_anchor"],
+            ],
+            subarray_header=self.CAP_SUBARRAY_HEADER,
+            sample_header=self.CAP_SAMPLE_HEADER,
+        )
+
+    def test_interpolates_up_to_cap_through_anchor(self):
+        # the exact-cap resolution (zero margin) lies on the ok->anchor
+        # segment: only the capped anchor makes it reachable
+        sample, msg = self.lib.solve("het", resolution=0.025, freq_ghz=30.0,
+                                     beam_margin=0.0, skirt_threshold=0.10)
+        self.assertIsNotNone(sample, msg)
+        self.assertAlmostEqual(sample.resolution, 0.025, delta=1e-9)
+        self.assertTrue(1.3 < sample.eta < 1.5)   # between s2 and the anchor
+
+    def test_window_clipped_at_cap(self):
+        # a window straddling the cap must answer, and only from <= cap
+        sample, msg = self.lib.solve("het", resolution=0.025, freq_ghz=30.0,
+                                     beam_margin=0.05, skirt_threshold=0.10)
+        self.assertIsNotNone(sample, msg)
+        self.assertLessEqual(sample.resolution, 0.025 + 1e-12)
+
+    def test_beyond_cap_gets_cap_reason(self):
+        sample, msg = self.lib.solve("het", resolution=0.030, freq_ghz=30.0,
+                                     beam_margin=0.05, skirt_threshold=0.10)
+        self.assertIsNone(sample)
+        self.assertIn("beam cap", msg)
+
+    def test_capped_anchor_never_qualifies(self):
+        q = self.lib.qualifying_samples("het", None)
+        self.assertEqual([s.source for s in q], ["s1", "s2"])
+
+    def test_uncapped_library_unaffected(self):
+        # old-schema tables (no cap / sample_status columns) load with
+        # cap None and status ok -- covered structurally here
+        lib = self.make_library(
+            subarray_rows=[["homog", "homog", 10, 100.0, 1000.0, 0.85,
+                            "homog", ""]],
+            sample_rows=[["homog", "0.020", "1.2", "0.05", "briggs", "0.5",
+                          "0.004", "30.0", "s1", ""]],
+        )
+        self.assertIsNone(lib.subarrays["homog"].beam_cap_arcsec)
+        self.assertEqual(lib.samples["homog"][0].sample_status, "ok")
 
 
 if __name__ == "__main__":

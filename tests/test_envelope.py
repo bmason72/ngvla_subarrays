@@ -846,5 +846,104 @@ class TestReportSelectorParity(unittest.TestCase):
         self.assertEqual(hard_mism, 0, "JS/engine hard regime mismatch")
 
 
+class TestBeamCapClipping(unittest.TestCase):
+    """max_res (heterogeneous beam cap, 9 Jul 2026): samples measured beyond
+    the cap are interpolation anchors -- they extend row coverage up to the
+    cap -- but no offered answer may sit beyond it.  The capped/ok flag lives
+    in the data layer (sample_status); the engine only receives max_res."""
+
+    def setUp(self):
+        # one taper-direction row crossing a cap at res 25; the 30-mas point
+        # plays the capped anchor
+        self.env = Envelope([
+            pt(20.0, 1.20, 0.20, robust=0.0, taper=4.0),
+            pt(24.0, 1.30, 0.20, robust=0.0, taper=5.0),
+            pt(30.0, 1.50, 0.20, robust=0.0, taper=6.5),
+        ])
+
+    def test_window_clipped_at_cap(self):
+        # window [23.4, 27.5] intersected with the cap -> answer <= 25
+        c = self.env.solve(26.0, margin=0.10, max_res=25.0)
+        self.assertIsNotNone(c)
+        self.assertLessEqual(c.res, 25.0 + 1e-9)
+
+    def test_interpolation_through_capped_anchor(self):
+        # 24.5 sits on the 24->30 segment: reachable only via the anchor
+        c = self.env.solve(24.5, max_res=25.0)
+        self.assertIsNotNone(c)
+        self.assertAlmostEqual(c.res, 24.5, delta=1e-6)
+        self.assertTrue(c.interpolated)
+
+    def test_window_entirely_beyond_cap_returns_none(self):
+        self.assertIsNone(self.env.solve(30.0, margin=0.05, max_res=25.0))
+
+    def test_curve_clipped_with_exact_cap_endpoint(self):
+        crv = self.env.curve(max_res=25.0)
+        self.assertTrue(crv)
+        self.assertLessEqual(max(c.res for c in crv), 25.0 + 1e-9)
+        self.assertAlmostEqual(crv[-1].res, 25.0, delta=1e-6)
+
+    def test_curve_uncapped_reaches_coverage_end(self):
+        crv = self.env.curve()
+        self.assertAlmostEqual(crv[-1].res, 30.0, delta=1e-6)
+        self.assertLessEqual(max(c.res for c in crv), 30.0 + 1e-9)
+
+
+class TestCappedRealData(unittest.TestCase):
+    """Real-data regressions for the 9 Jul 2026 glitch fixes (bmason's three
+    report complaints): the stale-cell repair killed the fake strict islands
+    in the spiral+mid / core+spiral imaging curves, and capped-anchor
+    collection + cap clipping killed the point-source coarse-end cliff of
+    the beam-capped combos (main+long jumped eta 1.18 -> 2.25 in one grid
+    step at ~20.5 mas because the taper grid stopped 20% short of the cap)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.lib = CurveLibrary()          # Rev F data (arcsec units)
+
+    def _steps(self, pts, lo_res=0.0, eta_max=None):
+        out = []
+        for a, b in zip(pts, pts[1:]):
+            if b.res / a.res > 1.055:      # rendered/true coverage gap
+                continue
+            if b.res < lo_res:
+                continue
+            if eta_max is not None and max(a.eta, b.eta) > eta_max:
+                continue
+            out.append(abs(b.eta - a.eta))
+        return out
+
+    def test_ptsrc_tail_smooth_to_cap(self):
+        for name in ("main+long", "spiral+mid+long"):
+            with self.subTest(subarray=name):
+                cap = self.lib.subarrays[name].beam_cap_arcsec
+                self.assertIsNotNone(cap)
+                pts = self.lib.envelope(name).curve(max_res=cap)
+                self.assertLessEqual(max(p.res for p in pts), cap + 1e-12)
+                self.assertGreater(pts[-1].res, 0.995 * cap)   # reaches it
+                worst = max(self._steps(pts, lo_res=cap / 1.5), default=0.0)
+                self.assertLess(worst, 0.2,
+                                "%s near-cap tail step %.3f" % (name, worst))
+
+    def test_main_long_cheap_at_20mas(self):
+        # the reported artifact: 20.5 mas cost eta 2.25; natural+taper
+        # through the capped anchors prices it honestly
+        sample, msg = self.lib.solve("main+long", resolution=0.0205,
+                                     freq_ghz=30.0, beam_margin=0.05)
+        self.assertIsNotNone(sample, msg)
+        self.assertLess(sample.eta, 1.3)
+
+    def test_imaging_islands_stay_dead(self):
+        # stale wrong-cell sculpt points (repair_stale_cells.py) produced
+        # steps of +0.37 (spiral+mid ~7.7 mas) and +0.21 (core+spiral
+        # ~260 mas) in the operating range; keep them dead
+        for name in ("spiral+mid", "core+spiral"):
+            with self.subTest(subarray=name):
+                pts = self.lib.envelope(name).curve(skirt_max=0.10)
+                worst = max(self._steps(pts, eta_max=3.0), default=0.0)
+                self.assertLess(worst, 0.2,
+                                "%s imaging step %.3f" % (name, worst))
+
+
 if __name__ == "__main__":
     unittest.main()

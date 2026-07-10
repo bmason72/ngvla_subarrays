@@ -297,6 +297,60 @@ wrapper; the previously-noted monolithic install is broken). 28/28 tests pass.
   running. TODO when trusted: drop them from `DEFERRED` in `collect.py` +
   `make_report.py`.
 
+### Report-glitch fixes (9-10 Jul 2026 — post-recompute)
+
+bmason flagged three glitches in the 9 Jul 00:15 report (the recompute job
+3287698's final output).  All three diagnosed and fixed; 82 tests green;
+report regenerated (`curvegen/reports/revf-curves.html`).
+
+1. **Imaging-curve jumps (spiral+mid ~7.7/44 mas, core+spiral ~260 mas) =
+   stale wrong-cell data**, not engine error: 68 v1-era sculpt points imaged
+   with the native cell instead of the adaptive rule (see the new §13
+   gotcha).  Repaired via `curvegen/repair_stale_cells.py` (all 68
+   re-measured under the v2 convention, 0 failed; originals archived in
+   `results/attic-badcell/`).  spiral+mid imaging now has ZERO adjacent-eta
+   steps > 0.12; the survivors elsewhere are small (<= 0.15 in the eta <= 3
+   operating range, e.g. core+spiral +0.12 @ ~800 mas) or sit in the
+   eta > 4 far-coarse display fringe.  `collect.py` hard-fails on stale-cell
+   rows now.
+2. **Point-source coarse-end cliff (main+long 20.1->20.6 mas eta 1.18->2.25,
+   spiral+mid+long alike) = beam-cap censoring**: the log taper grid's last
+   sub-cap point sat ~20% short of the cap, so the cheap natural family
+   was unmeasured there and the envelope fell onto an expensive family.
+   **SEMANTICS CHANGE (needs bmason sign-off — flagged):** status="capped"
+   sweep rows are now COLLECTED as interpolation anchors
+   (`sample_status=capped_anchor` column in revf_curves.csv;
+   `beam_cap_arcsec_30ghz` column in subarrays.csv), the engine gained
+   `solve(..., max_res=)` / `solve_interval` / `curve(..., max_res=)`, and
+   the report/selector clip offered answers at the cap (cap-specific
+   infeasibility message; JS calculator matches).  Curves now ride the
+   natural family to exactly the cap (main+long @20.6 mas: eta 1.05, was
+   2.25).  Offered range only shrinks (never beyond cap); memo-121
+   bootstrap-replay test updated accordingly (main's Rev-D-era 0.798"
+   natural sample is now correctly cap-refused vs Rev F core's 0.710").
+   Codex design-consulted (tmp/codex/tasks/, 9 Jul) both before and after.
+3. **Heatmap censored cells = mixed-grid axes + an over-broad eta trim**:
+   axes were "tapers in >= 6 samples" x "all distinct robusts" (a union of
+   v1/v2/refine grids -> mostly-blank lattices), and make_report dropped
+   eta > 5 samples before building heatmaps.  `build_heatmap` rebuilt on
+   the canonical v2 lattice (`config.grid_rows` from the seed beams;
+   natural + ROBUST_LIST rows), untrimmed eta (color clamps at 5, tooltip
+   true value), per-status rendering (ok / capped-anchor hatch / skipped /
+   failed), off-lattice-anchor footnotes.  **All 14 heatmaps are now fully
+   dense — 2458 ok + 398 capped cells, 0 skipped/failed/missing — no
+   further sweeps needed.**  (Report-side rework built by codex to Claude's
+   spec, diff reviewed; codex's two review findings — max_res not threaded
+   through curve()'s solves, and the un-regenerated curve table — both
+   addressed.)
+
+   Residual known steps (small, judged acceptable): fine-end steep
+   segments at the uniform-weighting limit (real physics, marker-anchored,
+   e.g. main+long eta 2.76->2.38 across a 2%-wide res span at 0.5 mas);
+   eta>4 far-coarse lattice granularity (core-inner/mid/core);
+   core+spiral +0.12 @ ~800 mas (genuine strict-strict lattice
+   transition).  Next-level smoothing would need denser robust sampling
+   near -2 / more coarse-end sculpt tapers.
+
 ### HANDOFF STATE (7 Jul 2026 — read this first)
 
 **Where things stand.** 14 offered subarrays now: the homogeneous set
@@ -706,6 +760,20 @@ high effort. Plumbing/IO/CLI → mid model, medium effort.
 
 ## 13. Gotchas log
 
+- **Resumable sweeps preserve stale conventions (9 Jul 2026 incident).**
+  `run_point` skips any recorded key forever, so when a measurement
+  convention changes (here: the adaptive cell rule `cell = max(native,
+  taper/OVERSAMPLE/1e3)` added for v2), rows measured under the OLD
+  convention silently survive every later re-sweep — including the 8 Jul
+  full-grid recompute.  68 v1-era sculpt-block points (robust {-2,-1.5,-1,
+  -0.5} x large tapers; core/spiral/mid/core+spiral/spiral+mid) imaged with
+  the NATIVE cell had beams up to 35% off their row (Briggs weights depend
+  on the gridded uv density = 1/(imsize*cell)) and spuriously low skirts —
+  the fake "strict islands" behind the imaging-curve jumps bmason flagged.
+  Repaired with `curvegen/repair_stale_cells.py` (archives to
+  results/attic-badcell/, strips, re-measures under the current rule);
+  `collect.py` now HARD-FAILS on any ok/capped row violating the cell rule
+  so mixed conventions can never be published again.
 - **TACC (Stampede3):** `$HOME` quota is 14 GB — `curvegen/ms` & `work` are
   symlinks into `$SCRATCH/ngvla_curvegen/`, and sweeps must run with **cwd on
   scratch** because CASA writes multi-GB `TempLattice*` scratch images to the

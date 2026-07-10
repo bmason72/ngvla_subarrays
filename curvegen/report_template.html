@@ -141,6 +141,10 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 .ok { color: var(--good); }
 .caveats { color: var(--ink-2); font-size: 14px; max-width: 82ch; }
 .caveats li { margin-bottom: 6px; }
+.hm-footnote {
+  color: var(--muted); font-size: 12px; margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
 @media (prefers-reduced-motion: no-preference) {
   .series-g, .mark { transition: opacity 0.15s ease; }
 }
@@ -232,9 +236,10 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 
 <div class="card">
   <h2>Raw sweep samples</h2>
-  <p class="note">Every measured grid point. Circles: natural&thinsp;+&thinsp;taper branch. Squares: Briggs
-  robust branch. Triangles: sculpt branch (robust&thinsp;&times;&thinsp;taper). Filled marks pass the 10% skirt
-  criterion; hollow marks fail it. Hover any mark for its parameters.</p>
+  <p class="note">Offerable measured grid points with &eta;&thinsp;&le;&thinsp;5. Circles:
+  natural&thinsp;+&thinsp;taper branch. Squares: Briggs robust branch. Triangles: sculpt branch
+  (robust&thinsp;&times;&thinsp;taper). Filled marks pass the 10% skirt criterion; hollow marks fail it.
+  Hover any mark for its parameters.</p>
   <div class="grid3" id="multiples"></div>
 </div>
 
@@ -243,9 +248,9 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   <p class="note">The full sweep lattice per subarray: rows step from natural weighting down to
   robust&thinsp;&minus;2, columns step through the uv tapers. Cell shade encodes &eta; (light&thinsp;=&thinsp;1,
   dark&thinsp;=&thinsp;5); a dot marks beams passing the 10% skirt criterion; a ring marks the cells the
-  imaging curve actually selects &mdash; the min-&eta; sculpted solution at each resolution. Blank cells
-  were pruned (&eta;&thinsp;&gt;&thinsp;5, or the row converged onto the natural+taper edge). Hover any
-  cell for its beam, &eta;, and skirt.</p>
+  imaging curve actually selects &mdash; the min-&eta; sculpted solution at each resolution. Beam-cap
+  anchors are shown as diagnostics only; skipped and failed cells distinguish deliberate cap stops
+  from absent measurements. Hover any measured cell for its beam, &eta;, and skirt.</p>
   <div class="legend" id="hm-legend"></div>
   <div class="grid3" style="grid-template-columns: repeat(auto-fit, minmax(460px, 1fr))" id="heatmaps"></div>
 </div>
@@ -285,7 +290,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
         (PLAN.md open question 2); continuum fractional-bandwidth effects are not yet modeled.</li>
     <li>Curves assume the memo-121 fixed-FOV single-pointing convention.</li>
   </ul>
-  <details><summary>Full sample table (all subarrays, all grid points)</summary>
+  <details><summary>Full displayed sample table (offerable points)</summary>
     <div class="tablewrap"><table id="data-table"></table></div>
   </details>
 </div>
@@ -473,6 +478,17 @@ function flagInfo(p) {
   return {text: flags.join(', '), title: notes.join(' ')};
 }
 
+function capInfeasibleReason(name, request, resRefMas) {
+  const cap = DATA.caps && DATA.caps[name];
+  const capRefMas = Number(cap);
+  if (!finitePositive(capRefMas)) return null;
+  if (resRefMas * (1 - CALC_BEAM_MARGIN) <= capRefMas) return null;
+  const capAtFreqMas = capRefMas * 30 / request.freq;
+  return "requested beam is coarser than this subarray's beam cap (" +
+    fmtRes(capAtFreqMas) + ") — beams this coarse are better made with its " +
+    "coarsest component";
+}
+
 function evaluateSubarray(name, request, order) {
   const reasons = [];
   const resRefMas = request.resolution * 1000 * (request.freq / 30);
@@ -481,7 +497,8 @@ function evaluateSubarray(name, request, order) {
   if (!finitePositive(nAnt)) reasons.push('missing antenna metadata');
 
   const curve = lookupCurvePoint(name, request.obs, resRefMas);
-  if (!curve.point) reasons.push(curve.reason);
+  if (!curve.point)
+    reasons.push(capInfeasibleReason(name, request, resRefMas) || curve.reason);
 
   if (request.las !== null) {
     if (!las || !finitePositive(Number(las.mas))) {
@@ -790,7 +807,7 @@ const nPts = ACTIVE.reduce((a, n) => a + DATA.counts[n], 0);
 const tiles = [
   {v: ACTIVE.length + '<span class="unit"> / ' + DATA.order.length + '</span>',
    l: 'subarrays with curve data'},
-  {v: String(nPts), l: 'lattice points measured'},
+  {v: String(nPts), l: 'offerable sample points shown'},
   {v: '0', l: 'failed points', cls: 'ok'},
 ];
 document.getElementById('tiles').innerHTML = tiles.map(t =>
@@ -861,6 +878,14 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
   const RAMP = ['#cde2fb','#9ec5f4','#6da7ec','#3987e5','#256abf','#184f95','#0d366b'];
   const etaColor = eta => RAMP[Math.min(6, Math.max(0,
     Math.round((Math.min(eta, 5) - 1) / 4 * 6)))];
+  const skirtText = c => Number.isFinite(Number(c.skirt))
+    ? (100 * Number(c.skirt)).toFixed(1) + '%' : '—';
+  const addHit = (svg, x, y, w, h, html) => {
+    const hit = svgEl('rect', {x, y, width: w, height: h, fill: 'transparent'});
+    hit.addEventListener('mousemove', ev => showTT(ev, html));
+    hit.addEventListener('mouseleave', hideTT);
+    svg.append(hit);
+  };
   const holder = document.getElementById('heatmaps');
   for (const name of ACTIVE) {
     const hm = DATA.heatmaps[name]; if (!hm) continue;
@@ -889,41 +914,77 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
             fill: 'none', stroke: 'var(--grid)', 'stroke-width': 1}));
           return;
         }
-        const cell = svgEl('rect', {x: x+1, y: y+1, width: CW-2, height: CH-2,
-          fill: etaColor(c.eta), stroke: 'var(--surface)', 'stroke-width': 2,
-          rx: 2});
-        svg.append(cell);
-        if (c.skirt !== null && c.skirt <= 0.10) {
-          const dark = c.eta > 2.5;
-          svg.append(svgEl('circle', {cx: x + CW/2, cy: y + CH/2, r: 2.4,
-            fill: dark ? '#fcfcfb' : '#0b0b0b', 'pointer-events': 'none'}));
-        }
-        if (c.env)
-          svg.append(svgEl('rect', {x: x+2, y: y+2, width: CW-4, height: CH-4,
-            fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, rx: 2,
-            'pointer-events': 'none'}));
-        const hit = svgEl('rect', {x: x, y: y, width: CW, height: CH,
-                                   fill: 'transparent'});
         const parlbl = row.label === 'natural' ? 'natural'
                                                : 'robust ' + row.label;
-        hit.addEventListener('mousemove', ev => showTT(ev,
-          `<b>${name}</b> &middot; ${parlbl}` +
-          `${hm.tapers[j] ? ', taper ' + fmtRes(hm.tapers[j]) : ', no taper'}` +
-          `<br>beam ${fmtRes(c.res)}<br>η = ${c.eta.toFixed(2)}` +
-          `<br>skirt ${(100*c.skirt).toFixed(1)}%${c.env ? '<br>← on the imaging curve' : ''}`));
-        hit.addEventListener('mouseleave', hideTT);
-        svg.append(hit);
+        const params = `<b>${name}</b> &middot; ${parlbl}` +
+          `${hm.tapers[j] ? ', taper ' + fmtRes(hm.tapers[j]) : ', no taper'}`;
+        if (c.status === 'ok' || c.status === 'capped') {
+          svg.append(svgEl('rect', {x: x+1, y: y+1, width: CW-2, height: CH-2,
+            fill: etaColor(c.eta), stroke: 'var(--surface)', 'stroke-width': 2,
+            rx: 2}));
+          if (c.status === 'capped') {
+            svg.append(svgEl('line', {x1: x+5, y1: y+CH-3, x2: x+CW-4, y2: y+4,
+              stroke: 'rgba(255,255,255,0.72)', 'stroke-width': 1.5,
+              'pointer-events': 'none'}));
+            svg.append(svgEl('line', {x1: x+11, y1: y+CH-3, x2: x+CW-4, y2: y+10,
+              stroke: 'rgba(255,255,255,0.72)', 'stroke-width': 1.5,
+              'pointer-events': 'none'}));
+          }
+          if (c.skirt !== null && c.skirt <= 0.10) {
+            const dark = c.eta > 2.5;
+            svg.append(svgEl('circle', {cx: x + CW/2, cy: y + CH/2, r: 2.4,
+              fill: dark ? '#fcfcfb' : '#0b0b0b', 'pointer-events': 'none'}));
+          }
+          if (c.env)
+            svg.append(svgEl('rect', {x: x+2, y: y+2, width: CW-4, height: CH-4,
+              fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, rx: 2,
+              'pointer-events': 'none'}));
+          const extra = c.status === 'capped'
+            ? '<br>beyond the beam cap — interpolation anchor only' : '';
+          addHit(svg, x, y, CW, CH, params +
+            `<br>beam ${fmtRes(c.res)}<br>η = ${Number(c.eta).toFixed(2)}` +
+            `<br>skirt ${skirtText(c)}${c.env ? '<br>← on the imaging curve' : ''}` +
+            extra);
+        } else if (c.status === 'skipped') {
+          svg.append(svgEl('rect', {x: x+1, y: y+1, width: CW-2, height: CH-2,
+            fill: 'var(--grid)', opacity: 0.28, stroke: 'var(--surface)',
+            'stroke-width': 2, rx: 2}));
+          svg.append(svgEl('line', {x1: x+4, y1: y+CH-4, x2: x+CW-4, y2: y+4,
+            stroke: 'var(--axis)', 'stroke-width': 1.2, opacity: 0.8,
+            'pointer-events': 'none'}));
+          addHit(svg, x, y, CW, CH, params +
+            '<br>not measured: beam cap exceeded earlier in this row');
+        } else if (c.status === 'failed') {
+          svg.append(svgEl('rect', {x: x+1, y: y+1, width: CW-2, height: CH-2,
+            fill: 'none', stroke: 'var(--axis)', 'stroke-width': 1.2, rx: 2}));
+          svg.append(svgEl('line', {x1: x+CW/2-4, y1: y+CH/2-4,
+            x2: x+CW/2+4, y2: y+CH/2+4, stroke: 'var(--axis)',
+            'stroke-width': 1.4, 'pointer-events': 'none'}));
+          svg.append(svgEl('line', {x1: x+CW/2+4, y1: y+CH/2-4,
+            x2: x+CW/2-4, y2: y+CH/2+4, stroke: 'var(--axis)',
+            'stroke-width': 1.4, 'pointer-events': 'none'}));
+          addHit(svg, x, y, CW, CH, params + '<br>measurement failed');
+        }
       });
     });
     wrap.append(svg);
+    if (hm.off_lattice > 0) {
+      const foot = document.createElement('div');
+      foot.className = 'hm-footnote';
+      foot.textContent = '+' + hm.off_lattice +
+        ' imaging-curve anchors sit off this lattice (refinement points)';
+      wrap.append(foot);
+    }
     holder.append(wrap);
   }
   document.getElementById('hm-legend').innerHTML =
     RAMP.map((c, i) => `<span style="display:inline-block;width:18px;height:12px;background:${c};border-radius:2px"></span>`).join('') +
-    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:6px">η 1 → 5</span>` +
+    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:6px">η 1 → 5; color clamps at η 5 (tooltip shows true value)</span>` +
     `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">● skirt ≤ 10%</span>` +
     `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">▢ selected by the imaging curve</span>` +
-    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">blank = pruned</span>`;
+    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">▧ beyond beam cap / anchor only</span>` +
+    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">╱ skipped after cap</span>` +
+    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">□ not measured</span>`;
 })();
 
 // PSF radial profile -----------------------------------------------------------

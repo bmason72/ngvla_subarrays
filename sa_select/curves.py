@@ -48,6 +48,8 @@ def load_subarrays(path: Optional[str] = None) -> Dict[str, SubarrayInfo]:
                 las_coeff=float(row["las_coeff"]),
                 calc_name=row.get("calc_name", "").strip(),
                 las_coeff_note=row.get("las_coeff_note", "").strip(),
+                beam_cap_arcsec=_float_or_none(
+                    row.get("beam_cap_arcsec_30ghz", "") or ""),
             )
             out[info.name] = info
     return out
@@ -75,6 +77,7 @@ def load_samples(path: Optional[str] = None) -> Dict[str, List[CurveSample]]:
                 freq_orig=_float_or_none(row.get("freq_orig_ghz", "")),
                 source=row.get("source", "").strip(),
                 note=row.get("note", "").strip(),
+                sample_status=(row.get("sample_status") or "ok").strip(),
             )
             out.setdefault(s.subarray, []).append(s)
     for samples in out.values():
@@ -113,8 +116,11 @@ class CurveLibrary:
 
         A sample with no skirt measurement cannot be shown to satisfy the
         imaging constraint, so it is excluded when a threshold is given.
+        Capped anchors (measured beyond the beam cap) are interpolation
+        support, not offerable answers, so they never qualify.
         """
-        samples = self.samples.get(name, [])
+        samples = [s for s in self.samples.get(name, [])
+                   if s.sample_status == "ok"]
         if skirt_threshold is None:
             return samples
         return [s for s in samples
@@ -159,13 +165,26 @@ class CurveLibrary:
         # work at the reference frequency: the window scales the same way
         res_ref = resolution * freq_ghz / REF_FREQ_GHZ
 
+        # heterogeneous beam cap: never offer a beam coarser than the
+        # coarsest component's own native beam (that regime belongs to the
+        # component subarray); capped-anchor samples only support
+        # interpolation up to the cap
+        info = self.subarrays.get(name)
+        cap = info.beam_cap_arcsec if info else None
+        if cap is not None and res_ref * (1 - beam_margin) > cap:
+            return None, ("requested beam is coarser than this subarray's "
+                          "beam cap (%.4g arcsec at the request frequency): "
+                          "beams this coarse are better made with its "
+                          "coarsest component subarray"
+                          % (cap * REF_FREQ_GHZ / freq_ghz))
+
         # the envelope engine interpolates within measured lattice rows, so
         # the answer varies continuously with the request (see envelope.py
         # and curve_anomaly_postmortem.md for why the old per-window sample
         # min produced discontinuities)
         choice = self.envelope(name).solve(res_ref, margin=beam_margin,
                                            skirt_max=skirt_threshold,
-                                           relax=relax)
+                                           relax=relax, max_res=cap)
         if choice is not None:
             sample = self._choice_to_sample(name, choice)
             if choice.relaxed:

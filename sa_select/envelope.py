@@ -695,9 +695,15 @@ class Envelope:
         return [c]
 
     def solve(self, theta, margin=0.0, skirt_max=None, relax=True,
-              mode="threshold", trade_slope=TRADE_SLOPE, trade_max=None
-              ) -> Optional[Choice]:
+              mode="threshold", trade_slope=TRADE_SLOPE, trade_max=None,
+              max_res=None) -> Optional[Choice]:
         """Cheapest way to reach resolution `theta` within +-margin.
+
+        `max_res` (the heterogeneous beam cap, 9 Jul 2026): samples measured
+        beyond the cap are carried as interpolation ANCHORS (they extend row
+        coverage up to the cap) but must never be OFFERED -- the beam-margin
+        window is intersected with [.., max_res].  A window entirely beyond
+        the cap returns None (the caller states the cap-specific reason).
 
         Point-source (skirt_max=None): minimum eta.
 
@@ -723,6 +729,19 @@ class Envelope:
         Returns None when the families give no answer in the interval.
         """
         lo, hi = theta * (1 - margin), theta * (1 + margin)
+        if max_res is not None:
+            if lo > max_res:
+                return None            # whole window beyond the beam cap
+            hi = min(hi, max_res)
+        return self.solve_interval(lo, hi, skirt_max=skirt_max, relax=relax,
+                                   mode=mode, trade_slope=trade_slope,
+                                   trade_max=trade_max)
+
+    def solve_interval(self, lo, hi, skirt_max=None, relax=True,
+                       mode="threshold", trade_slope=TRADE_SLOPE,
+                       trade_max=None) -> Optional[Choice]:
+        """solve() over an explicit (possibly cap-clipped, asymmetric)
+        resolution interval [lo, hi]; see solve() for the policy."""
         if skirt_max is None:
             cands = self._candidates(lo, hi, None)
             return min(cands, key=lambda c: c.eta) if cands else None
@@ -780,18 +799,33 @@ class Envelope:
         return choice
 
     def curve(self, skirt_max=None, relax=True, grid_dex=0.01,
-              margin=0.0, mode="threshold") -> List[Choice]:
+              margin=0.0, mode="threshold", max_res=None) -> List[Choice]:
         """The full curve on a log grid of target resolutions (gaps where the
-        families give no answer).  margin=0 evaluates the pure envelope."""
+        families give no answer).  margin=0 evaluates the pure envelope.
+
+        `max_res` clips the emitted curve at the heterogeneous beam cap:
+        capped-anchor samples extend coverage past the cap, but the offered
+        curve must end exactly there, so the grid is truncated and an exact
+        endpoint at max_res is appended if the log grid missed it."""
         cov = self.coverage()
         if cov is None:
             return []
-        lo, hi = (math.log10(cov[0]), math.log10(cov[1]))
+        cov_hi = cov[1] if max_res is None else min(cov[1], max_res)
+        if cov_hi < cov[0]:
+            return []
+        lo, hi = (math.log10(cov[0]), math.log10(cov_hi))
         out, x = [], lo
+        last_x = None
         while x <= hi + 1e-12:
             c = self.solve(10 ** x, margin=margin, skirt_max=skirt_max,
-                           relax=relax, mode=mode)
+                           relax=relax, mode=mode, max_res=max_res)
             if c is not None:
                 out.append(c)
+            last_x = x
             x += grid_dex
+        if last_x is not None and last_x < hi - 1e-12:
+            c = self.solve(cov_hi, margin=margin, skirt_max=skirt_max,
+                           relax=relax, mode=mode, max_res=max_res)
+            if c is not None:
+                out.append(c)
         return out

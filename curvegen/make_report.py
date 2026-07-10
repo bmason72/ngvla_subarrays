@@ -14,7 +14,7 @@ import json
 import os
 import sys
 
-from config import REPO, RESULTS_DIR
+from config import REPO, RESULTS_DIR, ROBUST_LIST, grid_rows
 
 sys.path.insert(0, REPO)                    # for the shared curve engine
 from sa_select.envelope import Envelope, ETA_CAP   # noqa: E402
@@ -35,7 +35,7 @@ GRID_DEX = 0.01      # target-resolution grid spacing of the plotted curves
 MARK_EVERY = 8       # cadence of tooltip markers along smooth curve runs
 
 
-def build_curve(samples, skirt_max=None):
+def build_curve(samples, skirt_max=None, max_res=None):
     """The curve as the shared engine computes it: at each target resolution
     on a fine log grid, the cheapest interpolated-family operating point at
     EXACTLY that resolution (see sa_select/envelope.py; this replaced the
@@ -52,7 +52,8 @@ def build_curve(samples, skirt_max=None):
     """
     curve = []
     prev_key, run = None, 0
-    for c in Envelope(samples).curve(skirt_max=skirt_max, grid_dex=GRID_DEX):
+    for c in Envelope(samples).curve(skirt_max=skirt_max, grid_dex=GRID_DEX,
+                                     max_res=max_res):
         key = (c.weighting, c.robust, c.relaxed, c.traded)
         run = run + 1 if key == prev_key else 0
         curve.append(dict(
@@ -66,46 +67,118 @@ def build_curve(samples, skirt_max=None):
     return curve
 
 
-def build_heatmap(samples, imaging_curve):
-    """The (robust, taper) lattice as a rectangular cell table.
+STATUS_PRIORITY = {"skipped": 0, "failed": 1, "capped": 2, "ok": 3}
 
-    Columns are the v2 lattice tapers (values appearing in >= 6 rows of the
-    lattice -- this drops stray v1-era taper values, which sit in only one
-    or two rows).  Rows are natural + robust descending (+2 -> -2), i.e.
-    from the sensitivity edge toward uniform weighting.  Cells absent from
-    the results (pruned by the eta cap / edge convergence) are null.
+
+def result_key(row):
+    """Canonical heatmap key for one raw sweep-result row."""
+    try:
+        weighting = row["weighting"]
+        robust = 2.0 if weighting == "natural" else round(float(row["robust"]), 2)
+        taper = round(float(row["taper_mas"]), 3)
+    except (KeyError, TypeError, ValueError):
+        return None
+    return weighting, robust, taper
+
+
+def best_result_rows(rows):
+    """Deduplicate append-style result CSV rows by lattice key.
+
+    Repair/fill jobs can leave stale rows behind.  Prefer offerable
+    measurements over diagnostics, and for identical statuses keep the later
+    row because the result files are append-ordered.
     """
-    from collections import Counter
-    tcount = Counter(s["taper"] for s in samples)
-    tapers = sorted(t for t, c in tcount.items() if t == 0.0 or c >= 6)
+    out = {}
+    for i, row in enumerate(rows):
+        key = result_key(row)
+        if key is None:
+            continue
+        rank = STATUS_PRIORITY.get(row.get("status"), -1)
+        prev = out.get(key)
+        if prev is None or (rank, i) > prev[:2]:
+            out[key] = (rank, i, row)
+    return {key: row for key, (_rank, _i, row) in out.items()}
+
+
+def env_key(key):
+    """Canonical heatmap key for one curve anchor tuple."""
+    try:
+        weighting, robust, taper = key
+        robust = 2.0 if weighting == "natural" else round(float(robust), 2)
+        taper = round(float(taper or 0.0), 3)
+    except (TypeError, ValueError):
+        return None
+    return weighting, robust, taper
+
+
+def build_heatmap(subarray, results_rows, sigma_nat, imaging_curve):
+    """The canonical sweep lattice as a rectangular cell table."""
+    cells_by_key = best_result_rows(results_rows)
+    nat = cells_by_key.get(("natural", 2.0, 0.0))
+    fine = cells_by_key.get(("briggs", -2.0, 0.0))
+    if (not nat or not fine or nat.get("status") != "ok"
+            or fine.get("status") != "ok"):
+        return None
+
+    res_nat = float(nat["res_geo_arcsec"]) * 1e3
+    res_fine = float(fine["res_geo_arcsec"]) * 1e3
+    lattice = grid_rows(res_fine, res_nat, subarray)
+    tapers = list(lattice[0][2])
+
+    lattice_keys = set()
+    for weighting, robust, row_tapers in lattice:
+        rkey = 2.0 if weighting == "natural" else round(float(robust), 2)
+        for taper in row_tapers:
+            lattice_keys.add((weighting, rkey, round(float(taper), 3)))
+
     # a lattice cell is "on the envelope" when it anchors an imaging-curve
     # interpolant (curve points themselves sit between cells)
-    on_env = set()
-    for s in imaging_curve:
-        on_env.update(tuple(k) for k in s.get("env_keys", []))
+    anchors = set()
+    for p in imaging_curve:
+        for key in p.get("env_keys", []):
+            k = env_key(key)
+            if k is not None:
+                anchors.add(k)
+    on_env = anchors & lattice_keys
+    off_lattice = len(anchors - lattice_keys)
 
-    def row_label(w, r):
-        return "natural" if w == "natural" else "%+.1f" % r
+    row_by_robust = {round(float(r), 2): (w, r, ts)
+                     for w, r, ts in lattice if w == "briggs"}
+    display_rows = [lattice[0]]
+    for robust in sorted(ROBUST_LIST, reverse=True):
+        rkey = round(float(robust), 2)
+        if rkey in row_by_robust:
+            display_rows.append(row_by_robust[rkey])
+
+    def row_label(weighting, robust):
+        return "natural" if weighting == "natural" else "%+.1f" % robust
 
     rows = []
-    robusts = sorted({s["robust"] for s in samples
-                      if s["weighting"] == "briggs"}, reverse=True)
-    for w, r in [("natural", None)] + [("briggs", r) for r in robusts]:
+    for weighting, robust, _row_tapers in display_rows:
+        rkey = 2.0 if weighting == "natural" else round(float(robust), 2)
         cells = []
-        for t in tapers:
-            m = [s for s in samples if s["weighting"] == w and
-                 s["robust"] == r and abs(s["taper"] - t) < 1e-6]
-            if not m:
+        for taper in tapers:
+            key = (weighting, rkey, round(float(taper), 3))
+            row = cells_by_key.get(key)
+            if row is None:
                 cells.append(None)
+                continue
+            status = row.get("status")
+            if status in ("ok", "capped"):
+                cells.append(dict(
+                    eta=float(row["sigma_dirty"]) / sigma_nat,
+                    skirt=float(row["skirt"]) if row["skirt"] else None,
+                    res=float(row["res_geo_arcsec"]) * 1e3,
+                    env=key in on_env,
+                    status=status))
+            elif status == "skipped":
+                cells.append(dict(status="skipped"))
+            elif status == "failed":
+                cells.append(dict(status="failed"))
             else:
-                s = m[0]
-                cells.append(dict(eta=s["eta"], skirt=s["skirt"], res=s["res"],
-                                  env=(w, r, s["taper"]) in on_env))
-        # stray robust values from the v1 sweeps populate almost no lattice
-        # columns; keep only substantive rows
-        if sum(c is not None for c in cells) >= 3:
-            rows.append(dict(label=row_label(w, r), cells=cells))
-    return dict(tapers=tapers, rows=rows)
+                cells.append(None)
+        rows.append(dict(label=row_label(weighting, robust), cells=cells))
+    return dict(tapers=tapers, rows=rows, off_lattice=off_lattice)
 
 
 def build_sens_table(las):
@@ -151,8 +224,14 @@ def build_sens_table(las):
 
 def main(out_path):
     samples_by = {name: [] for name in ORDER}
+    display_by = {name: [] for name in ORDER}
     with open(os.path.join(REPO, "sa_select", "data", "revf_curves.csv")) as f:
         for r in csv.DictReader(f):
+            name = r["subarray"]
+            if name not in samples_by:
+                continue
+            capped = ((r.get("sample_status") or "ok").strip()
+                      == "capped_anchor")
             s = dict(
                 res=float(r["resolution_arcsec_30ghz"]) * 1e3,   # mas
                 eta=float(r["eta"]),
@@ -161,16 +240,23 @@ def main(out_path):
                 robust=float(r["robust"]) if r["robust"] else None,
                 taper=float(r["taper_arcsec_30ghz"]) * 1e3
                       if r["taper_arcsec_30ghz"] else 0.0,
+                capped=capped,
             )
-            # DISPLAY trim only: the eta > ~5 regime (>25x natural time) is
-            # not of interest for the plots.  The engine/selector itself does
-            # NOT censor by ETA_CAP (see envelope.build_points) -- so at those
-            # extreme resolutions the Python tool still reports a solution
-            # where this report shows none.
-            if s["eta"] <= ETA_CAP:
-                samples_by[r["subarray"]].append(s)
+            # DISPLAY trim: the eta > ~5 regime (>25x natural time) is not of
+            # interest for the plots -- the engine/selector itself does NOT
+            # censor by ETA_CAP (envelope.build_points), so at those extreme
+            # resolutions the Python tool still reports a solution where this
+            # report shows none.  Capped anchors obey the same trim (a beyond-
+            # cap anchor with eta > 5 could only support curve points that the
+            # trim excludes anyway); they feed the envelope but not the dots.
+            if s["eta"] > ETA_CAP:
+                continue
+            samples_by[name].append(s)
+            if not capped:
+                display_by[name].append(s)
 
     las = {}
+    caps = {name: None for name in ORDER}
     with open(os.path.join(REPO, "sa_select", "data", "subarrays.csv")) as f:
         for r in csv.DictReader(f):
             lam = 0.299792458 / 30.0
@@ -180,21 +266,46 @@ def main(out_path):
                 coeff=float(r["las_coeff"]),
                 provisional="PROVISIONAL" in r["las_coeff_note"],
                 n_ant=int(r["n_ant"]))
+            cap = r.get("beam_cap_arcsec_30ghz", "").strip()
+            if r["name"] in caps:
+                caps[r["name"]] = float(cap) * 1e3 if cap else None
 
-    imaging = {n: build_curve(samples_by[n], 0.10) for n in ORDER}
-    heatmaps = {n: build_heatmap(samples_by[n], imaging[n])
-                for n in ORDER if samples_by[n]}
+    imaging = {n: build_curve(samples_by[n], 0.10, max_res=caps[n])
+               for n in ORDER}
+    heatmaps = {}
+    if os.path.isdir(RESULTS_DIR):
+        for base in sorted(os.listdir(RESULTS_DIR)):
+            if not base.endswith(".csv") or ".csv.shard_" in base:
+                continue
+            path = os.path.join(RESULTS_DIR, base)
+            with open(path, newline="") as f:
+                rows = list(csv.DictReader(f))
+            if not rows:
+                continue
+            name = next((r.get("subarray", "").strip()
+                         for r in rows if r.get("subarray")), "")
+            if name not in ORDER:
+                continue
+            cells_by_key = best_result_rows(rows)
+            nat = cells_by_key.get(("natural", 2.0, 0.0))
+            if not nat or nat.get("status") != "ok":
+                continue
+            hm = build_heatmap(name, rows, float(nat["sigma_dirty"]),
+                               imaging[name])
+            if hm is not None:
+                heatmaps[name] = hm
     for curve in imaging.values():          # anchors only feed the heatmaps
         for p in curve:
             p.pop("env_keys", None)
-    pointsource = {n: build_curve(samples_by[n]) for n in ORDER}
+    pointsource = {n: build_curve(samples_by[n], max_res=caps[n])
+                   for n in ORDER}
     for curve in pointsource.values():
         for p in curve:
             p.pop("env_keys", None)
-    data = dict(order=ORDER, las=las, samples=samples_by,
+    data = dict(order=ORDER, las=las, caps=caps, samples=display_by,
                 imaging=imaging,
                 pointsource=pointsource,
-                counts={n: len(samples_by[n]) for n in ORDER},
+                counts={n: len(display_by[n]) for n in ORDER},
                 heatmaps=heatmaps)
 
     # core+spiral natural-PSF radial profile measured 5 Jul 2026 (subsampled

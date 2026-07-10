@@ -33,12 +33,15 @@ GAP_RATIO = 1.35          # res jumps beyond this are infeasibility gaps
 
 
 def samples_from(sweep):
-    """ok rows -> sample dicts with eta relative to the natural reference."""
+    """ok + capped rows -> sample dicts with eta relative to the natural
+    reference.  Capped rows are interpolation anchors (the offered curve is
+    clipped at the beam cap via build_curve's max_res, matching collect.py /
+    the report), so refine sees the same curve the report will show."""
     nat = sweep.measured("natural", 2.0, 0.0)
     sigma_nat = float(nat["sigma_dirty"])
     out = []
     for row in sweep.rows.values():
-        if row["status"] != "ok":
+        if row["status"] not in ("ok", "capped"):
             continue
         out.append(dict(
             res=float(row["res_geo_arcsec"]) * 1e3,
@@ -49,6 +52,12 @@ def samples_from(sweep):
             taper=float(row["taper_mas"]),
         ))
     return out
+
+
+def curve_max_res_mas(subarray):
+    """The beam cap in mas (build_curve max_res), or None if uncapped."""
+    cap = BEAM_CAP_ARCSEC.get(subarray)
+    return None if cap is None else cap * 1e3
 
 
 def candidates_between(a, b):
@@ -84,8 +93,9 @@ def refine(subarray, rounds=3, max_step=0.25, budget=60):
     sweep = Sweep(subarray)
     chase_res_jumps = subarray in BEAM_CAP_ARCSEC
     n_new_total = 0
+    max_res = curve_max_res_mas(subarray)
     for rnd in range(1, rounds + 1):
-        curve = build_curve(samples_from(sweep), SKIRT_MAX)
+        curve = build_curve(samples_from(sweep), SKIRT_MAX, max_res=max_res)
         jumps = [(a, b) for a, b in zip(curve, curve[1:])
                  if (abs(b["eta"] - a["eta"]) > max_step
                      and b["res"] / a["res"] <= GAP_RATIO)
@@ -107,7 +117,7 @@ def refine(subarray, rounds=3, max_step=0.25, budget=60):
         if n_new_total >= budget:
             print("refinement budget (%d points) reached" % budget)
             break
-    curve = build_curve(samples_from(sweep), SKIRT_MAX)
+    curve = build_curve(samples_from(sweep), SKIRT_MAX, max_res=max_res)
     worst = max((abs(b["eta"] - a["eta"]) for a, b in zip(curve, curve[1:])
                  if b["res"] / a["res"] <= GAP_RATIO), default=0)
     print("%s refined: +%d points, curve %d pts, worst in-band step %.2f"
