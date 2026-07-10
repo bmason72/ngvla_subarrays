@@ -351,6 +351,25 @@ report regenerated (`curvegen/reports/revf-curves.html`).
    transition).  Next-level smoothing would need denser robust sampling
    near -2 / more coarse-end sculpt tapers.
 
+4. **v10 cosmetics pass (10 Jul, bugs.txt):** four rendering-only fixes,
+   built by codex to Claude's spec (tmp/codex_cosmetics_spec.md), diff
+   reviewed line-by-line.  (a) marker density — `build_curve`'s run key
+   dropped `c.robust` (family level `(weighting, relaxed, traded)`; on the
+   robust branch robust drifts continuously so every grid point was marked
+   and the halo strokes erased neighbours) plus a 7-px screen-space
+   thinning backstop in `curveChart` that never drops first/last or
+   relaxed-transition markers; all series now 12–21% marked (was ~100% in
+   dense runs), curve res/eta DATA byte-identical.  (b) LAS labels:
+   width-aware level allocation instead of identical-mas stacking.
+   (c) series end labels: shared right gutter (M.r 84→188) at common x,
+   >=13 px vertical separation clamped to the plot band, dashed
+   curve-coloured leader lines.  (d) heatmap legend rebuilt as data-driven
+   mini-SVG swatches drawn by the same cell primitives (capped-anchor
+   hatch now contrast-flips at eta 2.5 like the skirt dot; null cells
+   dashed; capped/skipped/failed/not-measured entries only shown when the
+   status occurs in the data).  82 tests green; validate.py output
+   byte-identical pre/post.
+
 ### HANDOFF STATE (7 Jul 2026 — read this first)
 
 **Where things stand.** 14 offered subarrays now: the homogeneous set

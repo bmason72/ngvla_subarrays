@@ -48,13 +48,16 @@ def build_curve(samples, skirt_max=None, max_res=None):
 
     Each point carries: the interpolated (weighting, robust, taper), its
     measured anchor keys (env_keys, for the lattice heatmaps), and a marker
-    flag (tooltip markers at winner changes and every MARK_EVERY points).
+    flag (tooltip markers at family changes and every MARK_EVERY points).
     """
     curve = []
     prev_key, run = None, 0
     for c in Envelope(samples).curve(skirt_max=skirt_max, grid_dex=GRID_DEX,
                                      max_res=max_res):
-        key = (c.weighting, c.robust, c.relaxed, c.traded)
+        # family level only: on the robust branch c.robust (and the anchor
+        # set, near refined minima) drifts continuously, which would reset
+        # the run — and mark a tooltip point — at every grid point
+        key = (c.weighting, c.relaxed, c.traded)
         run = run + 1 if key == prev_key else 0
         curve.append(dict(
             res=c.res, eta=c.eta, skirt=c.skirt, weighting=c.weighting,

@@ -654,7 +654,7 @@ function runSubarrayCalculator() {
 // log-x, log-y curve chart --------------------------------------------------
 function curveChart(el, curves, opts) {
   const W = opts.w || 960, H = opts.h || 430;
-  const M = {l: 46, r: 84, t: 12, b: 40};
+  const M = {l: 46, r: 188, t: 12, b: 40};
   const xmin = opts.xmin, xmax = opts.xmax, ymin = 1, ymax = opts.ymax;
   const X = v => M.l + (Math.log10(v) - Math.log10(xmin)) /
                  (Math.log10(xmax) - Math.log10(xmin)) * (W - M.l - M.r);
@@ -686,18 +686,28 @@ function curveChart(el, curves, opts) {
     transform: `rotate(-90 12 ${(H - M.b + M.t)/2})`});
   yt.textContent = 'η  (rms ÷ natural rms)'; svg.append(yt);
 
-  // LAS verticals (drawn under the curves); stack coincident labels
-  const lasSeen = {};
+  // LAS verticals (drawn under the curves); long names need real clearance,
+  // not just identical-value stacking.
+  const lasLabels = [];
   for (const name of ACTIVE) {
     const las = DATA.las[name]; if (!las || las.mas > xmax || las.mas < xmin) continue;
-    const key = Math.round(las.mas);
-    const n = (lasSeen[key] = (lasSeen[key] || 0) + 1);
+    const x = X(las.mas);
     svg.append(svgEl('line', {x1: X(las.mas), x2: X(las.mas), y1: M.t, y2: H - M.b,
       stroke: css(name), 'stroke-width': 1.2, 'stroke-dasharray': '3 4', opacity: 0.75,
       'class': `las-${SLOT[name].slice(3)}`}));
-    const lb = svgEl('text', {x: X(las.mas) + 4, y: M.t + 12 * n,
-      fill: css(name), 'class': 'serieslabel'});
-    lb.textContent = 'LAS ' + name + (las.provisional ? ' †' : '');
+    const text = 'LAS ' + name + (las.provisional ? ' †' : '');
+    lasLabels.push({name, x: x + 4, text, w: Math.max(56, text.length * 6.2)});
+  }
+  lasLabels.sort((a, b) => a.x - b.x);
+  const lasLevelRight = [];
+  for (const l of lasLabels) {
+    let level = 0;
+    while (lasLevelRight[level] !== undefined && l.x < lasLevelRight[level] + 6)
+      level++;
+    lasLevelRight[level] = l.x + l.w;
+    const lb = svgEl('text', {x: l.x, y: M.t + 12 * (level + 1),
+      fill: css(l.name), 'class': 'serieslabel'});
+    lb.textContent = l.text;
     svg.append(lb);
   }
 
@@ -716,14 +726,19 @@ function curveChart(el, curves, opts) {
     });
     g.append(svgEl('path', {d: path, fill: 'none', stroke: css(name),
                             'stroke-width': 2, 'stroke-linejoin': 'round'}));
-    for (const p of pts) {
-      if (!p.marker) continue;   // tooltip markers only at engine-flagged points
+    let drawnMarker = null;
+    const markerPts = pts.filter(p => p.marker);
+    markerPts.forEach((p, mi) => {
+      const x = X(p.res), y = Y(p.eta);
+      const keepEdge = mi === 0 || mi === markerPts.length - 1;
+      const keepRegime = drawnMarker && Boolean(p.relaxed) !== Boolean(drawnMarker.p.relaxed);
+      const near = drawnMarker && Math.hypot(x - drawnMarker.x, y - drawnMarker.y) <= 7;
+      if (!keepEdge && !keepRegime && near) return;
       let m;
       if (opts.marker === 'triangle') {
-        const x = X(p.res), y = Y(p.eta);
         m = svgEl('path', {d: `M${x} ${y-4.6}L${x+4.2} ${y+3.6}L${x-4.2} ${y+3.6}Z`});
       } else {
-        m = svgEl('circle', {cx: X(p.res), cy: Y(p.eta), r: 3.5});
+        m = svgEl('circle', {cx: x, cy: y, r: 3.5});
       }
       // relaxed optima (no beam here meets the skirt criterion; best
       // achievable skirt reported) are drawn hollow
@@ -732,20 +747,39 @@ function curveChart(el, curves, opts) {
       m.setAttribute('stroke', hollow ? css(name) : 'var(--surface)');
       m.setAttribute('stroke-width', 1.5);
       m.setAttribute('class', 'mark');
-      const hit = svgEl('circle', {cx: X(p.res), cy: Y(p.eta), r: 10,
-                                   fill: 'transparent'});
+      const hit = svgEl('circle', {cx: x, cy: y, r: 10, fill: 'transparent'});
       hit.addEventListener('mousemove', ev => showTT(ev, ttHtml(name, p)));
       hit.addEventListener('mouseleave', hideTT);
       g.append(m, hit);
-    }
+      drawnMarker = {x, y, p};
+    });
     svg.append(g);
     const last = pts[pts.length - 1];
-    endLabels.push({name, x: X(last.res) + 8, y: Y(last.eta) + 4});
+    endLabels.push({name, x: W - M.r + 10, y: Y(last.eta) + 4,
+      endX: X(last.res), endY: Y(last.eta)});
   }
-  // direct labels at line ends, nudged apart if they collide
+  // Direct labels share a gutter; keep the stack inside the plotting height.
   endLabels.sort((a, b) => a.y - b.y);
+  const labelTop = M.t + 12, labelBottom = H - M.b - 6;
+  for (const l of endLabels) l.y = Math.max(labelTop, Math.min(labelBottom, l.y));
   for (let i = 1; i < endLabels.length; i++)
     if (endLabels[i].y - endLabels[i-1].y < 13) endLabels[i].y = endLabels[i-1].y + 13;
+  if (endLabels.length && endLabels[endLabels.length - 1].y > labelBottom) {
+    const shift = endLabels[endLabels.length - 1].y - labelBottom;
+    for (const l of endLabels) l.y -= shift;
+  }
+  for (let i = endLabels.length - 2; i >= 0; i--)
+    if (endLabels[i+1].y - endLabels[i].y < 13) endLabels[i].y = endLabels[i+1].y - 13;
+  if (endLabels.length && endLabels[0].y < labelTop) {
+    const shift = labelTop - endLabels[0].y;
+    for (const l of endLabels) l.y += shift;
+  }
+  for (const l of endLabels) {
+    const x1 = l.endX + 3, y1 = l.endY, x2 = l.x - 4, y2 = l.y - 4;
+    if (Math.abs(x2 - x1) <= 25 && Math.abs(y2 - y1) <= 6) continue;
+    svg.append(svgEl('line', {x1, y1, x2, y2, stroke: css(l.name),
+      'stroke-width': 1, opacity: 0.45, 'stroke-dasharray': '2 3'}));
+  }
   for (const l of endLabels) {
     const lb = svgEl('text', {x: l.x, y: l.y, fill: css(l.name), 'class': 'serieslabel'});
     lb.textContent = l.name; svg.append(lb);
@@ -880,6 +914,56 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
     Math.round((Math.min(eta, 5) - 1) / 4 * 6)))];
   const skirtText = c => Number.isFinite(Number(c.skirt))
     ? (100 * Number(c.skirt)).toFixed(1) + '%' : '—';
+  const drawMeasuredCell = (svg, x, y, w, h, c) => {
+    svg.append(svgEl('rect', {x: x+1, y: y+1, width: w-2, height: h-2,
+      fill: etaColor(c.eta), stroke: 'var(--surface)', 'stroke-width': 2,
+      rx: 2}));
+  };
+  const cappedHatchAttrs = eta => Number(eta) > 2.5
+    ? {stroke: 'rgba(255,255,255,0.8)', 'stroke-width': 1.5,
+       'pointer-events': 'none'}
+    : {stroke: '#0b0b0b', opacity: 0.45, 'stroke-width': 1.5,
+       'pointer-events': 'none'};
+  const drawCappedHatch = (svg, x, y, w, h, eta) => {
+    const attrs = cappedHatchAttrs(eta);
+    svg.append(svgEl('line', {x1: x+w*0.19, y1: y+h-3, x2: x+w-4, y2: y+4,
+      ...attrs}));
+    svg.append(svgEl('line', {x1: x+w*0.42, y1: y+h-3, x2: x+w-4, y2: y+h*0.50,
+      ...attrs}));
+  };
+  const drawSkirtDot = (svg, x, y, w, h, eta) => {
+    const dark = Number(eta) > 2.5;
+    svg.append(svgEl('circle', {cx: x + w/2, cy: y + h/2, r: 2.4,
+      fill: dark ? '#fcfcfb' : '#0b0b0b', 'pointer-events': 'none'}));
+  };
+  const drawSelectedRing = (svg, x, y, w, h) => {
+    svg.append(svgEl('rect', {x: x+2, y: y+2, width: w-4, height: h-4,
+      fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, rx: 2,
+      'pointer-events': 'none'}));
+  };
+  const drawSkippedCell = (svg, x, y, w, h) => {
+    svg.append(svgEl('rect', {x: x+1, y: y+1, width: w-2, height: h-2,
+      fill: 'var(--grid)', opacity: 0.28, stroke: 'var(--surface)',
+      'stroke-width': 2, rx: 2}));
+    svg.append(svgEl('line', {x1: x+4, y1: y+h-4, x2: x+w-4, y2: y+4,
+      stroke: 'var(--axis)', 'stroke-width': 1.2, opacity: 0.8,
+      'pointer-events': 'none'}));
+  };
+  const drawFailedCell = (svg, x, y, w, h) => {
+    svg.append(svgEl('rect', {x: x+1, y: y+1, width: w-2, height: h-2,
+      fill: 'none', stroke: 'var(--axis)', 'stroke-width': 1.2, rx: 2}));
+    svg.append(svgEl('line', {x1: x+w/2-4, y1: y+h/2-4,
+      x2: x+w/2+4, y2: y+h/2+4, stroke: 'var(--axis)',
+      'stroke-width': 1.4, 'pointer-events': 'none'}));
+    svg.append(svgEl('line', {x1: x+w/2+4, y1: y+h/2-4,
+      x2: x+w/2-4, y2: y+h/2+4, stroke: 'var(--axis)',
+      'stroke-width': 1.4, 'pointer-events': 'none'}));
+  };
+  const drawNullCell = (svg, x, y, w, h) => {
+    svg.append(svgEl('rect', {x: x+1, y: y+1, width: w-2, height: h-2,
+      fill: 'none', stroke: 'var(--grid)', 'stroke-width': 1,
+      'stroke-dasharray': '2 2'}));
+  };
   const addHit = (svg, x, y, w, h, html) => {
     const hit = svgEl('rect', {x, y, width: w, height: h, fill: 'transparent'});
     hit.addEventListener('mousemove', ev => showTT(ev, html));
@@ -887,6 +971,18 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
     svg.append(hit);
   };
   const holder = document.getElementById('heatmaps');
+  const heatmapStatus = {capped: false, skipped: false, failed: false, missing: false};
+  for (const name of ACTIVE) {
+    const hm = DATA.heatmaps[name]; if (!hm) continue;
+    for (const row of hm.rows || []) {
+      for (const c of row.cells || []) {
+        if (!c) heatmapStatus.missing = true;
+        else if (c.status === 'capped') heatmapStatus.capped = true;
+        else if (c.status === 'skipped') heatmapStatus.skipped = true;
+        else if (c.status === 'failed') heatmapStatus.failed = true;
+      }
+    }
+  }
   for (const name of ACTIVE) {
     const hm = DATA.heatmaps[name]; if (!hm) continue;
     const CW = 26, CH = 20, ML = 62, MT = 44;
@@ -910,8 +1006,7 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
       row.cells.forEach((c, j) => {
         const x = ML + j*CW, y = MT + i*CH;
         if (!c) {
-          svg.append(svgEl('rect', {x: x+1, y: y+1, width: CW-2, height: CH-2,
-            fill: 'none', stroke: 'var(--grid)', 'stroke-width': 1}));
+          drawNullCell(svg, x, y, CW, CH);
           return;
         }
         const parlbl = row.label === 'natural' ? 'natural'
@@ -919,26 +1014,10 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
         const params = `<b>${name}</b> &middot; ${parlbl}` +
           `${hm.tapers[j] ? ', taper ' + fmtRes(hm.tapers[j]) : ', no taper'}`;
         if (c.status === 'ok' || c.status === 'capped') {
-          svg.append(svgEl('rect', {x: x+1, y: y+1, width: CW-2, height: CH-2,
-            fill: etaColor(c.eta), stroke: 'var(--surface)', 'stroke-width': 2,
-            rx: 2}));
-          if (c.status === 'capped') {
-            svg.append(svgEl('line', {x1: x+5, y1: y+CH-3, x2: x+CW-4, y2: y+4,
-              stroke: 'rgba(255,255,255,0.72)', 'stroke-width': 1.5,
-              'pointer-events': 'none'}));
-            svg.append(svgEl('line', {x1: x+11, y1: y+CH-3, x2: x+CW-4, y2: y+10,
-              stroke: 'rgba(255,255,255,0.72)', 'stroke-width': 1.5,
-              'pointer-events': 'none'}));
-          }
-          if (c.skirt !== null && c.skirt <= 0.10) {
-            const dark = c.eta > 2.5;
-            svg.append(svgEl('circle', {cx: x + CW/2, cy: y + CH/2, r: 2.4,
-              fill: dark ? '#fcfcfb' : '#0b0b0b', 'pointer-events': 'none'}));
-          }
-          if (c.env)
-            svg.append(svgEl('rect', {x: x+2, y: y+2, width: CW-4, height: CH-4,
-              fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, rx: 2,
-              'pointer-events': 'none'}));
+          drawMeasuredCell(svg, x, y, CW, CH, c);
+          if (c.status === 'capped') drawCappedHatch(svg, x, y, CW, CH, c.eta);
+          if (c.skirt !== null && c.skirt <= 0.10) drawSkirtDot(svg, x, y, CW, CH, c.eta);
+          if (c.env) drawSelectedRing(svg, x, y, CW, CH);
           const extra = c.status === 'capped'
             ? '<br>beyond the beam cap — interpolation anchor only' : '';
           addHit(svg, x, y, CW, CH, params +
@@ -946,23 +1025,11 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
             `<br>skirt ${skirtText(c)}${c.env ? '<br>← on the imaging curve' : ''}` +
             extra);
         } else if (c.status === 'skipped') {
-          svg.append(svgEl('rect', {x: x+1, y: y+1, width: CW-2, height: CH-2,
-            fill: 'var(--grid)', opacity: 0.28, stroke: 'var(--surface)',
-            'stroke-width': 2, rx: 2}));
-          svg.append(svgEl('line', {x1: x+4, y1: y+CH-4, x2: x+CW-4, y2: y+4,
-            stroke: 'var(--axis)', 'stroke-width': 1.2, opacity: 0.8,
-            'pointer-events': 'none'}));
+          drawSkippedCell(svg, x, y, CW, CH);
           addHit(svg, x, y, CW, CH, params +
             '<br>not measured: beam cap exceeded earlier in this row');
         } else if (c.status === 'failed') {
-          svg.append(svgEl('rect', {x: x+1, y: y+1, width: CW-2, height: CH-2,
-            fill: 'none', stroke: 'var(--axis)', 'stroke-width': 1.2, rx: 2}));
-          svg.append(svgEl('line', {x1: x+CW/2-4, y1: y+CH/2-4,
-            x2: x+CW/2+4, y2: y+CH/2+4, stroke: 'var(--axis)',
-            'stroke-width': 1.4, 'pointer-events': 'none'}));
-          svg.append(svgEl('line', {x1: x+CW/2+4, y1: y+CH/2-4,
-            x2: x+CW/2-4, y2: y+CH/2+4, stroke: 'var(--axis)',
-            'stroke-width': 1.4, 'pointer-events': 'none'}));
+          drawFailedCell(svg, x, y, CW, CH);
           addHit(svg, x, y, CW, CH, params + '<br>measurement failed');
         }
       });
@@ -977,14 +1044,52 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
     }
     holder.append(wrap);
   }
-  document.getElementById('hm-legend').innerHTML =
-    RAMP.map((c, i) => `<span style="display:inline-block;width:18px;height:12px;background:${c};border-radius:2px"></span>`).join('') +
-    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:6px">η 1 → 5; color clamps at η 5 (tooltip shows true value)</span>` +
-    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">● skirt ≤ 10%</span>` +
-    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">▢ selected by the imaging curve</span>` +
-    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">▧ beyond beam cap / anchor only</span>` +
-    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">╱ skipped after cap</span>` +
-    `<span style="font-size:12.5px;color:var(--ink-2);margin-left:18px">□ not measured</span>`;
+  const hmLegend = document.getElementById('hm-legend');
+  hmLegend.textContent = '';
+  const cellSwatch = draw => {
+    const svg = svgEl('svg', {viewBox: '0 0 18 14', width: 18, height: 14,
+      'aria-hidden': 'true', focusable: 'false'});
+    draw(svg, 0, 0, 18, 14);
+    return svg;
+  };
+  const legendEntry = (swatches, caption) => {
+    const item = document.createElement('span');
+    item.style.cssText = 'display:inline-flex;align-items:center;gap:4px;' +
+      'font-size:12.5px;color:var(--ink-2)';
+    swatches.forEach(s => item.append(s));
+    item.append(document.createTextNode(caption));
+    hmLegend.append(item);
+  };
+  legendEntry(RAMP.map(c => cellSwatch((svg, x, y, w, h) =>
+    svg.append(svgEl('rect', {x: x+1, y: y+1, width: w-2, height: h-2,
+      fill: c, stroke: 'var(--surface)', 'stroke-width': 2, rx: 2})))),
+    'η 1 → 5 (color clamps at 5; tooltip shows the true value)');
+  legendEntry([
+    cellSwatch((svg, x, y, w, h) => {
+      drawMeasuredCell(svg, x, y, w, h, {eta: 1.4});
+      drawSkirtDot(svg, x, y, w, h, 1.4);
+    }),
+    cellSwatch((svg, x, y, w, h) => {
+      drawMeasuredCell(svg, x, y, w, h, {eta: 4.2});
+      drawSkirtDot(svg, x, y, w, h, 4.2);
+    }),
+  ], 'skirt ≤ 10% (white dot on dark cells)');
+  legendEntry([cellSwatch((svg, x, y, w, h) => {
+    drawMeasuredCell(svg, x, y, w, h, {eta: 3.0});
+    drawSelectedRing(svg, x, y, w, h);
+  })], 'selected by the imaging curve');
+  if (heatmapStatus.capped)
+    legendEntry([cellSwatch((svg, x, y, w, h) => {
+      drawMeasuredCell(svg, x, y, w, h, {eta: 1.4});
+      drawCappedHatch(svg, x, y, w, h, 1.4);
+    })], 'beyond the beam cap — anchor only');
+  if (heatmapStatus.skipped)
+    legendEntry([cellSwatch(drawSkippedCell)],
+      'not measured (beam cap exceeded earlier in row)');
+  if (heatmapStatus.failed)
+    legendEntry([cellSwatch(drawFailedCell)], 'failed');
+  if (heatmapStatus.missing)
+    legendEntry([cellSwatch(drawNullCell)], 'not measured');
 })();
 
 // PSF radial profile -----------------------------------------------------------
