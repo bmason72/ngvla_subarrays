@@ -26,7 +26,7 @@ taperability-*/
 curvegen/reports/
 
 # claude-codex bridge
-codex-bridge/
+codex-bridge/tmp/
 tmp/codex/
 
 # user-local Claude Code permission grants (machine-specific)
