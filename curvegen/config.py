@@ -159,6 +159,12 @@ MS_DIR = os.path.join(REPO, "curvegen", "ms")
 WORK_DIR = os.path.join(REPO, "curvegen", "work")
 RESULTS_DIR = os.path.join(REPO, "curvegen", "results")
 
+# PSF radial-profile capture (groundwork for memo-style beam-shape work):
+# every successfully imaged sweep point appends one JSON line of azimuthal
+# profile to PROFILE_DIR/<subarray file stem>.jsonl (see sweep.py)
+CAPTURE_PROFILES = True
+PROFILE_DIR = os.path.join(RESULTS_DIR, "profiles")
+
 # the two seed points every sweep runs first; their measured beams anchor
 # the taper grid (res_nat from the first, res_fine from the second)
 SEEDS = [("natural", 2.0, 0.0), ("briggs", -2.0, 0.0)]

@@ -18,6 +18,14 @@ How a sweep runs (v2 -- see config.py for the grid rationale):
      extended grid just picks up where it left off.  Failures are caught
      and recorded (status=failed) so one bad point never aborts a sweep.
 
+PSF radial profiles: when config.CAPTURE_PROFILES is on, every successfully
+imaged point also appends one JSON line ({"key": ..., "res_geo_arcsec": ...,
+"r_arcsec": [...], "psf": [...]}) to PROFILE_DIR/<subarray file stem>.jsonl
+before the image products are deleted.  Appends are keyed by the lattice
+point: a re-measured point may append a second line, so consumers must take
+the LAST line per key.  A profile-capture failure never fails or skips the
+sweep point (one-line warning only).
+
 Run (from the curvegen/ directory, CASA's python3):
   .../python3 sweep.py core             # simulate if needed, then sweep
   .../python3 sweep.py core --limit 4   # at most 4 new points (pilot)
@@ -39,9 +47,10 @@ import casatools
 from casatasks import tclean, casalog
 
 from config import (SUBARRAYS, IMSIZE, OVERSAMPLE, WORK_DIR, RESULTS_DIR,
-                    SEEDS, BEAM_CAP_ARCSEC, MIN_UVRANGE_M, grid_rows)
+                    SEEDS, BEAM_CAP_ARCSEC, MIN_UVRANGE_M, grid_rows,
+                    CAPTURE_PROFILES, PROFILE_DIR)
 from simulate import make_ms
-from measure import beam_arcsec, image_rms, psf_skirt
+from measure import beam_arcsec, image_rms, psf_skirt, psf_radial_profile
 
 FIELDS = ["subarray", "weighting", "robust", "taper_mas", "imsize",
           "cell_arcsec", "bmaj_arcsec", "bmin_arcsec", "bpa_deg",
@@ -54,6 +63,11 @@ TCLEAN_EXTS = [".psf", ".image", ".residual", ".pb", ".sumwt", ".model",
 
 def point_key(weighting, robust, taper_mas):
     return "%s_%.2f_%.3f" % (weighting, float(robust), float(taper_mas))
+
+
+def _sig5(v):
+    """Round a float to 5 significant digits (compact profile JSON)."""
+    return float("%.5g" % float(v))
 
 
 def result_shards(results_path):
@@ -272,6 +286,15 @@ class Sweep:
                        sigma_dirty="%.6g" % sigma, skirt="%.4g" % skirt,
                        status=status, error=err,
                        elapsed_s="%.1f" % (time.time() - t0))
+            # compact radial profile, captured before the finally-block
+            # cleanup deletes the PSF; a capture failure must never fail
+            # or skip the point itself
+            if CAPTURE_PROFILES:
+                try:
+                    self.capture_profile(key, name + ".psf", res_geo)
+                except Exception as pe:
+                    print("warning: profile capture failed for %s: %s"
+                          % (key, pe), file=sys.stderr)
         except Exception as e:
             traceback.print_exc()
             row = dict(subarray=self.subarray, weighting=weighting,
@@ -285,6 +308,29 @@ class Sweep:
                 shutil.rmtree(name + ext, ignore_errors=True)
         self.record(row)
         return row
+
+    def capture_profile(self, key, psf_path, res_geo_arcsec):
+        """Append one radial-profile JSON line for a measured point.
+
+        Consumers take the LAST line per key (re-measured points append)."""
+        r, p = psf_radial_profile(psf_path, res_geo_arcsec)
+        os.makedirs(PROFILE_DIR, exist_ok=True)
+        stem = self.subarray.replace("+", "_").replace("-", "_")
+        line = json.dumps(dict(key=key,
+                               res_geo_arcsec=_sig5(res_geo_arcsec),
+                               r_arcsec=[_sig5(v) for v in r],
+                               psf=[_sig5(v) for v in p])) + "\n"
+        # one os.write on an O_APPEND descriptor: the best atomicity
+        # available when parallel shard jobs (sweep_parallel.py /
+        # fill_grid.py) append to the same file; interleaving is still
+        # possible on a shared filesystem, so consumers should also skip
+        # malformed lines (profiles are diagnostics, never curve data)
+        fd = os.open(os.path.join(PROFILE_DIR, stem + ".jsonl"),
+                     os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+        try:
+            os.write(fd, line.encode())
+        finally:
+            os.close(fd)
 
     def skip_point(self, weighting, robust, taper_mas, why):
         key = point_key(weighting, robust, taper_mas)
