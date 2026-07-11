@@ -33,6 +33,9 @@ ORDER = ["core", "spiral", "mid", "core+spiral", "spiral+mid",
 
 GRID_DEX = 0.01      # target-resolution grid spacing of the plotted curves
 MARK_EVERY = 8       # cadence of tooltip markers along smooth curve runs
+SKIRT_SETPOINTS = [0.05, 0.10, 0.15, 0.20]
+SKIRT_DEFAULT = 0.10
+SKIRT_DEFAULT_KEY = "%.2f" % SKIRT_DEFAULT
 
 
 def build_curve(samples, skirt_max=None, max_res=None):
@@ -273,8 +276,15 @@ def main(out_path):
             if r["name"] in caps:
                 caps[r["name"]] = float(cap) * 1e3 if cap else None
 
-    imaging = {n: build_curve(samples_by[n], 0.10, max_res=caps[n])
-               for n in ORDER}
+    skirt_setpoints = ["%.2f" % s0 for s0 in SKIRT_SETPOINTS]
+    imaging = {}
+    for s0, key in zip(SKIRT_SETPOINTS, skirt_setpoints):
+        imaging[key] = {n: build_curve(samples_by[n], s0, max_res=caps[n])
+                        for n in ORDER}
+        if key != SKIRT_DEFAULT_KEY:
+            for curve in imaging[key].values():
+                for p in curve:
+                    p.pop("env_keys", None)
     heatmaps = {}
     if os.path.isdir(RESULTS_DIR):
         for base in sorted(os.listdir(RESULTS_DIR)):
@@ -294,10 +304,11 @@ def main(out_path):
             if not nat or nat.get("status") != "ok":
                 continue
             hm = build_heatmap(name, rows, float(nat["sigma_dirty"]),
-                               imaging[name])
+                               imaging[SKIRT_DEFAULT_KEY][name])
             if hm is not None:
                 heatmaps[name] = hm
-    for curve in imaging.values():          # anchors only feed the heatmaps
+    for curve in imaging[SKIRT_DEFAULT_KEY].values():
+        # anchors only feed the default-threshold heatmaps
         for p in curve:
             p.pop("env_keys", None)
     pointsource = {n: build_curve(samples_by[n], max_res=caps[n])
@@ -306,6 +317,8 @@ def main(out_path):
         for p in curve:
             p.pop("env_keys", None)
     data = dict(order=ORDER, las=las, caps=caps, samples=display_by,
+                skirt_setpoints=skirt_setpoints,
+                s0_default=SKIRT_DEFAULT_KEY,
                 imaging=imaging,
                 pointsource=pointsource,
                 counts={n: len(display_by[n]) for n in ORDER},

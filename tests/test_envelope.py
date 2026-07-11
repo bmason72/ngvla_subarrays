@@ -799,7 +799,6 @@ class TestReportSelectorParity(unittest.TestCase):
     8 Jul 2026)."""
 
     def _js_pick(self, curve, res_ref, obs):
-        import math
         lo, hi = res_ref * 0.95, res_ref * 1.05
         win = [c for c in curve if lo <= c.res <= hi]
         if not win:
@@ -813,37 +812,57 @@ class TestReportSelectorParity(unittest.TestCase):
                                         else 1e9), c.eta))
 
     def test_js_window_pick_tracks_engine(self):
-        import math
         lib = CurveLibrary(samples=REVF_CSV)
+        self._check_window_pick_tracks_engine(
+            lib,
+            ("core", "spiral", "mid", "core+spiral", "spiral+mid",
+             "main", "core-inner"),
+            0.10, 50)
+        self._check_window_pick_tracks_engine(
+            lib, ("core", "spiral+mid", "main"), 0.20, 20)
+
+    def _check_window_pick_tracks_engine(self, lib, names, skirt_max, min_n):
+        import math
         worst, hard_mism, n = 0.0, 0, 0
-        for name in ("core", "spiral", "mid", "core+spiral", "spiral+mid",
-                     "main", "core-inner"):
+        for name in names:
             env = lib.envelope(name)
-            curve = env.curve(skirt_max=0.10, grid_dex=0.01)  # the DATA.imaging
+            info = lib.subarrays.get(name)
+            max_res = info.beam_cap_arcsec if info else None
+            curve = env.curve(skirt_max=skirt_max, grid_dex=0.01,
+                              max_res=max_res)  # the DATA.imaging[s0]
             cov = env.coverage()
-            lo, hi = math.log10(cov[0]), math.log10(cov[1])
+            cov_hi = cov[1] if max_res is None else min(cov[1], max_res)
+            if cov_hi < cov[0]:
+                continue
+            lo, hi = math.log10(cov[0]), math.log10(cov_hi)
             for i in range(15):
                 theta = 10 ** (lo + (hi - lo) * i / 14)
                 jp = self._js_pick(curve, theta, "imaging")
-                c = env.solve(theta, margin=0.05, skirt_max=0.10, relax=True)
+                c = env.solve(theta, margin=0.05, skirt_max=skirt_max,
+                              relax=True, max_res=max_res)
                 if jp is None or c is None or c.eta > 3.0:
                     continue          # coarse near-cap end is not of interest
                 n += 1
                 worst = max(worst, abs(jp.eta - c.eta))
-                # a strict/relaxed flip is benign at the skirt SEAM (both skirts
-                # ~0.10); only count it if it's a genuine (non-seam) mismatch
+                # a strict/relaxed flip is benign at the skirt seam; only
+                # count it if it's a genuine (non-seam) mismatch
                 if bool(jp.relaxed) != bool(c.relaxed):
-                    js_s = jp.skirt if jp.skirt is not None else 0.10
-                    en_s = c.skirt if c.skirt is not None else 0.10
-                    if min(abs(js_s - 0.10), abs(en_s - 0.10)) > 0.01:
+                    js_s = jp.skirt if jp.skirt is not None else skirt_max
+                    en_s = c.skirt if c.skirt is not None else skirt_max
+                    if min(abs(js_s - skirt_max),
+                           abs(en_s - skirt_max)) > 0.01:
                         hard_mism += 1
         # the JS window pick (over the pre-built 0.01-dex curve) and the
         # continuous engine solve agree to the grid discretization -- ~0.1 eta
         # at the steepest spots (the report is a quick-look; the Python
         # selector is authoritative); regime agrees except at the skirt seam
-        self.assertGreater(n, 50)
-        self.assertLess(worst, 0.12, "JS/engine eta drift %.3f" % worst)
-        self.assertEqual(hard_mism, 0, "JS/engine hard regime mismatch")
+        self.assertGreater(n, min_n)
+        self.assertLess(worst, 0.12,
+                        "JS/engine eta drift %.3f at s0=%.2f"
+                        % (worst, skirt_max))
+        self.assertEqual(hard_mism, 0,
+                         "JS/engine hard regime mismatch at s0=%.2f"
+                         % skirt_max)
 
 
 class TestBeamCapClipping(unittest.TestCase):
