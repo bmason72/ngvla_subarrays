@@ -297,6 +297,32 @@ wrapper; the previously-noted monolithic install is broken). 28/28 tests pass.
   running. TODO when trusted: drop them from `DEFERRED` in `collect.py` +
   `make_report.py`.
 
+### Feature tranche 1 (10-11 Jul 2026) — commits v11-v13, 93 tests green
+
+From bmason's features.txt: v11 (67606c3) PSF radial-profile capture in the
+sweep (results/profiles/<sa>.jsonl; future sweeps collect profiles free —
+feeds feature 3); v12 (7afac69) ngECT curve export
+(`casapy -m sa_select.export_ngect` -> sa_select/data/
+ngect_subarray_data.json; geometric-mean beam convention — NOT Stroh's
+sqrt(2) quadrature; PCHIP-PPoly splines, <1% vs engine, QA PNGs);
+v13 (a40d4b1) report skirt-setpoint dropdown (pre-tabulated s0 = 0.05/0.10/
+0.15/0.20; heatmap rings pinned to 0.10). The (rev, sim_mode) schema axis
+(tranche component D) was DEFERRED by bmason — it is the prerequisite for
+the RevD/snapshot campaigns (campaign_proposal_revd_snapshot.md, awaiting
+his markup). v13's missing codex review was re-run post-hoc on the
+committed diff (11 Jul; findings adjudicated below/in git).
+
+**ASK BMASON next iteration:**
+1. Eyeball verdict on the s0 dropdown UX (revf-curves.html) incl. relaxed
+   tooltips at s0 != 10%, and on the export QA PNGs
+   (curvegen/reports/ngect-export-qa/). (Deferred 11 Jul by bmason.)
+2. Stroh outreach (bmason agrees, 11 Jul): the exported "imaging" splines
+   for the four long-baseline combos use a labeled relaxed fallback
+   (`selection_policy` field) because they have NO strict skirt<=0.10
+   points — settle with Stroh/ngECT whether that is acceptable to the
+   consumer, and share the sqrt(2)-convention + spiral-spline findings
+   (mstroh_comparison.md).
+
 ### Report-glitch fixes (9-10 Jul 2026 — post-recompute)
 
 bmason flagged three glitches in the 9 Jul 00:15 report (the recompute job
