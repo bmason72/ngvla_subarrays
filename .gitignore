@@ -31,6 +31,7 @@ tmp/codex/
 
 # user-local Claude Code permission grants (machine-specific)
 .claude/settings.local.json
+.claude/
 # scratch symlinks (TACC): match the symlinks themselves, not just dir contents
 curvegen/ms
 curvegen/work
