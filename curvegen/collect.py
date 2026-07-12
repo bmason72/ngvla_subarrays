@@ -13,18 +13,39 @@ import csv
 import glob
 import os
 
-from config import RESULTS_DIR, REPO, OVERSAMPLE
+from config import RESULTS_DIR, REPO, OVERSAMPLE, REV, SIM_MODE
+
+DATA_DIR = os.path.join(REPO, "sa_select", "data")
+
+
+def registry_paths(rev=REV, sim_mode=SIM_MODE):
+    """(subarrays_csv, samples_csv) absolute paths for the active (rev,
+    sim_mode), resolved through sa_select/data/config_registry.csv.  This is
+    the SAME registry sa_select.CurveLibrary.for_config reads, so a campaign's
+    output lands exactly where the selector will look for it.  An unregistered
+    combination is a hard error telling the operator to add a row."""
+    reg_path = os.path.join(DATA_DIR, "config_registry.csv")
+    with open(reg_path, newline="") as f:
+        for r in csv.DictReader(f):
+            if r["rev"].strip() == rev and r["sim_mode"].strip() == sim_mode:
+                return (os.path.join(DATA_DIR, r["subarrays_csv"].strip()),
+                        os.path.join(DATA_DIR, r["samples_csv"].strip()))
+    raise SystemExit(
+        "collect.py: no config_registry.csv row for (rev=%r, sim_mode=%r).\n"
+        "Add a row 'rev,sim_mode,subarrays_csv,samples_csv' to %s before "
+        "collecting this campaign's curves." % (rev, sim_mode, reg_path))
+
+
+SUBARRAYS_CSV, OUT = registry_paths()
 
 
 def offered_subarrays():
-    """Subarrays the selector offers (rows of sa_select/data/subarrays.csv).
-    Result files for other subarrays (e.g. in-progress campaign members,
+    """Subarrays the selector offers (rows of the active combo's subarrays
+    CSV).  Result files for other subarrays (e.g. in-progress campaign members,
     or the dropped core+mid) are skipped until their metadata lands."""
-    path = os.path.join(REPO, "sa_select", "data", "subarrays.csv")
-    with open(path, newline="") as f:
+    with open(SUBARRAYS_CSV, newline="") as f:
         return {r["name"].strip() for r in csv.DictReader(f)}
 
-OUT = os.path.join(REPO, "sa_select", "data", "revf_curves.csv")
 OUT_FIELDS = ["subarray", "resolution_arcsec_30ghz", "eta", "skirt",
               "weighting", "robust", "taper_arcsec_30ghz", "freq_orig_ghz",
               "source", "note", "sample_status"]

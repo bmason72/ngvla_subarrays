@@ -308,9 +308,11 @@ sqrt(2) quadrature; PCHIP-PPoly splines, <1% vs engine, QA PNGs);
 v13 (a40d4b1) report skirt-setpoint dropdown (pre-tabulated s0 = 0.05/0.10/
 0.15/0.20; heatmap rings pinned to 0.10). The (rev, sim_mode) schema axis
 (tranche component D) was DEFERRED by bmason — it is the prerequisite for
-the RevD/snapshot campaigns (campaign_proposal_revd_snapshot.md, awaiting
-his markup). v13's missing codex review was re-run post-hoc on the
-committed diff (11 Jul; findings adjudicated below/in git).
+the RevD/snapshot campaigns (campaign_proposal_revd_snapshot.md).  **Now
+IMPLEMENTED (12 Jul 2026) together with the Rev D + snapshot campaign
+machinery — see the dedicated section below.**  v13's missing codex review
+was re-run post-hoc on the committed diff (11 Jul; findings adjudicated
+below/in git).
 
 **ASK BMASON next iteration:**
 1. Eyeball verdict on the s0 dropdown UX (revf-curves.html) incl. relaxed
@@ -322,6 +324,67 @@ committed diff (11 Jul; findings adjudicated below/in git).
    points — settle with Stroh/ngECT whether that is acceptable to the
    consumer, and share the sqrt(2)-convention + spiral-spline findings
    (mstroh_comparison.md).
+
+### (rev, sim_mode) axis + Rev D / snapshot campaign machinery (12 Jul 2026)
+
+Implements features 5 (multiple config revisions) + 6 (snapshot sim) and the
+deferred tranche component D that underpins them.  Codex design-consulted then
+diff-reviewed (tmp/codex_revd_snapshot_design.md, tmp/codex_review*).  **All
+code that does not depend on the not-yet-run sweeps is done; the sbatch is
+staged for bmason to submit.** 96 tests green; default (revF, track) verified
+byte-identical (report HTML + collect output diffed old-vs-new).
+
+**The axis.** `curvegen/config.py` reads `NGVLA_REV` (revF|revD) and
+`NGVLA_SIM_MODE` (track|snapshot) from the environment at import.  The DEFAULT
+(revF, track) reproduces the old hardcoded config byte-for-byte (same dicts,
+same `curvegen/{configs,results,ms,work}` paths).  Any other combo:
+- component .cfg map + dir switch per rev (revD "long" = `lba.cfg`; core/spiral/
+  mid map name-for-name); `SUBARRAYS`/`IMSIZE`/`MIN_UVRANGE_M` become per-rev.
+- `config_suffix()` = `-<rev>_<sim_mode>`; `CFG_DIR`/`RESULTS_DIR` get it in the
+  repo, `MS_DIR`/`WORK_DIR` go to `$NGVLA_SCRATCH/<kind><suffix>` (big/scratch).
+- snapshot = a single 60 s integration centered on transit, `("-30s","30s")`;
+  `simulate.py` asserts exactly one dump lands (verified: 1).
+- `sa_select/data/config_registry.csv` (`rev,sim_mode,subarrays_csv,samples_csv`)
+  is the source of truth; `CurveLibrary.for_config(rev,sim_mode)`,
+  `collect.py`, and `make_report.py --rev/--sim-mode` all route through it.
+  Rev D metadata is `subarrays_revd.csv`; revF/snapshot reuses Rev F geometry
+  (`subarrays_revf_snapshot.csv`, caps blanked).  Each combo gets its OWN curve
+  CSV + HTML report (`revd-track-curves.html`), so nothing collides.
+
+**Beam caps two-step.** Default caps stay hardcoded in config.  For any other
+combo the native beams differ, so caps are MEASURED from that combo's own
+natural seeds: `CAP_REFERENCE[rev]` maps each heterogeneous subarray to the
+offered subarray whose natural beam is its cap (revD: main←core, mid+long←mid,
+main+long←main).  `fill_beam_caps.py` (run after the seed pass) writes those
+caps INTO the metadata CSV; `config._load_caps_from_metadata()` reads them back
+at import for the full grid.  It FAILS CLOSED if a reference seed is missing —
+prep also does NOT regenerate the metadata CSV, so a resubmit never blanks the
+caps.  (Rev D `lba` has the SAME spurious-short pathology as Rev F Long —
+baselines 36-174 m then a jump to 131 km — so the existing 178 m cut applies to
+long/mid+long; main+long is unfiltered, as in Rev F.)
+
+**Campaign submission (bmason runs from a login node).** A 3-stage Slurm
+pipeline wired by `curvegen/submit_campaign.sh <rev> <sim_mode> [--time] [--prep-only]`:
+1. `campaign_prep.sbatch` — build cfgs, `sweep.py --seeds-only` for every
+   cap-reference subarray (`campaign_tasks.py seeds`), then `fill_beam_caps`.
+   Seeds-only (NOT a pilot): the two seeds are cap/lattice-invariant, so no
+   pre-cap row can strand or mis-cap a heterogeneous subarray (codex review).
+   QA gate: eyeball seed beams / imsize / cell in the log (or `--prep-only`).
+2. `campaign_sweep.sbatch` — Slurm job ARRAY; `campaign_tasks.py groups` puts
+   each long-baseline (>2600 km) subarray on its OWN node and the rest in one
+   grouped task (bmason's node rule).  Each task: sweep_parallel → fill_grid →
+   refine.  `--dependency=afterok` on prep.
+3. `campaign_collect.sbatch` — collect → routed curve CSV + own HTML report;
+   afterok on the array.
+Env (`NGVLA_REV/SIM_MODE/SCRATCH`) is `--export`ed to EVERY stage (a Slurm
+dependency does not inherit it).  Commands:
+`bash curvegen/submit_campaign.sh revF snapshot --time 24:00:00`  (campaign 1),
+`bash curvegen/submit_campaign.sh revD track --time 48:00:00`     (campaign 2).
+
+**Known cosmetic limitation:** a non-default report's `profile`/`qa` diagnostic
+blocks still show the Rev F reference values (the curves/heatmaps/LAS/sens ARE
+combo-correct); the output filename disambiguates.  Rev D / snapshot (one more
+registry row + rerun) is a follow-on if wanted after 1 + 2.
 
 ### Report-glitch fixes (9-10 Jul 2026 — post-recompute)
 
@@ -658,13 +721,14 @@ tool and can't be validated now without colliding with the running job; build
 + validate it before the next full recompute.**  [Recompute job 3287698
 LAUNCHED by bmason 8 Jul; QA when it lands.]
 
-7. **[FUTURE — do not implement now]** Selectable config revisions (revD, revF)
-   for both curve generation and the calculator; and per-rev snapshot
-   (single-integration) vs 4-h-track sims. Architecture impact to keep in mind:
-   curve data keys and the report/selector must become rev- and sim-mode-aware
-   (a (rev, sim_mode) axis on subarrays.csv/revf_curves.csv, the report
-   dropdowns, and the sensitivity path). Design items 2 & 4's data schema and
-   the report DATA layout so adding this axis later is additive, not a rewrite.
+7. **[DONE 12 Jul 2026]** Selectable config revisions (revD, revF) for curve
+   generation, and per-rev snapshot vs 4-h-track sims — implemented as the
+   (rev, sim_mode) env axis + registry (see the dedicated 12 Jul section
+   above).  Each combo gets its own subarrays/curve CSVs + HTML report keyed
+   through `config_registry.csv`; additive, default byte-identical.  NOT yet
+   wired into the calculator/selector CLI as a user-facing `--rev` flag (the
+   selector still defaults to revF via `CurveLibrary()`); `for_config` exists
+   for when a second dataset is swept and we want to expose it.
 
 **Context for another model/agent**: CLAUDE.md (repo guide) → this PLAN →
 `curve_anomaly_postmortem.md` (why the engine is what it is) →
@@ -819,6 +883,14 @@ high effort. Plumbing/IO/CLI → mid model, medium effort.
   results/attic-badcell/, strips, re-measures under the current rule);
   `collect.py` now HARD-FAILS on any ok/capped row violating the cell rule
   so mixed conventions can never be published again.
+- **$SCRATCH is periodically PURGED (bmason 11 Jul 2026):** the MSes and
+  work dirs under `$SCRATCH/ngvla_curvegen/` (targets of the `curvegen/ms`
+  and `curvegen/work` symlinks) can vanish.  All are regenerable (results
+  CSVs live in the repo), but re-simulating costs time.  TODO next
+  campaign: either archive freshly built MSes to `$WORK` after generation
+  or point the symlinks at `$WORK` outright if its quota/IO suit sweeps
+  (keep tclean cwd wherever TempLattice churn is acceptable — check $WORK
+  quota before moving that).
 - **TACC (Stampede3):** `$HOME` quota is 14 GB — `curvegen/ms` & `work` are
   symlinks into `$SCRATCH/ngvla_curvegen/`, and sweeps must run with **cwd on
   scratch** because CASA writes multi-GB `TempLattice*` scratch images to the

@@ -589,5 +589,46 @@ class TestBeamCapLibrary(SyntheticLibraryTestCase):
         self.assertEqual(lib.samples["homog"][0].sample_status, "ok")
 
 
+class TestConfigRegistry(unittest.TestCase):
+    """The (rev, sim_mode) axis (tranche component D): CurveLibrary.for_config
+    resolves data files through data/config_registry.csv.  The default
+    (revF, track) must be identical to the plain constructor."""
+
+    def test_default_combo_matches_plain_constructor(self):
+        lib = CurveLibrary.for_config("revF", "track")
+        self.assertEqual(sorted(lib.names()), sorted(CurveLibrary().names()))
+        self.assertTrue(lib.names())          # non-empty (real Rev F data)
+
+    def test_registry_lists_default(self):
+        from sa_select.curves import load_registry
+        reg = load_registry()
+        self.assertIn(("revF", "track"), reg)
+        self.assertEqual(reg[("revF", "track")],
+                         ("subarrays.csv", "revf_curves.csv"))
+
+    def test_unknown_combo_raises(self):
+        with self.assertRaises(ValueError) as cm:
+            CurveLibrary.for_config("revZ", "warp")
+        self.assertIn("config_registry", str(cm.exception))
+
+    def test_campaign_combos_registered(self):
+        from sa_select.curves import load_registry
+        reg = load_registry()
+        for combo in [("revD", "track"), ("revF", "snapshot")]:
+            self.assertIn(combo, reg, "campaign combo %s must be registered "
+                          "so collect/make_report can route it" % (combo,))
+
+    def test_campaign_metadata_csvs_load(self):
+        # the committed Rev D / snapshot metadata CSVs must stay schema-valid
+        # (their curve CSVs are produced later by the sweeps)
+        from sa_select.curves import load_subarrays, load_registry, DATA_DIR
+        reg = load_registry()
+        counts = {("revD", "track"): 9, ("revF", "snapshot"): 14}
+        for combo, n in counts.items():
+            subs_csv, _ = reg[combo]
+            info = load_subarrays(os.path.join(DATA_DIR, subs_csv))
+            self.assertEqual(len(info), n, "%s subarray count" % (combo,))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,10 +1,13 @@
 """
-Simulate a noise-only measurement set for one Rev F subarray at 30 GHz.
+Simulate a noise-only measurement set for one subarray at 30 GHz.
 
 Adapted from ngvla-taperability-pipeline/create_sim_ms.py (V. Rosero), with
-the same observing setup -- 4 h track (HA -2h..+2h), 60 s dumps, dec +24,
-one 1 MHz channel, 1 Jy per-visibility noise -- but callable as a plain
-function under CASA's python3 (casatools, no casashell globals).
+the same observing setup -- 60 s dumps, dec +24, one 1 MHz channel, 1 Jy
+per-visibility noise -- but callable as a plain function under CASA's python3
+(casatools, no casashell globals).  The observing WINDOW comes from the active
+sim_mode (config.SIM): "track" is the 4 h HA track (-2h..+2h); "snapshot" is a
+single 60 s integration centered on transit (HA=0).  For snapshot the created
+MS is asserted to hold exactly one integration.
 
 Run:  .../python3 curvegen/simulate.py core [spiral ...]
 """
@@ -16,7 +19,7 @@ import sys
 import casatools
 from casatasks.private.simutil import simutil
 
-from config import SUBARRAYS, SIM, CFG_DIR, MS_DIR
+from config import SUBARRAYS, SIM, SIM_MODE, CFG_DIR, MS_DIR
 
 
 def make_ms(subarray, overwrite=False):
@@ -65,8 +68,31 @@ def make_ms(subarray, overwrite=False):
     sm.setnoise(mode="simplenoise", simplenoise=SIM["noise"])
     sm.corrupt()
     sm.close()
-    print("created %s (%d antennas)" % (ms_path, len(x)))
+
+    # snapshot must be exactly one integration at HA=0 -- fail loudly if the
+    # CASA time-sampling produced 0 or 2 dumps for the 60 s window (bmason /
+    # codex Q3: don't trust CASA edge behaviour without a post-sim check)
+    n_dumps = _count_integrations(ms_path)
+    if SIM_MODE == "snapshot" and n_dumps != 1:
+        shutil.rmtree(ms_path, ignore_errors=True)
+        raise RuntimeError(
+            "snapshot sim for %s produced %d integrations (expected exactly 1)"
+            " for window %s -- adjust config.SIM_MODES['snapshot'] timerange"
+            % (subarray, n_dumps, SIM["timerange"]))
+    print("created %s (%d antennas, %d integration%s)"
+          % (ms_path, len(x), n_dumps, "" if n_dumps == 1 else "s"))
     return ms_path
+
+
+def _count_integrations(ms_path):
+    """Number of distinct integration timestamps in the MS (= dumps)."""
+    tb = casatools.table()
+    tb.open(ms_path)
+    try:
+        import numpy as np
+        return int(np.unique(tb.getcol("TIME")).size)
+    finally:
+        tb.close()
 
 
 if __name__ == "__main__":

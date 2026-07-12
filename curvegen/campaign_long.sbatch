@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH -J ngvla_campaign
+#SBATCH -A AST25010
 #SBATCH -o /work2/10240/bmason72/stampede3/campaign_%j.log
 #SBATCH -p icx
 #SBATCH -N 1

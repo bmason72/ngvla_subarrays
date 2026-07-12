@@ -489,6 +489,12 @@ if __name__ == "__main__":
     ap.add_argument("subarray", choices=sorted(SUBARRAYS))
     ap.add_argument("--limit", type=int, default=None,
                     help="run at most N new points")
+    ap.add_argument("--seeds-only", action="store_true",
+                    help="run ONLY the two seed points (natural + robust=-2, "
+                         "untapered) and stop.  The seeds are cap- and "
+                         "lattice-invariant, so this is the safe pre-cap pass: "
+                         "it never writes a lattice point that a later "
+                         "cap/N_TAPERS_HETERO change would strand or mis-cap.")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--only-row", type=parse_row_spec,
                     help="run only one lattice row, e.g. briggs:-1.2")
@@ -499,11 +505,19 @@ if __name__ == "__main__":
     args = ap.parse_args()
     if args.points_file and args.only_row:
         ap.error("--points-file cannot be combined with --only-row")
+    if args.seeds_only and (args.only_row or args.points_file):
+        ap.error("--seeds-only cannot be combined with --only-row/--points-file")
     include_shards = bool(args.only_row or args.shard or args.points_file)
-    sweep = Sweep(args.subarray, limit=args.limit, record_path=args.shard,
-                  include_shards=include_shards)
+    # --seeds-only ignores --limit (it runs exactly the seeds, no lattice)
+    sweep = Sweep(args.subarray, limit=None if args.seeds_only else args.limit,
+                  record_path=args.shard, include_shards=include_shards)
     try:
-        if args.points_file:
+        if args.seeds_only:
+            seeds = sweep.ensure_seeds(dry_run=args.dry_run)
+            ok = seeds is not None
+            if ok and not args.dry_run:
+                print("%s: seeds ready (natural + robust=-2)" % args.subarray)
+        elif args.points_file:
             if args.dry_run:
                 ap.error("--dry-run is not supported with --points-file")
             ok = sweep.run_points(load_points_file(args.points_file),
@@ -513,5 +527,5 @@ if __name__ == "__main__":
     except RuntimeError as e:
         print("error:", e, file=sys.stderr)
         sys.exit(1)
-    if (args.only_row or args.points_file) and not ok:
+    if (args.only_row or args.points_file or args.seeds_only) and not ok:
         sys.exit(1)

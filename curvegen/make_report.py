@@ -1,20 +1,29 @@
 """
 Build the HTML curve-inspection report from the current sweep results.
 
-Reads sa_select/data/revf_curves.csv + subarrays.csv and injects the data as
-JSON into report_template.html.  The output is a self-contained page (no
-external resources) suitable for publishing as a Claude artifact or opening
-directly in a browser.
+Reads the (rev, sim_mode) combination's curve + subarray CSVs (routed through
+sa_select/data/config_registry.csv) and injects the data as JSON into
+report_template.html.  The output is a self-contained page (no external
+resources) suitable for opening directly in a browser.
 
-Run:  .../python3 make_report.py [output.html]
+The DEFAULT invocation is (revF, track) and is byte-for-byte identical to the
+original: it reads revf_curves.csv + subarrays.csv and RESULTS_DIR = results/.
+A campaign for another combination sets NGVLA_REV / NGVLA_SIM_MODE in the
+environment (so config.RESULTS_DIR points at that combo's results dir) and,
+optionally, passes matching --rev / --sim-mode:
+
+  Run:  .../python3 make_report.py [output.html]
+        NGVLA_REV=revD NGVLA_SIM_MODE=track .../python3 make_report.py \\
+            --rev revD --sim-mode track            # -> revd-track-curves.html
 """
 
+import argparse
 import csv
 import json
 import os
 import sys
 
-from config import REPO, RESULTS_DIR, ROBUST_LIST, grid_rows
+from config import REPO, RESULTS_DIR, ROBUST_LIST, grid_rows, REV, SIM_MODE
 
 sys.path.insert(0, REPO)                    # for the shared curve engine
 from sa_select.envelope import Envelope, ETA_CAP   # noqa: E402
@@ -36,6 +45,38 @@ MARK_EVERY = 8       # cadence of tooltip markers along smooth curve runs
 SKIRT_SETPOINTS = [0.05, 0.10, 0.15, 0.20]
 SKIRT_DEFAULT = 0.10
 SKIRT_DEFAULT_KEY = "%.2f" % SKIRT_DEFAULT
+
+DATA_DIR = os.path.join(REPO, "sa_select", "data")
+
+# Data routing.  These module globals default to (revF, track) so the plain
+# `make_report.py out.html` call is byte-identical to the original; __main__
+# re-points them for a different registered (rev, sim_mode).  ACTIVE_ORDER is
+# ORDER filtered to the combo's offered subarrays (identical to ORDER for the
+# default, since subarrays.csv holds exactly those 14).
+CURVES_CSV = os.path.join(DATA_DIR, "revf_curves.csv")
+SUBARRAYS_CSV = os.path.join(DATA_DIR, "subarrays.csv")
+ACTIVE_ORDER = ORDER
+
+
+def registry_paths(rev, sim_mode):
+    """(subarrays_csv, samples_csv) absolute paths for (rev, sim_mode) from
+    config_registry.csv; SystemExit with guidance if the combo is absent."""
+    reg = os.path.join(DATA_DIR, "config_registry.csv")
+    with open(reg, newline="") as f:
+        for r in csv.DictReader(f):
+            if r["rev"].strip() == rev and r["sim_mode"].strip() == sim_mode:
+                return (os.path.join(DATA_DIR, r["subarrays_csv"].strip()),
+                        os.path.join(DATA_DIR, r["samples_csv"].strip()))
+    raise SystemExit("make_report.py: no config_registry.csv row for "
+                     "(rev=%r, sim_mode=%r)" % (rev, sim_mode))
+
+
+def offered_order(subarrays_csv):
+    """ORDER restricted to the subarrays this combo actually offers, in ORDER's
+    display order (so color slots and layout are reused)."""
+    with open(subarrays_csv, newline="") as f:
+        offered = {r["name"].strip() for r in csv.DictReader(f)}
+    return [n for n in ORDER if n in offered]
 
 
 def build_curve(samples, skirt_max=None, max_res=None):
@@ -199,7 +240,7 @@ def build_sens_table(las):
     from sa_select import sensitivity as sens
 
     calc_names = {}
-    with open(os.path.join(REPO, "sa_select", "data", "subarrays.csv")) as f:
+    with open(SUBARRAYS_CSV) as f:
         for r in _csv.DictReader(f):
             calc_names[r["name"]] = r["calc_name"].strip() or r["name"]
 
@@ -213,7 +254,7 @@ def build_sens_table(las):
 
     C_M_S = 2.99792458e8
     out = {}
-    for name in ORDER:
+    for name in ACTIVE_ORDER:
         calc = calc_names.get(name, name)
         sig = []
         for f_ghz in freqs:
@@ -228,10 +269,10 @@ def build_sens_table(las):
     return out
 
 
-def main(out_path):
-    samples_by = {name: [] for name in ORDER}
-    display_by = {name: [] for name in ORDER}
-    with open(os.path.join(REPO, "sa_select", "data", "revf_curves.csv")) as f:
+def main(out_path, title_label=None):
+    samples_by = {name: [] for name in ACTIVE_ORDER}
+    display_by = {name: [] for name in ACTIVE_ORDER}
+    with open(CURVES_CSV) as f:
         for r in csv.DictReader(f):
             name = r["subarray"]
             if name not in samples_by:
@@ -262,8 +303,8 @@ def main(out_path):
                 display_by[name].append(s)
 
     las = {}
-    caps = {name: None for name in ORDER}
-    with open(os.path.join(REPO, "sa_select", "data", "subarrays.csv")) as f:
+    caps = {name: None for name in ACTIVE_ORDER}
+    with open(SUBARRAYS_CSV) as f:
         for r in csv.DictReader(f):
             lam = 0.299792458 / 30.0
             las[r["name"]] = dict(
@@ -280,7 +321,7 @@ def main(out_path):
     imaging = {}
     for s0, key in zip(SKIRT_SETPOINTS, skirt_setpoints):
         imaging[key] = {n: build_curve(samples_by[n], s0, max_res=caps[n])
-                        for n in ORDER}
+                        for n in ACTIVE_ORDER}
         if key != SKIRT_DEFAULT_KEY:
             for curve in imaging[key].values():
                 for p in curve:
@@ -297,7 +338,7 @@ def main(out_path):
                 continue
             name = next((r.get("subarray", "").strip()
                          for r in rows if r.get("subarray")), "")
-            if name not in ORDER:
+            if name not in ACTIVE_ORDER:
                 continue
             cells_by_key = best_result_rows(rows)
             nat = cells_by_key.get(("natural", 2.0, 0.0))
@@ -312,16 +353,16 @@ def main(out_path):
         for p in curve:
             p.pop("env_keys", None)
     pointsource = {n: build_curve(samples_by[n], max_res=caps[n])
-                   for n in ORDER}
+                   for n in ACTIVE_ORDER}
     for curve in pointsource.values():
         for p in curve:
             p.pop("env_keys", None)
-    data = dict(order=ORDER, las=las, caps=caps, samples=display_by,
+    data = dict(order=ACTIVE_ORDER, las=las, caps=caps, samples=display_by,
                 skirt_setpoints=skirt_setpoints,
                 s0_default=SKIRT_DEFAULT_KEY,
                 imaging=imaging,
                 pointsource=pointsource,
-                counts={n: len(display_by[n]) for n in ORDER},
+                counts={n: len(display_by[n]) for n in ACTIVE_ORDER},
                 heatmaps=heatmaps)
 
     # core+spiral natural-PSF radial profile measured 5 Jul 2026 (subsampled
@@ -361,10 +402,56 @@ def main(out_path):
     with open(TEMPLATE) as f:
         html = f.read()
     html = html.replace("__DATA__", json.dumps(data))
+    # For a non-default combo, relabel the static "Rev F / 4 h track" title text
+    # so the page names its own configuration.  Done as targeted string
+    # replacements on the rendered HTML (NOT the shared template), so the
+    # default (title_label=None) output stays byte-for-byte identical.  The
+    # profile/qa diagnostic blocks remain the Rev F reference values (a known
+    # cosmetic limitation, noted in PLAN.md).
+    if title_label:
+        html = (html
+                .replace("NGVLA Rev F subarray curves",
+                         "NGVLA %s subarray curves" % title_label)
+                .replace("Rev&thinsp;F taperability",
+                         "%s taperability" % title_label)
+                .replace("simulations of each Rev&thinsp;F",
+                         "simulations of each %s" % title_label))
     with open(out_path, "w") as f:
         f.write(html)
     print("wrote", out_path)
 
 
+_REV_DISPLAY = {"revF": "Rev F", "revD": "Rev D"}
+
+
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "revf-curves.html")
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("out_path", nargs="?", default=None,
+                    help="output HTML path (default: "
+                         "<rev>-<sim_mode>-curves.html, or revf-curves.html)")
+    ap.add_argument("--rev", default=REV,
+                    help="config revision (default: $NGVLA_REV or revF)")
+    ap.add_argument("--sim-mode", default=SIM_MODE, dest="sim_mode",
+                    help="simulation mode (default: $NGVLA_SIM_MODE or track)")
+    args = ap.parse_args()
+
+    # RESULTS_DIR (the heatmap source) is derived from the environment at
+    # import time, so --rev/--sim-mode MUST agree with NGVLA_REV/NGVLA_SIM_MODE.
+    # Refuse a mismatch rather than silently drawing another combo's heatmaps.
+    if (args.rev, args.sim_mode) != (REV, SIM_MODE):
+        ap.error("--rev/--sim-mode (%s/%s) disagree with the environment "
+                 "(NGVLA_REV=%s NGVLA_SIM_MODE=%s); export those to match, so "
+                 "RESULTS_DIR points at the right results dir"
+                 % (args.rev, args.sim_mode, REV, SIM_MODE))
+
+    is_default = (args.rev, args.sim_mode) == ("revF", "track")
+    if not is_default:
+        SUBARRAYS_CSV, CURVES_CSV = registry_paths(args.rev, args.sim_mode)
+        ACTIVE_ORDER = offered_order(SUBARRAYS_CSV)
+        label = "%s — %s" % (_REV_DISPLAY.get(args.rev, args.rev),
+                                  args.sim_mode)
+        default_out = "%s-%s-curves.html" % (args.rev.lower(), args.sim_mode)
+    else:
+        label = None
+        default_out = "revf-curves.html"
+    main(args.out_path or default_out, title_label=label)

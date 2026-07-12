@@ -35,10 +35,17 @@ tmp/codex/
 # scratch symlinks (TACC): match the symlinks themselves, not just dir contents
 curvegen/ms
 curvegen/work
+# per-(rev,sim_mode) campaign scratch dirs (ms-revD_track/, work-revF_snapshot/,
+# ...): huge/regenerable, normally on $NGVLA_SCRATCH but ignore repo fallbacks
+curvegen/ms-*/
+curvegen/work-*/
 
 # external delivery (contains nested git repos; see mstroh_comparison.md)
 mstroh/
 ._codex-bridge
-# transient run logs and in-flight parallel shards
-curvegen/results/*.log
-curvegen/results/*.csv.shard_*
+# transient run logs and in-flight parallel shards (all rev/sim_mode results
+# dirs: results/, results-revD_track/, results-revF_snapshot/, ...)
+curvegen/results*/*.log
+curvegen/results*/*.csv.shard_*
+# PSF radial profiles are diagnostics, not curve data -- keep them out of git
+curvegen/results*/profiles/

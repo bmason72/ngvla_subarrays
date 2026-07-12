@@ -21,12 +21,8 @@ sim_mode axis against arrays we already know well).
 **Campaign 2 — Rev D / track** (feature 5).
 - Component .cfgs exist: ngvla-configurations/"Rev D"/CASA Files/
   ngvla-revD.{core,spiral,mid,lba,sba,...}.cfg.
-- **Open question for you: the Rev D offered-subarray list.** My default
-  proposal: mirror the Rev F structure where components exist — core,
-  spiral, mid, core+spiral, spiral+mid, main (+ core+mid if wanted), and
-  optionally the lba (long) combos. Rev D has no delivered core-inner /
-  core-outer; we could derive them by the same innermost-57 rule if you
-  want parity. Please mark up the list.
+-RevD subarrays to include: mirror the Rev F structure where components exist — core,
+  spiral, mid, core+spiral, spiral+mid, main,main+long,long,mid+long
 - Full sweep cost comparable to the original Rev F campaign; request 48 h.
 
 **Rev D / snapshot**: only if you want it after seeing 1 + 2 (one more
@@ -65,6 +61,10 @@ allocation or the vnc node. New campaigns collect profiles automatically.
 ## What I need from you
 
 1. The Rev D offered-subarray list (mark up the default above).
+   -> DONE
 2. Snapshot convention: single 60 s integration at transit (HA = 0) with
    the same dec +24 — confirm, or specify HA/dec.
+   -> a single 60s integration
 3. Approval to stage the sbatch scripts; you submit from a login node.
+   -> yes just write them. i will submit
+

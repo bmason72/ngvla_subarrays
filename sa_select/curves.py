@@ -33,6 +33,25 @@ def _float_or_none(s: str) -> Optional[float]:
     return float(s) if s else None
 
 
+def load_registry(path: Optional[str] = None
+                  ) -> Dict[Tuple[str, str], Tuple[str, str]]:
+    """Read data/config_registry.csv into {(rev, sim_mode): (subs_csv, samp_csv)}.
+
+    The registry maps a configuration revision + simulation mode to the pair of
+    data files (both relative to data/) that describe it: the subarray-metadata
+    CSV and the curve-sample CSV.  It is the single source of truth for which
+    files back a given (rev, sim_mode) -- see CurveLibrary.for_config and
+    curvegen/collect.py (which routes its output through the same registry).
+    """
+    path = path or os.path.join(DATA_DIR, "config_registry.csv")
+    out: Dict[Tuple[str, str], Tuple[str, str]] = {}
+    with open(path, newline="") as f:
+        for row in csv.DictReader(f):
+            out[(row["rev"].strip(), row["sim_mode"].strip())] = (
+                row["subarrays_csv"].strip(), row["samples_csv"].strip())
+    return out
+
+
 def load_subarrays(path: Optional[str] = None) -> Dict[str, SubarrayInfo]:
     """Read data/subarrays.csv into {name: SubarrayInfo}."""
     path = path or os.path.join(DATA_DIR, "subarrays.csv")
@@ -92,6 +111,27 @@ class CurveLibrary:
         self.subarrays = load_subarrays(subarrays)
         self.samples = load_samples(samples)
         self._envelopes: Dict[str, Envelope] = {}
+
+    @classmethod
+    def for_config(cls, rev: str = "revF", sim_mode: str = "track",
+                   registry_path: Optional[str] = None) -> "CurveLibrary":
+        """Build a library for a registered (rev, sim_mode) combination.
+
+        Resolves the metadata + curve CSVs through data/config_registry.csv.
+        ``for_config("revF", "track")`` is equivalent to ``CurveLibrary()``
+        (the default files).  An unregistered combination raises ValueError
+        listing the registered ones.
+        """
+        registry = load_registry(registry_path)
+        key = (rev, sim_mode)
+        if key not in registry:
+            raise ValueError(
+                "no config_registry.csv entry for (rev=%r, sim_mode=%r); "
+                "registered combinations: %s"
+                % (rev, sim_mode, sorted(registry)))
+        subs_csv, samp_csv = registry[key]
+        return cls(subarrays=os.path.join(DATA_DIR, subs_csv),
+                   samples=os.path.join(DATA_DIR, samp_csv))
 
     def envelope(self, name: str) -> Envelope:
         """The interpolated curve families for one subarray (cached)."""
