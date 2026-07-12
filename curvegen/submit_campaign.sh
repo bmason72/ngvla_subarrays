@@ -43,19 +43,33 @@ EXP="ALL,NGVLA_REV=$REV,NGVLA_SIM_MODE=$MODE,NGVLA_SCRATCH=$NGVLA_SCRATCH"
 N=$("$PY" "$CG/campaign_tasks.py" narray)
 echo "campaign $REV/$MODE : $N sweep array tasks, sweep walltime $WALL, scratch $NGVLA_SCRATCH"
 
-prep=$(sbatch --parsable $ACCT --export="$EXP" "$CG/campaign_prep.sbatch")
+# TACC's sbatch wrapper prints a "Welcome to Stampede3" banner to stdout, so
+# a bare $(sbatch --parsable ...) capture is polluted with banner text and a
+# downstream --dependency=afterok:$prep becomes a malformed multi-line string
+# ("Job dependency problem").  Extract only the parsable job-id line, which is
+# the sole line starting with a bare digit (banner lines start with -/>/space).
+submit() {
+    local out id
+    out=$(sbatch --parsable "$@") || return 1
+    id=$(printf '%s\n' "$out" | grep -oE '^[0-9]+' | tail -n1)
+    [ -n "$id" ] || { echo "could not parse a job id from sbatch output:" >&2
+                      printf '%s\n' "$out" >&2; return 1; }
+    printf '%s\n' "$id"
+}
+
+prep=$(submit $ACCT --export="$EXP" "$CG/campaign_prep.sbatch") || exit 1
 echo "prep job:    $prep   (QA gate -- check prep_${prep}.log seed beams)"
 if [ "$PREP_ONLY" -eq 1 ]; then
     echo "--prep-only: stopping.  After eyeballing prep, submit the rest with:"
-    echo "  sweep=\$(sbatch --parsable $ACCT --dependency=afterok:$prep --array=0-$((N-1)) --time=$WALL --export=\"$EXP\" $CG/campaign_sweep.sbatch)"
+    echo "  sweep=\$(sbatch --parsable $ACCT --dependency=afterok:$prep --array=0-$((N-1)) --time=$WALL --export=\"$EXP\" $CG/campaign_sweep.sbatch | grep -oE '^[0-9]+' | tail -n1)"
     echo "  sbatch $ACCT --dependency=afterok:\$sweep --export=\"$EXP\" $CG/campaign_collect.sbatch"
     exit 0
 fi
 
-sweep=$(sbatch --parsable $ACCT --dependency=afterok:"$prep" --array=0-$((N-1)) \
-        --time="$WALL" --export="$EXP" "$CG/campaign_sweep.sbatch")
+sweep=$(submit $ACCT --dependency=afterok:"$prep" --array=0-$((N-1)) \
+        --time="$WALL" --export="$EXP" "$CG/campaign_sweep.sbatch") || exit 1
 echo "sweep array: $sweep  (0-$((N-1)))"
-collect=$(sbatch --parsable $ACCT --dependency=afterok:"$sweep" \
-          --export="$EXP" "$CG/campaign_collect.sbatch")
+collect=$(submit $ACCT --dependency=afterok:"$sweep" \
+          --export="$EXP" "$CG/campaign_collect.sbatch") || exit 1
 echo "collect job: $collect"
 echo "submitted.  monitor: squeue -u $USER   |   cancel downstream: scancel $sweep $collect"
