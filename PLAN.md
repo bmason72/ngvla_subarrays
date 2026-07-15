@@ -459,7 +459,51 @@ report regenerated (`curvegen/reports/revf-curves.html`).
    status occurs in the data).  82 tests green; validate.py output
    byte-identical pre/post.
 
+### UPDATE (13 Jul 2026) — 12 Jul sweep-campaign failure diagnosed + fixed; relaunch ready
+
+The 12 Jul campaigns (revF/snapshot 3299896, revD/track 3299900) had prep
+COMPLETE but every sweep array task FAIL in ~3 s.  Root cause:
+`campaign_sweep.sbatch` assigned to `GROUPS`, a bash special variable whose
+assignment fails with status 1 — the `|| exit 1` guard fired on the
+*assignment*, not on `campaign_tasks.py` (which was fine).  Renamed to
+`SA_GROUPS`.  No sweep work was lost; both preps' seeds + measured beam caps
+survive on disk and in `subarrays_revd.csv` / `subarrays_revf_snapshot.csv`
+(uncommitted — commit them).  revD/snapshot additionally lacked supporting
+metadata: added the `config_registry.csv` row and generated
+`sa_select/data/subarrays_revd_snapshot.csv` (`build_subarrays_csv.py`; caps
+blank until its own prep runs — sweep preflight fails closed, verified).
+All 4 registry combos now pass `campaign_tasks.py narray/groups/seeds`.
+Codex (gpt-5.5 xhigh) reviewed the fixes: confirmed both, flagged committing
+the untracked metadata CSV with the registry row as required for a clean
+checkout.  Relaunch commands: `RUN_CAMPAIGNS.md` (step 0 cancels the two
+orphaned DependencyNeverSatisfied collect jobs 3299897/3299901).  Memo
+updated the same day (scope now 14 subarrays, full-grid + uv-filter + campaign
+sections, real figures replacing the three placeholders).
+
 ### HANDOFF STATE (7 Jul 2026 — read this first)
+
+**SESSION DELTA (15 Jul 2026, Fable):**
+- All four campaign reports EXIST and are FRESH (newer than their curve
+  CSVs; the campaign collect stage builds them): `curvegen/reports/`
+  revf-curves.html (14 SAs), revF-snapshot-curves.html (14),
+  revD-track-curves.html (9), revD-snapshot-curves.html (9).  bmason review
+  pending.  QA note: mid+long has only ~53 samples in BOTH snapshot
+  reports (vs ~150 track) — consistent across revisions, so probably
+  genuine snapshot-uv pruning, but eyeball its heatmap first.
+- **Long b_min correction (supersedes the note in item 1):** Rev F Long is
+  10 clusters x 3 antennas; intra-cluster baselines span 37–176 m, then a
+  clean gap to 515 km.  A ~150 m cut is therefore WRONG (leaves the 176 m
+  intra-cluster pair); any cut in (176 m, 515 km) works — use e.g. 1 km.
+  The filter must be COMPONENT-AWARE: filter only Long's intra-cluster
+  pairs, then b_min(combo) = min over components' legitimate b_min
+  (e.g. main+long keeps core's real 42.15 m).  Long-only filtered
+  b_min = 515 km (LAS ~4 uas at 30 GHz).  Analysis: single-linkage
+  clustering on curvegen/configs/long.cfg, 15 Jul session.
+- Queued next: bmason reviews the 3 new reports; long-family refine passes
+  (standing caveat) when node-hours are approved; milestone commit of the
+  RevD/snapshot campaign state (uncommitted since 74470c0); optional
+  cross-revision/mode comparison report (spec deliberately before building).
+
 
 **Where things stand.** 14 offered subarrays now: the homogeneous set
 (core-inner, core, spiral, mid, core+spiral, spiral+mid, main) PLUS the
@@ -869,6 +913,13 @@ high effort. Plumbing/IO/CLI → mid model, medium effort.
 
 ## 13. Gotchas log
 
+- **Never name a shell variable `GROUPS` (12 Jul 2026 incident).**  `GROUPS`
+  (like `UID`, `EUID`, `BASH*`, `SHELLOPTS`) is a bash special variable;
+  `GROUPS=$(cmd)` fails with status 1 without running any failure path you
+  can see, so an `|| exit` guard misfires with a misleading message and no
+  traceback.  This silently killed every task of both 12 Jul sweep campaigns
+  in ~3 s ("SWEEP: campaign_tasks FAILED").  Symptom signature: instant
+  sbatch task death, guard message present, no Python output.
 - **Resumable sweeps preserve stale conventions (9 Jul 2026 incident).**
   `run_point` skips any recorded key forever, so when a measurement
   convention changes (here: the adaptive cell rule `cell = max(native,
