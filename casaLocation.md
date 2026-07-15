@@ -34,8 +34,15 @@ run" was IPython starting despite casatools being unimportable.
 ## Filesystem gotchas
 
 - `$HOME` quota is ~14 GB: **never write MSes or tclean products under home.**
-  `curvegen/ms` and `curvegen/work` are symlinks into
-  `$SCRATCH/ngvla_curvegen/` (regenerable, so scratch-purge-safe).
+- **MS stores live on `$WORK` since 15 Jul 2026** (`$WORK/ngvla_curvegen/ms*`,
+  checksum-verified copy; $SCRATCH is periodically purged): `curvegen/ms` is a
+  symlink there, and non-default (rev, sim_mode) combos route via
+  `NGVLA_MS_BASE` (default `$WORK/ngvla_curvegen` in every campaign sbatch —
+  EXPORT IT for interactive non-default sweeps or they fall back to scratch).
+  If an MS ever goes missing: `sbatch --array=0-3 curvegen/regen_ms.sbatch`.
+- tclean work dirs stay on scratch (`$SCRATCH/ngvla_curvegen/work*`, via
+  `NGVLA_SCRATCH`): pure TempLattice churn, disposable. Sweeps must run with
+  **cwd on scratch** (CASA writes multi-GB TempLattice* to the process cwd).
 - The venv lives in `$WORK` (persistent, not purged).
 - Compute node sessions (VNC/idev): check remaining walltime with
   `squeue -u $USER` before launching multi-hour sweeps.

@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Freshness (15 Jul 2026):** the task statement, domain concepts, and raw-materials map
+> below remain authoritative.  The *built* system now lives in `sa_select/` (selection
+> engine) + `curvegen/` (CASA curve generation + campaigns + HTML reports) — see
+> `README.md` for the current layout/commands, `PLAN.md` for status/decisions/gotchas,
+> `NEXT_AGENT.md` for the hand-off, and `RUN_CAMPAIGNS.md` for the Slurm run sheet.
+> Where this file and those disagree (environment especially), trust them.
+
 ## Project goal (the task)
 
 Produce a stand-alone Python routine that takes as input a desired resolution, frequency,
@@ -93,16 +100,19 @@ return an integration time for the selected array + imaging parameters.
 
 ## Environment & commands
 
-- **Working dir is not a git repo.** No build system; these are loose Python scripts.
-- **CASA** is at `/Applications/CASA.app`. Its bundled Python is
-  `/Applications/CASA.app/Contents/MacOS/python3` (has numpy/scipy/CASA tools). Use it for
-  anything touching simulations, `tclean`, or the sensitivity/`.pkl` code:
-  ```
-  /Applications/CASA.app/Contents/MacOS/casa -c script.py      # run a CASA script
-  /Applications/CASA.app/Contents/MacOS/python3 sens_thing.py  # plain python w/ numpy+scipy
-  ```
-- **`.venv/`** is a bare Python 3.13 venv with only `pip` (no numpy) — install deps there before
-  using it, or just use CASA's Python which already has the scientific stack.
+- **This IS a git repo** (since 5 Jul 2026, branch `main`); commit at milestones, and only
+  when the user has asked or a milestone commit is queued in `PLAN.md`.
+- **Current platform is TACC Stampede3** — use the `casapy` wrapper
+  (`/work2/10240/bmason72/stampede3/casaenv/bin/casapy`, modular CASA 6.7.5 + numpy/scipy);
+  see `casaLocation.md` for the wrapper rationale and quota/TempLattice gotchas, and
+  `RUN_CAMPAIGNS.md` for Slurm campaign submission.  Tests:
+  `casapy -m unittest discover -s tests -t .` from the repo root.
+- Big data placement: MS stores persist under `$WORK/ngvla_curvegen` (`NGVLA_MS_BASE`);
+  tclean scratch stays under `$SCRATCH/ngvla_curvegen` (`NGVLA_SCRATCH`, purged, disposable).
+  `$HOME` has a 14 GB quota — never point CASA work dirs at it.
+- *(Historical, macOS era:)* CASA was at `/Applications/CASA.app`
+  (`/Applications/CASA.app/Contents/MacOS/python3` has the scientific stack) — still valid
+  when working on a Mac.  **`.venv/`** is a bare pip-only venv; prefer CASA's Python.
 - **Sensitivity calculator CLI:** `cd ngvla-sensitivity-calculator && ./ngVLA_sensitivity_calculator.py <subarray> <freq_GHz> <theta_arcsec> [--t_obs H] [--delta_v] [-v]`.
 - **`pdftotxt`** is available if another PDF needs converting. **Do not read a PDF when the
   `.txt` already exists** — only open a PDF for figures or badly-formatted tables.

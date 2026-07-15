@@ -645,12 +645,85 @@ independent beam sanity checks.
    report going forward.
 
 *Future goal noted (bmason, 15 Jul): per-subarray PSF plots and cuts in the
-report for the selected subarrays.*  Groundwork already exists: every sweep
-point captures an azimuthal radial profile (results*/profiles/*.jsonl,
-feature v11), and the payload/dropdown architecture takes per-combo panels
-cleanly.  When picked up: add a per-subarray PSF panel (profile at the
-selected operating point + cuts), fed from the profile JSONLs at
-collect/report time.
+report for the selected subarrays.*  DESIGNED same day — see the dedicated
+section below ("PSF inspector plan").
+
+### PSF inspector plan (15 Jul 2026 — designed, NOT yet built)
+
+bmason's decisions (AskUserQuestion, 15 Jul): **(1)** azimuthal profiles AND
+major/minor-axis cuts (cuts need a capture extension; they expose the
+snapshot elongation the azimuthal average hides); **(2)** display scope =
+FULL lattice, lazy-loaded (report no longer one self-contained file — the
+`reports/psf/` payload dir travels with the HTML); **(3)** anchors-only
+backfill; **(4)** polish campaigns launch now, PSF work proceeds in
+parallel.
+
+**Data situation:** results-{revF_snapshot,revD_track,revD_snapshot}/
+profiles/*.jsonl already hold an azimuthal radial profile for EVERY measured
+point (~7.2k profiles; capture feature v11).  revF/track has NONE (its
+points predate v11).  Axis cuts exist nowhere yet.
+
+**Sequencing constraint (important):** the polish campaigns MOVE the
+envelope anchors, so the anchor backfill (P2) must run AFTER polish lands.
+Polish refine points get azimuthal profiles automatically (CAPTURE_PROFILES
+is on everywhere — this also starts populating revF/track's empty
+profiles/); the post-polish backfill then adds cuts at the settled anchors.
+If P1 happens to land before bmason submits polish, polish points carry
+cuts natively — a bonus, not a dependency.
+
+**P1 — capture extension** (`curvegen/measure.py`, `sweep.capture_profile`).
+New pure-numpy `psf_axis_cuts(cutout, center, cell_arcsec, bpa_deg, r_max,
+n=81)`: bilinear-sample the PSF along the fitted-beam major & minor axes,
+signed radius ±r_max (= 3 x res_geo, matching the radial profile).  JSONL
+line gains `bmaj_arcsec, bmin_arcsec, bpa_deg, cut_r_arcsec, cut_maj,
+cut_min`; old lines stay valid (missing cut fields => "azimuthal only").
+CASA-free unit test alongside tests/test_measure_profile.py.
+[Sonnet 5 / GPT-5, medium]
+
+**P2 — anchor backfill** (`curvegen/backfill_psf.py` + `backfill_psf.sbatch`,
+job array over the 4 combos; run AFTER polish).  Anchor set per subarray =
+env_keys of the s0=0.10 imaging curve + the ptsrc curve (build_curve over
+collected samples, exactly like refine) + the natural point.  For each
+anchor lacking a cut-bearing JSONL line: re-image with the EXACT recorded
+convention (weighting/robust/taper; imsize; **cell from the results row's
+cell_arcsec**, NOT recomputed; uvrange from config) with results-CSV
+recording DISABLED — backfill must never touch curve data — then append the
+profile+cuts line (loader: last line per key wins).  Resumable by skipping
+cut-bearing keys.  Covers revF/track profiles+cuts and the other three
+combos' anchor cuts in one pass; a few node-hours.
+[Opus 4.8 / GPT-5, high — the convention-reuse details are where bugs live]
+
+**P3 — payload export** (`curvegen/export_psf_data.py`).  profiles JSONL ->
+`curvegen/reports/psf/<rev>_<mode>/<sa>.js` script files:
+`window.PSF_REGISTER("<combo>/<sa>", {key: {...}})` — script-tag JSONP, NOT
+fetch(), because Chrome blocks fetch() on file:// and these reports open as
+local files.  ~0.2-0.5 MB per (combo, subarray).  Wire into
+campaign_collect.sbatch (per-combo) and the --combined build (all combos).
+[Sonnet 5 / GPT-5-mini, medium]
+
+**P4 — report UI panel** (`report_template.html` + make_report).  New "PSF
+inspector" card: subarray dropdown + point selection three ways — (a) a
+"show PSF" affordance on each calculator result row (its chosen operating
+point, nearest measured anchor), (b) CLICK any heatmap cell or
+small-multiple mark, (c) default = natural point.  Plot: azimuthal profile
++ both cut arms (major/minor) vs radius; annotate r=1 FWHM vertical, the s0
+threshold horizontal, the measured skirt dot; text line with bmaj x bmin @
+bpa, axis ratio, eta, skirt.  Lazy-load via injected <script> per
+(combo, subarray), cached; graceful states: "cuts pending backfill"
+(azimuthal-only line) and "no PSF captured for this point" (revF/track
+non-anchors until backfill/full pass).  Re-render-safe like every other
+panel (renderAll clears it; pending loads guarded against stale combo).
+[Fable/Opus 4.8 / GPT-5, high — fiddly SVG/JS, follow the renderAll rules]
+
+**P5 — docs + QA.**  README/RUN_CAMPAIGNS notes (psf/ dir must travel with
+the HTML), PLAN update, spot-check elongated snapshot beams (mid+long) and
+a relaxed imaging point.  [any small model, low]
+
+Build-time defaults (flag if changed): cut length 3 x geometric-FWHM, 81
+samples/arm; positive-r overlay with both arms drawn light; heatmap click
+also switches the panel's subarray.  Optional follow-on if anchor coverage
+feels sparse on revF/track: full-lattice backfill for that combo only
+(~3.2k tcleans, hours on one node).
 
 
 **Where things stand.** 14 offered subarrays now: the homogeneous set

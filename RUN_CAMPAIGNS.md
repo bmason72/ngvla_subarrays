@@ -66,6 +66,10 @@ grep -E "refined|budget|worst" /work2/10240/bmason72/stampede3/sweep_<SWEEP_ID>_
 Success criterion per subarray: `worst in-band step` ≤ ~0.25 for BOTH
 `(imaging)` and `(ptsrc)` lines, or a budget-reached line worth reading.
 
+After the polish campaigns land, the next campaign to stage is the **PSF
+anchor backfill** (PLAN.md "PSF inspector plan", task P2) — it must wait for
+polish because refinement moves the envelope anchors it targets.
+
 ## 2. MS regeneration (insurance — run after any scratch purge, or never)
 
 One array task per combo; re-simulates only MISSING MSes into
