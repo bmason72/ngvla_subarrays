@@ -47,6 +47,7 @@ python3 sweep.py core               # simulate + sweep one subarray
 python3 refine.py core              # adaptive refinement where the curve jumps
 python3 collect.py                  # results/*.csv -> sa_select/data/revf_curves.csv
 python3 make_report.py reports/revf-curves.html     # local HTML report (open in browser)
+python3 make_report.py --combined reports/ngvla-curves.html  # ALL campaigns, dropdown
 ```
 
 ## Picking up on a new machine

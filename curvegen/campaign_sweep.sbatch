@@ -21,7 +21,14 @@ PY=/work2/10240/bmason72/stampede3/casaenv/bin/casapy
 : "${NGVLA_REV:?export NGVLA_REV (use submit_campaign.sh)}"
 : "${NGVLA_SIM_MODE:?export NGVLA_SIM_MODE (use submit_campaign.sh)}"
 export NGVLA_SCRATCH="${NGVLA_SCRATCH:-$SCRATCH/ngvla_curvegen}"
+export NGVLA_MS_BASE="${NGVLA_MS_BASE:-$WORK/ngvla_curvegen}"
+mkdir -p "$NGVLA_MS_BASE"
 mkdir -p "$NGVLA_SCRATCH"
+# refine intensity: the default (60/3) matches the original campaigns; a
+# POLISH pass (base grids already swept, so sweep_parallel/fill_grid are
+# fast no-ops) raises these via submit_campaign.sh --refine-budget/-rounds
+REFINE_BUDGET="${NGVLA_REFINE_BUDGET:-60}"
+REFINE_ROUNDS="${NGVLA_REFINE_ROUNDS:-3}"
 
 # preflight: fail closed if the caps this combo needs are not in the metadata
 # CSV, so a full grid never runs uncapped (no-op for revF/track)
@@ -29,10 +36,14 @@ mkdir -p "$NGVLA_SCRATCH"
     || { echo "SWEEP: cap preflight FAILED -- run prep/fill_beam_caps first"; exit 1; }
 
 # resolve this task's subarray group (guard the helper: a campaign_tasks
-# failure must NOT collapse into an empty task and a bogus success)
-GROUPS=$("$PY" "$CG/campaign_tasks.py" groups) \
+# failure must NOT collapse into an empty task and a bogus success).
+# NB: must NOT be named GROUPS -- that is a bash special variable (the user's
+# group ids); assigning to it FAILS with status 1, which silently killed every
+# task of the 12 Jul 2026 campaigns ("SWEEP: campaign_tasks FAILED" with no
+# traceback).  Same trap for UID/EUID/BASH*/SHELLOPTS.
+SA_GROUPS=$("$PY" "$CG/campaign_tasks.py" groups) \
     || { echo "SWEEP: campaign_tasks FAILED"; exit 1; }
-TASK=$(printf '%s\n' "$GROUPS" | sed -n "$((SLURM_ARRAY_TASK_ID+1))p")
+TASK=$(printf '%s\n' "$SA_GROUPS" | sed -n "$((SLURM_ARRAY_TASK_ID+1))p")
 if [ -z "${TASK:-}" ]; then
     echo "no group for array index $SLURM_ARRAY_TASK_ID -- nothing to do"; exit 0
 fi
@@ -51,7 +62,7 @@ for SA in $TASK; do
     "$PY" "$CG/fill_grid.py" "$SA" --max-procs 10 --omp 8 \
         || echo "FILL FAILED (non-blocking): $SA"
     echo "=== refine $SA ==="
-    "$PY" "$CG/refine.py" "$SA" \
+    "$PY" "$CG/refine.py" "$SA" --budget "$REFINE_BUDGET" --rounds "$REFINE_ROUNDS" \
         || echo "REFINE FAILED (non-blocking): $SA"
 done
 echo "sweep task $SLURM_ARRAY_TASK_ID done (rc=$rc)"

@@ -23,6 +23,8 @@ PY=/work2/10240/bmason72/stampede3/casaenv/bin/casapy
 : "${NGVLA_REV:?export NGVLA_REV (use submit_campaign.sh)}"
 : "${NGVLA_SIM_MODE:?export NGVLA_SIM_MODE (use submit_campaign.sh)}"
 export NGVLA_SCRATCH="${NGVLA_SCRATCH:-$SCRATCH/ngvla_curvegen}"
+export NGVLA_MS_BASE="${NGVLA_MS_BASE:-$WORK/ngvla_curvegen}"
+mkdir -p "$NGVLA_MS_BASE"
 mkdir -p "$NGVLA_SCRATCH"
 
 echo "=== CAMPAIGN PREP  rev=$NGVLA_REV  mode=$NGVLA_SIM_MODE ==="

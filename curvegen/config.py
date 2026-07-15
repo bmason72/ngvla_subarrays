@@ -328,16 +328,25 @@ RESULTS_DIR = os.path.join(REPO, "curvegen", "results" + _SUFFIX)
 
 
 def _scratch_dir(kind):
-    """Resolve a large scratch directory (ms / work): the multi-GB MSes and
-    CASA TempLattice products must live on scratch, not $HOME.  The DEFAULT
-    combo keeps the original repo path (curvegen/ms, curvegen/work -- both
-    symlinks into scratch on TACC) byte-for-byte.  For any other combo the
-    sbatch exports NGVLA_SCRATCH (the scratch base, e.g. $SCRATCH/ngvla_curvegen)
-    and the dir is <NGVLA_SCRATCH>/<kind><suffix>; absent that env it falls
-    back to a suffixed repo dir (fine for a laptop, wrong for a big campaign)."""
+    """Resolve a large out-of-repo directory (ms / work).  The DEFAULT combo
+    keeps the original repo path (curvegen/ms, curvegen/work -- symlinks on
+    TACC) byte-for-byte; any other combo appends the suffix under a base dir
+    taken from the environment.
+
+    The two kinds get DIFFERENT bases (15 Jul 2026, bmason: $SCRATCH is
+    periodically purged and losing the MSes costs a re-simulation campaign):
+    - ms   -> NGVLA_MS_BASE   (e.g. $WORK/ngvla_curvegen -- persistent)
+    - work -> NGVLA_SCRATCH   (e.g. $SCRATCH/ngvla_curvegen -- tclean cwd /
+      TempLattice churn; disposable, regenerated per run)
+    NGVLA_MS_BASE falls back to NGVLA_SCRATCH (the pre-15-Jul layout), then
+    to a suffixed repo dir (fine for a laptop, wrong for a big campaign)."""
     if not _SUFFIX:
         return os.path.join(REPO, "curvegen", kind)
-    base = os.environ.get("NGVLA_SCRATCH")
+    base = None
+    if kind == "ms":
+        base = os.environ.get("NGVLA_MS_BASE")
+    if base is None:
+        base = os.environ.get("NGVLA_SCRATCH")
     if base:
         return os.path.join(base, kind + _SUFFIX)
     return os.path.join(REPO, "curvegen", kind + _SUFFIX)

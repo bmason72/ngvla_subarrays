@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.15)  6 JUL 2026 19:21
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.15)  13 JUL 2026 08:20
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -292,24 +292,24 @@ File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
 ) (./ngvla_sa_selection.aux)
 \openout1 = `ngvla_sa_selection.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 18.
+LaTeX Font Info:    ... okay on input line 18.
 
 (/scratch/projects/tacc/texlive/2025/texmf-dist/tex/context/base/mkii/supp-pdf.
 mkii
@@ -348,15 +348,27 @@ Package color Info: Driver file: pdftex.def on input line 149.
 
 (/scratch/projects/tacc/texlive/2025/texmf-dist/tex/latex/graphics/mathcolor.lt
 x))
-Package hyperref Info: Link coloring ON on input line 16.
+Package hyperref Info: Link coloring ON on input line 18.
  (./ngvla_sa_selection.out) (./ngvla_sa_selection.out)
 \@outlinefile=\write3
 \openout3 = `ngvla_sa_selection.out'.
 
 
-Overfull \hbox (0.24953pt too wide) in paragraph at lines 20--28
-[]\OT1/cmr/m/n/10 This memo de-scribes a query-time tool for as-sign-ing a Rev 
-F ngVLA
+Underfull \hbox (badness 1052) in paragraph at lines 42--56
+\OT1/cmr/m/n/10.95 core+spiral, spi-ral+mid, and main--plus the memo-121 cam-pa
+ign ad-
+ []
+
+
+Underfull \hbox (badness 1043) in paragraph at lines 42--56
+\OT1/cmr/m/n/10.95 di-tions long, mid+long, spi-ral+mid+long, main+long, and th
+e three
+ []
+
+
+Underfull \hbox (badness 1048) in paragraph at lines 42--56
+\OT1/cmr/m/n/10.95 outer-core com-bi-na-tions spiral+core-outer, mid+spiral+cor
+e-outer, and
  []
 
 
@@ -365,84 +377,168 @@ F ngVLA
 
 {/scratch/projects/tacc/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.m
 ap}]
-
-Package amsmath Warning: Foreign command \over;
-(amsmath)                \frac or \genfrac should be used instead
-(amsmath)                 on input line 64.
-
-
-
-[2]
-
-[3{/scratch/projects/tacc/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-s
-uper-ts1.enc}]
-Overfull \hbox (0.65091pt too wide) in paragraph at lines 157--162
-\OT1/cmr/m/n/10.95 script finds jumps in the imag-ing curve and mea-sures ad-di
--tional ro-bust/taper
+Underfull \hbox (badness 1043) in paragraph at lines 57--64
+\OT1/cmtt/m/n/10.95 config[]registry.csv\OT1/cmr/m/n/10.95 ) routes each com-bi
+-na-tion to its own subarray-
  []
 
 
+Underfull \hbox (badness 1242) in paragraph at lines 57--64
+\OT1/cmr/m/n/10.95 metadata and curve ta-bles, and Rev D and snapshot-mode (sin
+gle-
+ []
+
+
+Package amsmath Warning: Foreign command \over;
+(amsmath)                \frac or \genfrac should be used instead
+(amsmath)                 on input line 79.
+
+
+
+[2{/scratch/projects/tacc/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-s
+uper-ts1.enc}]
+
+[3]
 
 [4]
 
 [5]
-Overfull \hbox (34.74884pt too wide) in paragraph at lines 264--272
-\OT1/cmr/m/n/10.95 the ex-act 18-m thermal-noise fac-tor $[]$;
+<figs/taperability.pdf, id=105, 558.95703pt x 342.20848pt>
+File: figs/taperability.pdf Graphic file (type pdf)
+<use figs/taperability.pdf>
+Package pdftex.def Info: figs/taperability.pdf  used on input line 252.
+(pdftex.def)             Requested size: 360.0pt x 220.40685pt.
+<figs/imaging.pdf, id=106, 558.95703pt x 356.15659pt>
+File: figs/imaging.pdf Graphic file (type pdf)
+<use figs/imaging.pdf>
+Package pdftex.def Info: figs/imaging.pdf  used on input line 266.
+(pdftex.def)             Requested size: 360.0pt x 229.39044pt.
+
+
+[6 <./figs/taperability.pdf>]
+
+[7 <./figs/imaging.pdf>]
+<figs/heatmap.pdf, id=282, 512.08685pt x 332.46594pt>
+File: figs/heatmap.pdf Graphic file (type pdf)
+<use figs/heatmap.pdf>
+Package pdftex.def Info: figs/heatmap.pdf  used on input line 340.
+(pdftex.def)             Requested size: 341.9989pt x 222.04587pt.
+
+
+[8]
+
+[9 <./figs/heatmap.pdf>]
+
+[10]
+Underfull \hbox (badness 1400) in paragraph at lines 458--460
+[]\OT1/cmr/m/n/10 One row per mea-sured, skipped,
+ []
+
+
+Underfull \hbox (badness 3635) in paragraph at lines 458--460
+\OT1/cmr/m/n/10 default cam-paigns use \OT1/cmtt/m/n/10 results-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 460--460
+[]\OT1/cmtt/m/n/10 sa[]select/data/
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 461--461
+[]\OT1/cmr/m/n/10 Campaign
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 463--463
+[]\OT1/cmtt/m/n/10 sa[]select/data/
+ []
+
+
+Underfull \hbox (badness 1852) in paragraph at lines 465--468
+\OT1/cmr/m/n/10 paigns col-lect to their reg-is-tered
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 468--468
+[]\OT1/cmtt/m/n/10 sa[]select/data/
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 469--469
+[]\OT1/cmr/m/n/10 Subarray
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 470--472
+[]\OT1/cmr/m/n/10 Names, com-po-nents, an-tenna
+ []
+
+
+Overfull \hbox (2.60631pt too wide) in paragraph at lines 489--489
+[]\OT1/cmtt/m/n/10 resolution[]arcsec[]30ghz| 
+ []
+
+
+Underfull \hbox (badness 5592) in paragraph at lines 495--496
+[]\OT1/cmr/m/n/10 Simulation/reference fre-quency, cur-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 497--498
+[]\OT1/cmr/m/n/10 Free-form caveat, in-clud-ing
  []
 
 
 
-[6]
-Overfull \hbox (258.19366pt too wide) in paragraph at lines 328--346
- [][] 
- []
+[11]
 
+[12]
 
-Overfull \hbox (88.0318pt too wide) in paragraph at lines 353--369
- [][] 
- []
-
-
-
-[7]
-
-[8] (./ngvla_sa_selection.aux)
+[13] (./ngvla_sa_selection.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 1
 L3 programming layer <2024-12-25>
  ***********
 Package rerunfilecheck Info: File `ngvla_sa_selection.out' has not changed.
-(rerunfilecheck)             Checksum: B2AD8D8057AB8902DCA19555AA64678D;1124.
+(rerunfilecheck)             Checksum: 0A5B535C1D1C1AD86A062F5F7E69B160;1423.
  ) 
 Here is how much of TeX's memory you used:
- 9357 strings out of 473207
- 145665 string characters out of 5710030
- 550643 words of memory out of 5000000
- 32465 multiletter control sequences out of 15000+600000
- 565724 words of font info for 61 fonts, out of 8000000 for 9000
+ 9403 strings out of 473207
+ 146530 string characters out of 5710030
+ 556566 words of memory out of 5000000
+ 32499 multiletter control sequences out of 15000+600000
+ 567855 words of font info for 68 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,11n,79p,464b,558s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,11n,79p,810b,558s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </scratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/c
 m/cmbx10.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/public
 /amsfonts/cm/cmbx12.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/t
 ype1/public/amsfonts/cm/cmex10.pfb></scratch/projects/tacc/texlive/2025/texmf-d
 ist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></scratch/projects/tacc/texlive/2
 025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></scratch/projects/tacc
-/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></scratch/pro
-jects/tacc/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></s
+/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></scratch/pro
+jects/tacc/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></s
 cratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr
-17.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/public/amsfo
-nts/cm/cmr7.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/pub
-lic/amsfonts/cm/cmr8.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/
-type1/public/amsfonts/cm/cmsy10.pfb></scratch/projects/tacc/texlive/2025/texmf-
-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></scratch/projects/tacc/texlive/2
-025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></scratch/projects/tacc
-/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></scratch/pr
-ojects/tacc/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb>
-Output written on ngvla_sa_selection.pdf (8 pages, 190895 bytes).
+12.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/public/amsfo
+nts/cm/cmr17.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/pu
+blic/amsfonts/cm/cmr6.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts
+/type1/public/amsfonts/cm/cmr7.pfb></scratch/projects/tacc/texlive/2025/texmf-d
+ist/fonts/type1/public/amsfonts/cm/cmr8.pfb></scratch/projects/tacc/texlive/202
+5/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></scratch/projects/tacc/te
+xlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></scratch/proje
+cts/tacc/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></scr
+atch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7
+.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/public/amsfont
+s/cm/cmsy8.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/publ
+ic/amsfonts/cm/cmti10.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts
+/type1/public/amsfonts/cm/cmtt10.pfb></scratch/projects/tacc/texlive/2025/texmf
+-dist/fonts/type1/public/cm-super/sfrm1000.pfb></scratch/projects/tacc/texlive/
+2025/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb>
+Output written on ngvla_sa_selection.pdf (13 pages, 349883 bytes).
 PDF statistics:
- 195 PDF objects out of 1000 (max. 8388607)
- 153 compressed objects within 2 object streams
- 39 named destinations out of 1000 (max. 500000)
- 65 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 487 PDF objects out of 1000 (max. 8388607)
+ 248 compressed objects within 3 object streams
+ 45 named destinations out of 1000 (max. 500000)
+ 88 words of extra memory for PDF output out of 10000 (max. 10000000)
 

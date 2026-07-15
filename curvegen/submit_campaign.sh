@@ -20,21 +20,32 @@ if [ -z "$REV" ] || [ -z "$MODE" ]; then
     exit 2
 fi
 shift 2
-WALL="48:00:00"; PREP_ONLY=0
+WALL="48:00:00"; PREP_ONLY=0; RBUDGET=60; RROUNDS=3
 while [ $# -gt 0 ]; do
     case "$1" in
         --time) WALL=${2:?}; shift 2 ;;
         --prep-only) PREP_ONLY=1; shift ;;
+        --refine-budget) RBUDGET=${2:?}; shift 2 ;;   # polish pass: e.g. 200
+        --refine-rounds) RROUNDS=${2:?}; shift 2 ;;   # polish pass: e.g. 8
         *) echo "unknown arg: $1" >&2; exit 2 ;;
     esac
 done
+case "$RBUDGET$RROUNDS" in *[!0-9]*)
+    echo "--refine-budget/--refine-rounds must be positive integers" >&2; exit 2 ;;
+esac
 
 CG=$HOME/Code/ngvla_subarrays/curvegen
 PY=/work2/10240/bmason72/stampede3/casaenv/bin/casapy
 ACCT="-A AST25010"      # TACC allocation (also in every .sbatch header)
 export NGVLA_REV=$REV NGVLA_SIM_MODE=$MODE
 export NGVLA_SCRATCH="${NGVLA_SCRATCH:-$SCRATCH/ngvla_curvegen}"
-EXP="ALL,NGVLA_REV=$REV,NGVLA_SIM_MODE=$MODE,NGVLA_SCRATCH=$NGVLA_SCRATCH"
+# MSes persist on $WORK (SCRATCH is purged; 15 Jul 2026); tclean work dirs
+# stay on scratch (disposable TempLattice churn)
+export NGVLA_MS_BASE="${NGVLA_MS_BASE:-$WORK/ngvla_curvegen}"
+# refine knobs are ALWAYS exported explicitly (defaults 60/3): with
+# --export=ALL a stale NGVLA_REFINE_* in the submitting shell would otherwise
+# silently turn a default campaign into a polish pass (codex review)
+EXP="ALL,NGVLA_REV=$REV,NGVLA_SIM_MODE=$MODE,NGVLA_SCRATCH=$NGVLA_SCRATCH,NGVLA_MS_BASE=$NGVLA_MS_BASE,NGVLA_REFINE_BUDGET=$RBUDGET,NGVLA_REFINE_ROUNDS=$RROUNDS"
 
 # guard: the combo must be registered and its metadata CSV must exist
 "$PY" "$CG/campaign_tasks.py" narray >/dev/null || {

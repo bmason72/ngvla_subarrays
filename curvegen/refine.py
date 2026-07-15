@@ -21,6 +21,7 @@ import argparse
 from config import SUBARRAYS, BEAM_CAP_ARCSEC
 from sweep import Sweep, point_key
 from make_report import build_curve
+from sa_select.envelope import ETA_CAP
 
 SKIRT_MAX = 0.10
 GAP_RATIO = 1.35          # res jumps beyond this are infeasibility gaps
@@ -36,16 +37,26 @@ def samples_from(sweep):
     """ok + capped rows -> sample dicts with eta relative to the natural
     reference.  Capped rows are interpolation anchors (the offered curve is
     clipped at the beam cap via build_curve's max_res, matching collect.py /
-    the report), so refine sees the same curve the report will show."""
+    the report), so refine sees the same curve the report will show.
+
+    The eta > ETA_CAP display trim matches make_report.main() EXACTLY: the
+    report never draws that far-coarse fringe, so jumps there must not eat
+    the refinement budget.  (15 Jul 2026: the first campaign round burned
+    entire 60-point budgets smoothing invisible eta~5+ fringe jumps -- e.g.
+    snapshot spiral "worst step 0.92" while its rendered curve was already
+    smooth at 0.10.)"""
     nat = sweep.measured("natural", 2.0, 0.0)
     sigma_nat = float(nat["sigma_dirty"])
     out = []
     for row in sweep.rows.values():
         if row["status"] not in ("ok", "capped"):
             continue
+        eta = float(row["sigma_dirty"]) / sigma_nat
+        if eta > ETA_CAP:
+            continue
         out.append(dict(
             res=float(row["res_geo_arcsec"]) * 1e3,
-            eta=float(row["sigma_dirty"]) / sigma_nat,
+            eta=eta,
             skirt=float(row["skirt"]),
             weighting=row["weighting"],
             robust=float(row["robust"]),
@@ -89,25 +100,78 @@ def candidates_between(a, b):
     return cands
 
 
+# the two published curves; BOTH are refinement targets (15 Jul 2026 -- the
+# first campaign round chased only the imaging curve, so point-source steps
+# like RevF-snapshot main/main+long survived refinement untouched)
+CURVE_SPECS = (("imaging", SKIRT_MAX), ("ptsrc", None))
+
+
+def curve_jumps(curve, max_step, chase_res_jumps):
+    return [(a, b) for a, b in zip(curve, curve[1:])
+            if (abs(b["eta"] - a["eta"]) > max_step
+                and b["res"] / a["res"] <= GAP_RATIO)
+            or (chase_res_jumps and b["res"] / a["res"] > GAP_RATIO)]
+
+
+def jump_severity(pair):
+    """Ranking key: eta jumps by their size; coverage gaps by (ratio - 1),
+    so a x2 resolution hole ranks with a 1.0-eta jump."""
+    a, b = pair
+    ratio = b["res"] / a["res"]
+    if ratio > GAP_RATIO:
+        return ratio - 1.0
+    return abs(b["eta"] - a["eta"])
+
+
+def pick_candidates(jumps, sweep, room):
+    """Severity-ranked round-robin selection of new measurement points.
+
+    A flat sorted-set truncation let one pathological jump's (alphabetically
+    early) candidates crowd out every other jump when the per-round list
+    exceeded the budget (codex review, 15 Jul 2026).  Instead: candidates are
+    grouped per jump (deduped toward the most severe one that generated
+    them), then taken one-per-jump in severity order until `room` is used."""
+    jumps = sorted(jumps, key=jump_severity, reverse=True)
+    assigned, cand_lists = set(), []
+    for a, b in jumps:
+        cands = []
+        for p in sorted(candidates_between(a, b)):
+            if p in assigned or point_key(*p) in sweep.rows:
+                continue
+            assigned.add(p)
+            cands.append(p)
+        if cands:
+            cand_lists.append(cands)
+    todo, depth = [], 0
+    while len(todo) < room:
+        added = False
+        for cands in cand_lists:
+            if depth < len(cands):
+                todo.append(cands[depth])
+                added = True
+                if len(todo) >= room:
+                    break
+        if not added:
+            break
+        depth += 1
+    return todo
+
+
 def refine(subarray, rounds=3, max_step=0.25, budget=60):
     sweep = Sweep(subarray)
     chase_res_jumps = subarray in BEAM_CAP_ARCSEC
     n_new_total = 0
     max_res = curve_max_res_mas(subarray)
     for rnd in range(1, rounds + 1):
-        curve = build_curve(samples_from(sweep), SKIRT_MAX, max_res=max_res)
-        jumps = [(a, b) for a, b in zip(curve, curve[1:])
-                 if (abs(b["eta"] - a["eta"]) > max_step
-                     and b["res"] / a["res"] <= GAP_RATIO)
-                 or (chase_res_jumps and b["res"] / a["res"] > GAP_RATIO)]
+        samples = samples_from(sweep)
+        jumps = []
+        for _label, s_max in CURVE_SPECS:
+            curve = build_curve(samples, s_max, max_res=max_res)
+            jumps += curve_jumps(curve, max_step, chase_res_jumps)
         if not jumps:
             print("round %d: no eta jumps > %.2g left -- done" % (rnd, max_step))
             break
-        todo = set()
-        for a, b in jumps:
-            todo |= candidates_between(a, b)
-        todo = [p for p in todo if point_key(*p) not in sweep.rows]
-        todo = sorted(todo)[:budget - n_new_total]
+        todo = pick_candidates(jumps, sweep, budget - n_new_total)
         print("round %d: %d jumps, %d new points" % (rnd, len(jumps), len(todo)))
         if not todo:
             break
@@ -117,11 +181,14 @@ def refine(subarray, rounds=3, max_step=0.25, budget=60):
         if n_new_total >= budget:
             print("refinement budget (%d points) reached" % budget)
             break
-    curve = build_curve(samples_from(sweep), SKIRT_MAX, max_res=max_res)
-    worst = max((abs(b["eta"] - a["eta"]) for a, b in zip(curve, curve[1:])
-                 if b["res"] / a["res"] <= GAP_RATIO), default=0)
-    print("%s refined: +%d points, curve %d pts, worst in-band step %.2f"
-          % (subarray, n_new_total, len(curve), worst))
+    samples = samples_from(sweep)
+    for label, s_max in CURVE_SPECS:
+        curve = build_curve(samples, s_max, max_res=max_res)
+        worst = max((abs(b["eta"] - a["eta"]) for a, b in zip(curve, curve[1:])
+                     if b["res"] / a["res"] <= GAP_RATIO), default=0)
+        print("%s refined (%s): +%d points, curve %d pts, "
+              "worst in-band step %.2f"
+              % (subarray, label, n_new_total, len(curve), worst))
 
 
 if __name__ == "__main__":

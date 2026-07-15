@@ -1,0 +1,392 @@
+subarray,weighting,robust,taper_mas,imsize,cell_arcsec,bmaj_arcsec,bmin_arcsec,bpa_deg,res_geo_arcsec,sigma_dirty,skirt,status,error,elapsed_s
+spiral+mid+long,natural,2.0,0.0,15000,4.78119e-05,0.00197867,0.00185542,61.94,0.00191605,0.00774706,0.3865,ok,,102.8
+spiral+mid+long,briggs,-2.0,0.0,15000,4.78119e-05,0.00228164,0.00216893,58.13,0.00222457,0.00982328,0.3203,ok,,105.1
+spiral+mid+long,natural,2.0,0.667,15000,0.0001334,0.00577525,0.00567782,-46.53,0.00572633,0.00916219,0.3813,ok,,102.3
+spiral+mid+long,natural,2.0,0.847,15000,0.0001694,0.00731425,0.00708339,0.4349,0.00719789,0.00946654,0.3465,ok,,102.3
+spiral+mid+long,natural,2.0,1.075,15000,0.000215,0.00886337,0.00856877,17.3,0.00871482,0.0097236,0.3612,ok,,102.5
+spiral+mid+long,natural,2.0,1.364,15000,0.0002728,0.0110484,0.0104264,44.74,0.0107329,0.0100588,0.3408,ok,,102.8
+spiral+mid+long,natural,2.0,1.731,15000,0.0003462,0.0137732,0.0131135,44.73,0.0134393,0.0103826,0.3312,capped,beam 0.01344 > cap 0.01093 arcsec,101.1
+spiral+mid+long,natural,2.0,2.197,15000,0.0004394,0.0167092,0.0153418,42.32,0.0160109,0.0106918,0.3142,capped,beam 0.01601 > cap 0.01093 arcsec,103.7
+spiral+mid+long,natural,2.0,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,natural,2.0,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,natural,2.0,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,natural,2.0,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,natural,2.0,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,natural,2.0,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,natural,2.0,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,natural,2.0,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,natural,2.0,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,natural,2.0,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,natural,2.0,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,natural,2.0,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,0.0,15000,4.78119e-05,0.00223874,0.00211127,57.05,0.00217407,0.00952343,0.32,ok,,137.3
+spiral+mid+long,briggs,-0.0,0.667,15000,0.0001334,0.00542924,0.00528874,-31.5,0.00535853,0.0102307,0.3121,ok,,138.8
+spiral+mid+long,briggs,-0.0,0.847,15000,0.0001694,0.006773,0.00645461,20.59,0.00661189,0.0102185,0.3172,ok,,127.0
+spiral+mid+long,briggs,-0.0,1.075,15000,0.000215,0.00835411,0.00792822,25.14,0.00813838,0.0102247,0.3159,ok,,133.7
+spiral+mid+long,briggs,-0.0,1.364,15000,0.0002728,0.0101916,0.0096671,48.44,0.00992587,0.0103596,0.3243,ok,,134.4
+spiral+mid+long,briggs,-0.0,1.731,15000,0.0003462,0.0134257,0.0117805,49.79,0.0125762,0.0105364,0.3197,capped,beam 0.01258 > cap 0.01093 arcsec,268.4
+spiral+mid+long,briggs,-0.0,2.197,15000,0.0004394,0.0160991,0.0144709,39.76,0.0152633,0.0107894,0.3047,capped,beam 0.01526 > cap 0.01093 arcsec,134.7
+spiral+mid+long,briggs,-0.0,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.0,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,0.0,15000,4.78119e-05,0.00227383,0.00215973,58.11,0.00221605,0.00976883,0.3203,ok,,108.6
+spiral+mid+long,briggs,-0.4,0.667,15000,0.0001334,0.00542106,0.00526371,-32.66,0.00534181,0.0102838,0.3103,ok,,112.3
+spiral+mid+long,briggs,-0.4,0.847,15000,0.0001694,0.00675492,0.0064289,21.41,0.0065899,0.0102515,0.3167,ok,,118.6
+spiral+mid+long,briggs,-0.4,1.075,15000,0.000215,0.0083275,0.00790593,24.45,0.00811398,0.0102463,0.3143,ok,,130.3
+spiral+mid+long,briggs,-0.4,1.364,15000,0.0002728,0.0101687,0.00965215,48.7,0.00990706,0.0103729,0.3237,ok,,127.3
+spiral+mid+long,briggs,-0.4,1.731,15000,0.0003462,0.0134011,0.0117677,49.92,0.0125579,0.0105431,0.3192,capped,beam 0.01256 > cap 0.01093 arcsec,245.9
+spiral+mid+long,briggs,-0.4,2.197,15000,0.0004394,0.0160888,0.0144442,39.45,0.0152444,0.0107938,0.3045,capped,beam 0.01524 > cap 0.01093 arcsec,118.6
+spiral+mid+long,briggs,-0.4,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,0.0,15000,4.78119e-05,0.00228034,0.00216758,58.13,0.00222325,0.00981447,0.3203,ok,,135.4
+spiral+mid+long,briggs,-0.8,0.667,15000,0.0001334,0.00541964,0.00526194,-32.62,0.00534021,0.0102927,0.31,ok,,111.6
+spiral+mid+long,briggs,-0.8,0.847,15000,0.0001694,0.00675116,0.00642557,20.95,0.00658635,0.0102569,0.3166,ok,,114.0
+spiral+mid+long,briggs,-0.8,1.075,15000,0.000215,0.00832461,0.00790305,24.43,0.00811109,0.0102499,0.314,ok,,135.9
+spiral+mid+long,briggs,-0.8,1.364,15000,0.0002728,0.0101659,0.00964954,48.69,0.00990434,0.0103751,0.3236,ok,,128.4
+spiral+mid+long,briggs,-0.8,1.731,15000,0.0003462,0.0133988,0.0117656,49.91,0.0125557,0.0105442,0.3191,capped,beam 0.01256 > cap 0.01093 arcsec,301.6
+spiral+mid+long,briggs,-0.8,2.197,15000,0.0004394,0.0160869,0.0144423,39.45,0.0152424,0.0107946,0.3044,capped,beam 0.01524 > cap 0.01093 arcsec,145.0
+spiral+mid+long,briggs,-0.8,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.8,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,0.0,15000,4.78119e-05,0.00228144,0.00216872,58.13,0.00222437,0.0098219,0.3203,ok,,134.9
+spiral+mid+long,briggs,-1.2,0.667,15000,0.0001334,0.00541942,0.00526166,-32.61,0.00533996,0.0102941,0.31,ok,,132.1
+spiral+mid+long,briggs,-1.2,0.847,15000,0.0001694,0.00675076,0.00642522,20.95,0.00658598,0.0102578,0.3166,ok,,129.3
+spiral+mid+long,briggs,-1.2,1.075,15000,0.000215,0.00832415,0.0079026,24.43,0.00811063,0.0102505,0.314,ok,,115.3
+spiral+mid+long,briggs,-1.2,1.364,15000,0.0002728,0.0101654,0.00964913,48.69,0.0099039,0.0103754,0.3235,ok,,112.9
+spiral+mid+long,briggs,-1.2,1.731,15000,0.0003462,0.0133985,0.0117653,49.91,0.0125554,0.0105444,0.3191,capped,beam 0.01256 > cap 0.01093 arcsec,256.6
+spiral+mid+long,briggs,-1.2,2.197,15000,0.0004394,0.0160866,0.014442,39.45,0.0152421,0.0107947,0.3044,capped,beam 0.01524 > cap 0.01093 arcsec,120.1
+spiral+mid+long,briggs,-1.2,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.2,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,0.0,15000,4.78119e-05,0.00228161,0.0021689,58.13,0.00222454,0.00982309,0.3203,ok,,119.6
+spiral+mid+long,briggs,-1.6,0.667,15000,0.0001334,0.00541938,0.00526161,-32.61,0.00533992,0.0102943,0.3099,ok,,114.3
+spiral+mid+long,briggs,-1.6,0.847,15000,0.0001694,0.00675069,0.00642517,20.95,0.00658592,0.0102579,0.3166,ok,,131.9
+spiral+mid+long,briggs,-1.6,1.075,15000,0.000215,0.00832408,0.00790252,24.43,0.00811056,0.0102506,0.314,ok,,131.5
+spiral+mid+long,briggs,-1.6,1.364,15000,0.0002728,0.0101653,0.00964906,48.69,0.00990383,0.0103755,0.3235,ok,,121.1
+spiral+mid+long,briggs,-1.6,1.731,15000,0.0003462,0.0133984,0.0117653,49.91,0.0125553,0.0105444,0.3191,capped,beam 0.01256 > cap 0.01093 arcsec,307.5
+spiral+mid+long,briggs,-1.6,2.197,15000,0.0004394,0.0160865,0.014442,39.45,0.0152421,0.0107947,0.3044,capped,beam 0.01524 > cap 0.01093 arcsec,135.5
+spiral+mid+long,briggs,-1.6,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-1.6,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,0.667,15000,0.0001334,0.00541938,0.00526161,-32.61,0.00533991,0.0102944,0.3099,ok,,125.7
+spiral+mid+long,briggs,-2.0,0.847,15000,0.0001694,0.00675068,0.00642516,20.95,0.00658591,0.010258,0.3166,ok,,123.2
+spiral+mid+long,briggs,-2.0,1.075,15000,0.000215,0.00832406,0.00790251,24.43,0.00811055,0.0102506,0.314,ok,,101.6
+spiral+mid+long,briggs,-2.0,1.364,15000,0.0002728,0.0101653,0.00964905,48.69,0.00990382,0.0103755,0.3235,ok,,128.8
+spiral+mid+long,briggs,-2.0,1.731,15000,0.0003462,0.0133984,0.0117652,49.91,0.0125553,0.0105444,0.3191,capped,beam 0.01256 > cap 0.01093 arcsec,129.8
+spiral+mid+long,briggs,-2.0,2.197,15000,0.0004394,0.0160865,0.014442,39.45,0.0152421,0.0107947,0.3044,capped,beam 0.01524 > cap 0.01093 arcsec,313.5
+spiral+mid+long,briggs,-2.0,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-2.0,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,0.0,15000,4.78119e-05,0.00209146,0.00195898,58.39,0.00202414,0.00877988,0.3273,ok,,137.0
+spiral+mid+long,briggs,0.4,0.667,15000,0.0001334,0.0055033,0.00534959,-33.48,0.0054259,0.00998101,0.322,ok,,135.5
+spiral+mid+long,briggs,0.4,0.847,15000,0.0001694,0.00687913,0.00657759,14.79,0.00672667,0.0100596,0.3194,ok,,127.2
+spiral+mid+long,briggs,0.4,1.075,15000,0.000215,0.00844833,0.00805964,22.58,0.00825169,0.0101209,0.3243,ok,,121.9
+spiral+mid+long,briggs,0.4,1.364,15000,0.0002728,0.0103848,0.00978308,47.62,0.0100794,0.0102955,0.3261,ok,,133.8
+spiral+mid+long,briggs,0.4,1.731,15000,0.0003462,0.0134841,0.0119166,50.31,0.0126761,0.0105035,0.3221,capped,beam 0.01268 > cap 0.01093 arcsec,287.3
+spiral+mid+long,briggs,0.4,2.197,15000,0.0004394,0.0161916,0.0145492,40.54,0.0153485,0.0107674,0.306,capped,beam 0.01535 > cap 0.01093 arcsec,115.3
+spiral+mid+long,briggs,0.4,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.4,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,0.0,15000,4.78119e-05,0.0019176,0.00170211,-81.9,0.00180665,0.00806285,0.3604,ok,,131.4
+spiral+mid+long,briggs,0.8,0.667,15000,0.0001334,0.00562913,0.00549994,-38.37,0.00556416,0.00947363,0.349,ok,,116.2
+spiral+mid+long,briggs,0.8,0.847,15000,0.0001694,0.0071014,0.00686346,6.905,0.00698142,0.00971381,0.3316,ok,,125.2
+spiral+mid+long,briggs,0.8,1.075,15000,0.000215,0.00866474,0.00833533,18.68,0.00849844,0.00989552,0.3439,ok,,136.1
+spiral+mid+long,briggs,0.8,1.364,15000,0.0002728,0.010813,0.0101393,43.77,0.0104707,0.010157,0.3315,ok,,129.9
+spiral+mid+long,briggs,0.8,1.731,15000,0.0003462,0.0136137,0.0125977,45.5,0.0130958,0.0104315,0.3265,capped,beam 0.0131 > cap 0.01093 arcsec,278.9
+spiral+mid+long,briggs,0.8,2.197,15000,0.0004394,0.0163664,0.0150203,40.71,0.0156789,0.0107184,0.3093,capped,beam 0.01568 > cap 0.01093 arcsec,113.5
+spiral+mid+long,briggs,0.8,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,0.8,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,0.0,15000,4.78119e-05,0.00191597,0.00175579,-83.37,0.00183414,0.00778919,0.3744,ok,,126.3
+spiral+mid+long,briggs,1.2,0.667,15000,0.0001334,0.00573474,0.00562919,-43.85,0.00568172,0.00921626,0.3725,ok,,144.8
+spiral+mid+long,briggs,1.2,0.847,15000,0.0001694,0.00726774,0.00703625,0.3828,0.00715105,0.00951658,0.3425,ok,,103.7
+spiral+mid+long,briggs,1.2,1.075,15000,0.000215,0.00881866,0.00851856,17.21,0.00866731,0.00976168,0.3571,ok,,141.8
+spiral+mid+long,briggs,1.2,1.364,15000,0.0002728,0.0109939,0.0103738,44.61,0.0106794,0.0100799,0.3384,ok,,124.9
+spiral+mid+long,briggs,1.2,1.731,15000,0.0003462,0.0137109,0.013055,44.88,0.0133789,0.010393,0.3296,capped,beam 0.01338 > cap 0.01093 arcsec,271.9
+spiral+mid+long,briggs,1.2,2.197,15000,0.0004394,0.0166354,0.0152567,42.02,0.0159311,0.0106956,0.3128,capped,beam 0.01593 > cap 0.01093 arcsec,132.7
+spiral+mid+long,briggs,1.2,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.2,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,0.0,15000,4.78119e-05,0.00194302,0.00184784,71.72,0.00189483,0.00774978,0.3841,ok,,113.2
+spiral+mid+long,briggs,1.6,0.667,15000,0.0001334,0.00576795,0.00566908,-46.01,0.0057183,0.00917025,0.3797,ok,,144.3
+spiral+mid+long,briggs,1.6,0.847,15000,0.0001694,0.00730639,0.00707532,0.4295,0.00718992,0.0094747,0.3458,ok,,125.0
+spiral+mid+long,briggs,1.6,1.075,15000,0.000215,0.00885597,0.00856035,17.29,0.0087069,0.00973011,0.3605,ok,,133.5
+spiral+mid+long,briggs,1.6,1.364,15000,0.0002728,0.0110393,0.0104173,44.75,0.0107238,0.0100624,0.3404,ok,,120.4
+spiral+mid+long,briggs,1.6,1.731,15000,0.0003462,0.0137644,0.0131041,44.71,0.0134302,0.0103844,0.3309,capped,beam 0.01343 > cap 0.01093 arcsec,298.8
+spiral+mid+long,briggs,1.6,2.197,15000,0.0004394,0.0167013,0.0153236,42.42,0.0159976,0.0106923,0.3139,capped,beam 0.016 > cap 0.01093 arcsec,134.8
+spiral+mid+long,briggs,1.6,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,1.6,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,0.0,15000,4.78119e-05,0.00194947,0.0018556,72.06,0.00190195,0.00774729,0.387,ok,,122.6
+spiral+mid+long,briggs,2.0,0.667,15000,0.0001334,0.00577407,0.00567641,-46.44,0.00572503,0.00916345,0.381,ok,,88.6
+spiral+mid+long,briggs,2.0,0.847,15000,0.0001694,0.00731299,0.00708209,0.4342,0.00719662,0.00946784,0.3464,ok,,84.2
+spiral+mid+long,briggs,2.0,1.075,15000,0.000215,0.00886219,0.00856742,17.3,0.00871356,0.00972465,0.3611,ok,,85.3
+spiral+mid+long,briggs,2.0,1.364,15000,0.0002728,0.0110469,0.0104251,44.73,0.0107315,0.0100594,0.3407,ok,,90.0
+spiral+mid+long,briggs,2.0,1.731,15000,0.0003462,0.0137718,0.013112,44.73,0.0134379,0.0103829,0.3312,capped,beam 0.01344 > cap 0.01093 arcsec,92.1
+spiral+mid+long,briggs,2.0,2.197,15000,0.0004394,0.0167099,0.0153324,42.43,0.0160063,0.0106919,0.3142,capped,beam 0.01601 > cap 0.01093 arcsec,155.1
+spiral+mid+long,briggs,2.0,2.788,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,3.537,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,4.489,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,5.697,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,7.23,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,9.175,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,11.643,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,14.775,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,18.75,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,23.795,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,30.197,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,2.0,38.321,15000,,,,,,,,skipped,beam cap 0.0109 arcsec exceeded earlier in row,
+spiral+mid+long,briggs,-0.4,2.788,15000,0.0005576,0.0195715,0.0171814,37.99,0.0183375,0.0111041,0.3125,capped,beam 0.01834 > cap 0.01093 arcsec,169.9
+spiral+mid+long,briggs,-0.4,3.537,15000,0.0007074,0.0247643,0.0198225,43.74,0.022156,0.0114698,0.2969,capped,beam 0.02216 > cap 0.01093 arcsec,153.8
+spiral+mid+long,briggs,-0.4,4.489,15000,0.0008978,0.0278788,0.0251405,59.27,0.0264743,0.0119261,0.2863,capped,beam 0.02647 > cap 0.01093 arcsec,152.2
+spiral+mid+long,briggs,-0.4,5.697,15000,0.0011394,0.0324705,0.0288414,81.45,0.0306022,0.0123687,0.2707,capped,beam 0.0306 > cap 0.01093 arcsec,265.1
+spiral+mid+long,briggs,-0.4,7.23,15000,0.001446,0.0377181,0.032949,61.58,0.035253,0.0129083,0.2564,capped,beam 0.03525 > cap 0.01093 arcsec,205.9
+spiral+mid+long,briggs,-0.4,9.175,15000,0.001835,0.0426182,0.0374786,57.23,0.0399659,0.0134763,0.2451,capped,beam 0.03997 > cap 0.01093 arcsec,148.3
+spiral+mid+long,briggs,-0.4,11.643,15000,0.0023286,0.0481791,0.0423958,60.89,0.045195,0.0140874,0.2283,capped,beam 0.0452 > cap 0.01093 arcsec,225.4
+spiral+mid+long,briggs,-0.4,14.775,15000,0.002955,0.0538724,0.0475402,67.53,0.0506073,0.0147327,0.2142,capped,beam 0.05061 > cap 0.01093 arcsec,130.5
+spiral+mid+long,briggs,-0.4,18.75,15000,0.00375,0.0597192,0.0529686,71.08,0.0562427,0.0154392,0.1907,capped,beam 0.05624 > cap 0.01093 arcsec,128.1
+spiral+mid+long,briggs,-0.4,23.795,15000,0.004759,0.0660819,0.0596072,72.74,0.0627611,0.0161831,0.1602,capped,beam 0.06276 > cap 0.01093 arcsec,169.2
+spiral+mid+long,briggs,-0.4,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,294.0
+spiral+mid+long,briggs,-0.4,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,136.7
+spiral+mid+long,briggs,-0.8,2.788,15000,0.0005576,0.0195701,0.0171802,37.99,0.0183363,0.0111045,0.3124,capped,beam 0.01834 > cap 0.01093 arcsec,180.8
+spiral+mid+long,briggs,-0.8,3.537,15000,0.0007074,0.0247633,0.0198217,43.74,0.0221551,0.01147,0.2969,capped,beam 0.02216 > cap 0.01093 arcsec,150.4
+spiral+mid+long,briggs,-0.8,4.489,15000,0.0008978,0.027878,0.0251397,59.27,0.0264735,0.0119263,0.2863,capped,beam 0.02647 > cap 0.01093 arcsec,157.7
+spiral+mid+long,briggs,-0.8,5.697,15000,0.0011394,0.0324699,0.0288409,81.45,0.0306016,0.0123688,0.2707,capped,beam 0.0306 > cap 0.01093 arcsec,267.6
+spiral+mid+long,briggs,-0.8,7.23,15000,0.001446,0.0377174,0.0329485,61.58,0.0352524,0.0129084,0.2564,capped,beam 0.03525 > cap 0.01093 arcsec,217.6
+spiral+mid+long,briggs,-0.8,9.175,15000,0.001835,0.0426177,0.0374782,57.23,0.0399654,0.0134764,0.2451,capped,beam 0.03997 > cap 0.01093 arcsec,151.0
+spiral+mid+long,briggs,-0.8,11.643,15000,0.0023286,0.048179,0.0423957,60.89,0.0451949,0.0140874,0.2283,capped,beam 0.04519 > cap 0.01093 arcsec,231.2
+spiral+mid+long,briggs,-0.8,14.775,15000,0.002955,0.0538723,0.0475402,67.53,0.0506073,0.0147327,0.2143,capped,beam 0.05061 > cap 0.01093 arcsec,158.5
+spiral+mid+long,briggs,-0.8,18.75,15000,0.00375,0.0597192,0.0529686,71.08,0.0562427,0.0154392,0.1907,capped,beam 0.05624 > cap 0.01093 arcsec,179.9
+spiral+mid+long,briggs,-0.8,23.795,15000,0.004759,0.0660819,0.0596072,72.74,0.0627611,0.0161831,0.1602,capped,beam 0.06276 > cap 0.01093 arcsec,303.6
+spiral+mid+long,briggs,-0.8,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,148.5
+spiral+mid+long,briggs,-0.8,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,156.9
+spiral+mid+long,briggs,-0.0,2.788,15000,0.0005576,0.0195797,0.0171888,38,0.0183454,0.0111018,0.3127,capped,beam 0.01835 > cap 0.01093 arcsec,176.1
+spiral+mid+long,briggs,-0.0,3.537,15000,0.0007074,0.0247969,0.0198494,43.63,0.0221856,0.0114684,0.2967,capped,beam 0.02219 > cap 0.01093 arcsec,129.7
+spiral+mid+long,briggs,-0.0,4.489,15000,0.0008978,0.0278843,0.0251456,59.28,0.0264796,0.011925,0.2864,capped,beam 0.02648 > cap 0.01093 arcsec,163.6
+spiral+mid+long,briggs,-0.0,5.697,15000,0.0011394,0.0325051,0.02889,81.06,0.0306443,0.0123681,0.2703,capped,beam 0.03064 > cap 0.01093 arcsec,258.8
+spiral+mid+long,briggs,-0.0,7.23,15000,0.001446,0.037722,0.0329523,61.58,0.0352566,0.0129077,0.2564,capped,beam 0.03526 > cap 0.01093 arcsec,192.3
+spiral+mid+long,briggs,-0.0,9.175,15000,0.001835,0.0426023,0.0375304,57.24,0.039986,0.0134759,0.245,capped,beam 0.03999 > cap 0.01093 arcsec,177.5
+spiral+mid+long,briggs,-0.0,11.643,15000,0.0023286,0.0481797,0.0423962,60.89,0.0451955,0.0140874,0.2283,capped,beam 0.0452 > cap 0.01093 arcsec,264.9
+spiral+mid+long,briggs,-0.0,14.775,15000,0.002955,0.0538726,0.0475403,67.53,0.0506075,0.0147326,0.2142,capped,beam 0.05061 > cap 0.01093 arcsec,166.1
+spiral+mid+long,briggs,-0.0,18.75,15000,0.00375,0.0597196,0.052969,71.08,0.0562431,0.0154391,0.1907,capped,beam 0.05624 > cap 0.01093 arcsec,228.7
+spiral+mid+long,briggs,-0.0,23.795,15000,0.004759,0.0660821,0.0596075,72.73,0.0627614,0.0161831,0.1602,capped,beam 0.06276 > cap 0.01093 arcsec,268.9
+spiral+mid+long,briggs,-0.0,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,152.5
+spiral+mid+long,briggs,-0.0,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,141.8
+spiral+mid+long,briggs,-1.2,2.788,15000,0.0005576,0.0195699,0.01718,37.99,0.0183361,0.0111045,0.3124,capped,beam 0.01834 > cap 0.01093 arcsec,172.5
+spiral+mid+long,briggs,-1.2,3.537,15000,0.0007074,0.0247631,0.0198215,43.74,0.022155,0.01147,0.2969,capped,beam 0.02215 > cap 0.01093 arcsec,157.8
+spiral+mid+long,briggs,-1.2,4.489,15000,0.0008978,0.0278778,0.0251396,59.27,0.0264733,0.0119263,0.2863,capped,beam 0.02647 > cap 0.01093 arcsec,144.2
+spiral+mid+long,briggs,-1.2,5.697,15000,0.0011394,0.0324698,0.0288408,81.45,0.0306016,0.0123688,0.2707,capped,beam 0.0306 > cap 0.01093 arcsec,251.7
+spiral+mid+long,briggs,-1.2,7.23,15000,0.001446,0.0377173,0.0329484,61.58,0.0352523,0.0129085,0.2564,capped,beam 0.03525 > cap 0.01093 arcsec,191.9
+spiral+mid+long,briggs,-1.2,9.175,15000,0.001835,0.0426177,0.0374782,57.23,0.0399654,0.0134764,0.2451,capped,beam 0.03997 > cap 0.01093 arcsec,134.5
+spiral+mid+long,briggs,-1.2,11.643,15000,0.0023286,0.048179,0.0423957,60.89,0.0451949,0.0140874,0.2283,capped,beam 0.04519 > cap 0.01093 arcsec,246.6
+spiral+mid+long,briggs,-1.2,14.775,15000,0.002955,0.0538723,0.0475402,67.53,0.0506073,0.0147327,0.2143,capped,beam 0.05061 > cap 0.01093 arcsec,190.7
+spiral+mid+long,briggs,-1.2,18.75,15000,0.00375,0.0597191,0.0529685,71.08,0.0562427,0.0154392,0.1907,capped,beam 0.05624 > cap 0.01093 arcsec,224.3
+spiral+mid+long,briggs,-1.2,23.795,15000,0.004759,0.0660819,0.0596072,72.74,0.0627611,0.0161831,0.1602,capped,beam 0.06276 > cap 0.01093 arcsec,252.4
+spiral+mid+long,briggs,-1.2,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,136.6
+spiral+mid+long,briggs,-1.2,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,128.1
+spiral+mid+long,briggs,-1.6,2.788,15000,0.0005576,0.0195699,0.01718,37.99,0.018336,0.0111046,0.3124,capped,beam 0.01834 > cap 0.01093 arcsec,142.4
+spiral+mid+long,briggs,-1.6,3.537,15000,0.0007074,0.0247631,0.0198215,43.74,0.022155,0.01147,0.2969,capped,beam 0.02215 > cap 0.01093 arcsec,95.9
+spiral+mid+long,briggs,-1.6,4.489,15000,0.0008978,0.0278778,0.0251396,59.27,0.0264733,0.0119263,0.2863,capped,beam 0.02647 > cap 0.01093 arcsec,116.0
+spiral+mid+long,briggs,-1.6,5.697,15000,0.0011394,0.0324698,0.0288408,81.45,0.0306015,0.0123688,0.2707,capped,beam 0.0306 > cap 0.01093 arcsec,126.9
+spiral+mid+long,briggs,-1.6,7.23,15000,0.001446,0.0377173,0.0329484,61.58,0.0352523,0.0129085,0.2564,capped,beam 0.03525 > cap 0.01093 arcsec,105.3
+spiral+mid+long,briggs,-1.6,9.175,15000,0.001835,0.0426176,0.0374782,57.23,0.0399654,0.0134764,0.2451,capped,beam 0.03997 > cap 0.01093 arcsec,101.1
+spiral+mid+long,briggs,-1.6,11.643,15000,0.0023286,0.048179,0.0423957,60.89,0.0451949,0.0140874,0.2283,capped,beam 0.04519 > cap 0.01093 arcsec,97.9
+spiral+mid+long,briggs,-1.6,14.775,15000,0.002955,0.0538723,0.0475401,67.53,0.0506073,0.0147327,0.2143,capped,beam 0.05061 > cap 0.01093 arcsec,94.9
+spiral+mid+long,briggs,-1.6,18.75,15000,0.00375,0.0597191,0.0529685,71.08,0.0562427,0.0154392,0.1907,capped,beam 0.05624 > cap 0.01093 arcsec,92.6
+spiral+mid+long,briggs,-1.6,23.795,15000,0.004759,0.0660819,0.0596072,72.74,0.0627611,0.0161831,0.1602,capped,beam 0.06276 > cap 0.01093 arcsec,93.0
+spiral+mid+long,briggs,-1.6,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,90.0
+spiral+mid+long,briggs,-1.6,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,88.2
+spiral+mid+long,briggs,-2.0,2.788,15000,0.0005576,0.0195699,0.0171799,37.99,0.018336,0.0111046,0.3124,capped,beam 0.01834 > cap 0.01093 arcsec,139.1
+spiral+mid+long,briggs,-2.0,3.537,15000,0.0007074,0.0247631,0.0198215,43.74,0.022155,0.01147,0.2969,capped,beam 0.02215 > cap 0.01093 arcsec,92.6
+spiral+mid+long,briggs,-2.0,4.489,15000,0.0008978,0.0278778,0.0251396,59.27,0.0264733,0.0119264,0.2863,capped,beam 0.02647 > cap 0.01093 arcsec,147.0
+spiral+mid+long,briggs,-2.0,5.697,15000,0.0011394,0.0324698,0.0288408,81.45,0.0306015,0.0123688,0.2707,capped,beam 0.0306 > cap 0.01093 arcsec,109.8
+spiral+mid+long,briggs,-2.0,7.23,15000,0.001446,0.0377173,0.0329484,61.58,0.0352523,0.0129085,0.2564,capped,beam 0.03525 > cap 0.01093 arcsec,95.0
+spiral+mid+long,briggs,-2.0,9.175,15000,0.001835,0.0426176,0.0374782,57.23,0.0399654,0.0134764,0.2451,capped,beam 0.03997 > cap 0.01093 arcsec,97.2
+spiral+mid+long,briggs,-2.0,11.643,15000,0.0023286,0.048179,0.0423957,60.89,0.0451949,0.0140874,0.2283,capped,beam 0.04519 > cap 0.01093 arcsec,98.4
+spiral+mid+long,briggs,-2.0,14.775,15000,0.002955,0.0538723,0.0475401,67.53,0.0506073,0.0147327,0.2143,capped,beam 0.05061 > cap 0.01093 arcsec,100.6
+spiral+mid+long,briggs,-2.0,18.75,15000,0.00375,0.0597191,0.0529685,71.08,0.0562427,0.0154392,0.1907,capped,beam 0.05624 > cap 0.01093 arcsec,97.5
+spiral+mid+long,briggs,-2.0,23.795,15000,0.004759,0.0660819,0.0596072,72.74,0.0627611,0.0161831,0.1602,capped,beam 0.06276 > cap 0.01093 arcsec,94.2
+spiral+mid+long,briggs,-2.0,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,95.5
+spiral+mid+long,briggs,-2.0,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,89.6
+spiral+mid+long,briggs,0.4,2.788,15000,0.0005576,0.0196287,0.0173151,38.27,0.0184357,0.0110905,0.3135,capped,beam 0.01844 > cap 0.01093 arcsec,141.4
+spiral+mid+long,briggs,0.4,3.537,15000,0.0007074,0.0248355,0.0200686,43.8,0.0223252,0.0114614,0.2957,capped,beam 0.02233 > cap 0.01093 arcsec,184.0
+spiral+mid+long,briggs,0.4,4.489,15000,0.0008978,0.0279357,0.0253279,61.02,0.0265999,0.0119192,0.2862,capped,beam 0.0266 > cap 0.01093 arcsec,130.9
+spiral+mid+long,briggs,0.4,5.697,15000,0.0011394,0.0325562,0.0289234,80.38,0.0306861,0.0123651,0.2703,capped,beam 0.03069 > cap 0.01093 arcsec,287.5
+spiral+mid+long,briggs,0.4,7.23,15000,0.001446,0.0377599,0.0330238,60.86,0.0353125,0.0129043,0.2564,capped,beam 0.03531 > cap 0.01093 arcsec,210.8
+spiral+mid+long,briggs,0.4,9.175,15000,0.001835,0.0426177,0.0375437,57.25,0.0400003,0.0134735,0.2451,capped,beam 0.04 > cap 0.01093 arcsec,147.9
+spiral+mid+long,briggs,0.4,11.643,15000,0.0023286,0.048183,0.0423988,60.88,0.0451985,0.0140871,0.2284,capped,beam 0.0452 > cap 0.01093 arcsec,233.1
+spiral+mid+long,briggs,0.4,14.775,15000,0.002955,0.0538737,0.0475412,67.54,0.0506085,0.0147322,0.2142,capped,beam 0.05061 > cap 0.01093 arcsec,145.4
+spiral+mid+long,briggs,0.4,18.75,15000,0.00375,0.0597215,0.0529712,71.07,0.0562452,0.0154386,0.1907,capped,beam 0.05625 > cap 0.01093 arcsec,206.1
+spiral+mid+long,briggs,0.4,23.795,15000,0.004759,0.0660833,0.0596094,72.72,0.0627629,0.0161829,0.1602,capped,beam 0.06276 > cap 0.01093 arcsec,225.2
+spiral+mid+long,briggs,0.4,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,152.5
+spiral+mid+long,briggs,0.4,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,152.8
+spiral+mid+long,briggs,0.8,2.788,15000,0.0005576,0.0198816,0.0175436,37.99,0.0186761,0.0110667,0.3162,capped,beam 0.01868 > cap 0.01093 arcsec,150.7
+spiral+mid+long,briggs,0.8,3.537,15000,0.0007074,0.0251966,0.0202471,44.24,0.0225867,0.0114456,0.2956,capped,beam 0.02259 > cap 0.01093 arcsec,146.4
+spiral+mid+long,briggs,0.8,4.489,15000,0.0008978,0.0281753,0.0255468,60.71,0.0268289,0.011905,0.2871,capped,beam 0.02683 > cap 0.01093 arcsec,163.9
+spiral+mid+long,briggs,0.8,5.697,15000,0.0011394,0.0326782,0.0290799,79.55,0.0308266,0.0123588,0.2701,capped,beam 0.03083 > cap 0.01093 arcsec,260.9
+spiral+mid+long,briggs,0.8,7.23,15000,0.001446,0.0378136,0.0331285,63.05,0.0353936,0.0128958,0.2571,capped,beam 0.03539 > cap 0.01093 arcsec,205.4
+spiral+mid+long,briggs,0.8,9.175,15000,0.001835,0.0427039,0.037603,57.72,0.0400724,0.0134675,0.2454,capped,beam 0.04007 > cap 0.01093 arcsec,159.0
+spiral+mid+long,briggs,0.8,11.643,15000,0.0023286,0.0481948,0.042408,60.86,0.0452089,0.014087,0.2284,capped,beam 0.04521 > cap 0.01093 arcsec,263.7
+spiral+mid+long,briggs,0.8,14.775,15000,0.002955,0.0538778,0.0475443,67.58,0.0506121,0.014731,0.2142,capped,beam 0.05061 > cap 0.01093 arcsec,171.5
+spiral+mid+long,briggs,0.8,18.75,15000,0.00375,0.0597286,0.0529791,71.07,0.0562527,0.0154367,0.1908,capped,beam 0.05625 > cap 0.01093 arcsec,151.4
+spiral+mid+long,briggs,0.8,23.795,15000,0.004759,0.0660877,0.0596159,72.68,0.0627684,0.0161828,0.1602,capped,beam 0.06277 > cap 0.01093 arcsec,308.4
+spiral+mid+long,briggs,0.8,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,131.2
+spiral+mid+long,briggs,0.8,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,157.7
+spiral+mid+long,briggs,1.2,2.788,15000,0.0005576,0.0200322,0.0177665,38.27,0.0188654,0.0110597,0.3189,capped,beam 0.01887 > cap 0.01093 arcsec,179.7
+spiral+mid+long,briggs,1.2,3.537,15000,0.0007074,0.0252742,0.0206526,44.94,0.0228468,0.0114396,0.296,capped,beam 0.02285 > cap 0.01093 arcsec,131.0
+spiral+mid+long,briggs,1.2,4.489,15000,0.0008978,0.028327,0.0258768,59.39,0.0270742,0.0118995,0.2881,capped,beam 0.02707 > cap 0.01093 arcsec,194.1
+spiral+mid+long,briggs,1.2,5.697,15000,0.0011394,0.0328595,0.0292051,80.09,0.0309784,0.0123595,0.2701,capped,beam 0.03098 > cap 0.01093 arcsec,280.7
+spiral+mid+long,briggs,1.2,7.23,15000,0.001446,0.0380707,0.0332347,62.95,0.0355706,0.0128926,0.2573,capped,beam 0.03557 > cap 0.01093 arcsec,168.8
+spiral+mid+long,briggs,1.2,9.175,15000,0.001835,0.0428407,0.0376653,58.5,0.0401697,0.0134652,0.2457,capped,beam 0.04017 > cap 0.01093 arcsec,136.0
+spiral+mid+long,briggs,1.2,11.643,15000,0.0023286,0.0482708,0.0424412,61.61,0.0452622,0.0140881,0.2282,capped,beam 0.04526 > cap 0.01093 arcsec,234.6
+spiral+mid+long,briggs,1.2,14.775,15000,0.002955,0.0538826,0.047548,67.62,0.0506163,0.0147299,0.2142,capped,beam 0.05062 > cap 0.01093 arcsec,195.0
+spiral+mid+long,briggs,1.2,18.75,15000,0.00375,0.059737,0.0529884,71.07,0.0562616,0.0154349,0.1908,capped,beam 0.05626 > cap 0.01093 arcsec,146.9
+spiral+mid+long,briggs,1.2,23.795,15000,0.004759,0.0660928,0.0596237,72.63,0.0627749,0.0161837,0.1602,capped,beam 0.06277 > cap 0.01093 arcsec,122.4
+spiral+mid+long,briggs,1.2,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,261.1
+spiral+mid+long,briggs,1.2,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,149.1
+spiral+mid+long,briggs,1.6,2.788,15000,0.0005576,0.0200779,0.017816,38.08,0.0189132,0.0110605,0.3197,capped,beam 0.01891 > cap 0.01093 arcsec,152.3
+spiral+mid+long,briggs,1.6,3.537,15000,0.0007074,0.0252776,0.020786,44.74,0.022922,0.0114396,0.2961,capped,beam 0.02292 > cap 0.01093 arcsec,150.0
+spiral+mid+long,briggs,1.6,4.489,15000,0.0008978,0.0283894,0.0259071,59.19,0.0271199,0.0118998,0.2886,capped,beam 0.02712 > cap 0.01093 arcsec,160.0
+spiral+mid+long,briggs,1.6,5.697,15000,0.0011394,0.0328897,0.0292302,80.1,0.0310061,0.0123617,0.2704,capped,beam 0.03101 > cap 0.01093 arcsec,249.8
+spiral+mid+long,briggs,1.6,7.23,15000,0.001446,0.038133,0.0333292,62.47,0.0356503,0.0128931,0.2572,capped,beam 0.03565 > cap 0.01093 arcsec,172.7
+spiral+mid+long,briggs,1.6,9.175,15000,0.001835,0.0428602,0.0377196,58.18,0.0402079,0.0134655,0.2457,capped,beam 0.04021 > cap 0.01093 arcsec,143.8
+spiral+mid+long,briggs,1.6,11.643,15000,0.0023286,0.0482756,0.0424449,61.61,0.0452665,0.0140888,0.2283,capped,beam 0.04527 > cap 0.01093 arcsec,142.9
+spiral+mid+long,briggs,1.6,14.775,15000,0.002955,0.0539807,0.0475287,68,0.0506521,0.0147296,0.2139,capped,beam 0.05065 > cap 0.01093 arcsec,202.9
+spiral+mid+long,briggs,1.6,18.75,15000,0.00375,0.0597399,0.0529916,71.06,0.0562647,0.0154344,0.1909,capped,beam 0.05626 > cap 0.01093 arcsec,158.5
+spiral+mid+long,briggs,1.6,23.795,15000,0.004759,0.0660945,0.0596263,72.62,0.0627772,0.0161843,0.1602,capped,beam 0.06278 > cap 0.01093 arcsec,158.3
+spiral+mid+long,briggs,1.6,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,281.7
+spiral+mid+long,briggs,1.6,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,137.1
+spiral+mid+long,briggs,2.0,2.788,15000,0.0005576,0.0201002,0.0178205,38.31,0.0189261,0.0110607,0.3198,capped,beam 0.01893 > cap 0.01093 arcsec,171.2
+spiral+mid+long,briggs,2.0,3.537,15000,0.0007074,0.0252843,0.0208139,44.44,0.0229405,0.0114397,0.2961,capped,beam 0.02294 > cap 0.01093 arcsec,130.0
+spiral+mid+long,briggs,2.0,4.489,15000,0.0008978,0.0284147,0.0259308,59.53,0.0271443,0.0119,0.2886,capped,beam 0.02714 > cap 0.01093 arcsec,139.9
+spiral+mid+long,briggs,2.0,5.697,15000,0.0011394,0.0328954,0.029235,80.11,0.0310113,0.0123622,0.2704,capped,beam 0.03101 > cap 0.01093 arcsec,260.7
+spiral+mid+long,briggs,2.0,7.23,15000,0.001446,0.0381389,0.0333342,62.48,0.0356557,0.0128933,0.2572,capped,beam 0.03566 > cap 0.01093 arcsec,216.7
+spiral+mid+long,briggs,2.0,9.175,15000,0.001835,0.0428644,0.0377233,58.19,0.0402118,0.0134657,0.2458,capped,beam 0.04021 > cap 0.01093 arcsec,154.1
+spiral+mid+long,briggs,2.0,11.643,15000,0.0023286,0.0482765,0.0424456,61.61,0.0452673,0.014089,0.2283,capped,beam 0.04527 > cap 0.01093 arcsec,222.9
+spiral+mid+long,briggs,2.0,14.775,15000,0.002955,0.053981,0.0475289,68.01,0.0506523,0.0147296,0.2139,capped,beam 0.05065 > cap 0.01093 arcsec,153.2
+spiral+mid+long,briggs,2.0,18.75,15000,0.00375,0.0597404,0.0529922,71.06,0.0562652,0.0154343,0.1909,capped,beam 0.05627 > cap 0.01093 arcsec,210.9
+spiral+mid+long,briggs,2.0,23.795,15000,0.004759,0.0660949,0.0596268,72.61,0.0627776,0.0161844,0.1602,capped,beam 0.06278 > cap 0.01093 arcsec,237.8
+spiral+mid+long,briggs,2.0,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,166.5
+spiral+mid+long,briggs,2.0,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,166.8
+spiral+mid+long,natural,2.0,2.788,15000,0.0005576,0.0201015,0.0178218,38.31,0.0189273,0.0110608,0.3199,capped,beam 0.01893 > cap 0.01093 arcsec,140.2
+spiral+mid+long,natural,2.0,3.537,15000,0.0007074,0.0252855,0.0208149,44.44,0.0229415,0.0114397,0.2961,capped,beam 0.02294 > cap 0.01093 arcsec,152.7
+spiral+mid+long,natural,2.0,4.489,15000,0.0008978,0.028416,0.025932,59.53,0.0271456,0.0119,0.2887,capped,beam 0.02715 > cap 0.01093 arcsec,158.7
+spiral+mid+long,natural,2.0,5.697,15000,0.0011394,0.0328966,0.0292359,80.11,0.0310123,0.0123623,0.2704,capped,beam 0.03101 > cap 0.01093 arcsec,267.5
+spiral+mid+long,natural,2.0,7.23,15000,0.001446,0.0381644,0.0333458,62.87,0.0356739,0.0128934,0.2571,capped,beam 0.03567 > cap 0.01093 arcsec,229.6
+spiral+mid+long,natural,2.0,9.175,15000,0.001835,0.0428653,0.037724,58.19,0.0402125,0.0134657,0.2458,capped,beam 0.04021 > cap 0.01093 arcsec,162.5
+spiral+mid+long,natural,2.0,11.643,15000,0.0023286,0.0482767,0.0424458,61.6,0.0452674,0.014089,0.2283,capped,beam 0.04527 > cap 0.01093 arcsec,229.2
+spiral+mid+long,natural,2.0,14.775,15000,0.002955,0.0539811,0.047529,68.01,0.0506524,0.0147296,0.2139,capped,beam 0.05065 > cap 0.01093 arcsec,150.2
+spiral+mid+long,natural,2.0,18.75,15000,0.00375,0.0597405,0.0529923,71.06,0.0562654,0.0154343,0.1909,capped,beam 0.05627 > cap 0.01093 arcsec,124.6
+spiral+mid+long,natural,2.0,23.795,15000,0.004759,0.0660949,0.0596269,72.61,0.0627777,0.0161844,0.1602,capped,beam 0.06278 > cap 0.01093 arcsec,295.1
+spiral+mid+long,natural,2.0,30.197,15000,0.0060394,0.0728128,0.0665225,72.62,0.0695966,0.016985,0.1356,capped,beam 0.0696 > cap 0.01093 arcsec,167.7
+spiral+mid+long,natural,2.0,38.321,15000,0.0076642,0.0802938,0.0744134,72.38,0.0772977,0.017865,0.1127,capped,beam 0.0773 > cap 0.01093 arcsec,117.0
+spiral+mid+long,briggs,-1.8,0.684,15000,0.0001368,0.00567224,0.00552878,-20.92,0.00560005,0.0102476,0.3165,ok,,112.7
+spiral+mid+long,briggs,-1.6,0.56,15000,0.000112,0.00474051,0.0045759,-35.88,0.00465748,0.0102995,0.2952,ok,,117.0
+spiral+mid+long,briggs,-1.6,0.834,15000,0.0001668,0.00673243,0.00639089,23.67,0.00655944,0.0102458,0.3173,ok,,124.5
+spiral+mid+long,briggs,-1.4,0.684,15000,0.0001368,0.00567225,0.0055288,-20.92,0.00560007,0.0102475,0.3165,ok,,132.4
+spiral+mid+long,briggs,-1.18,0.342,15000,6.84e-05,0.003165,0.00312533,54.2,0.0031451,0.0103652,0.3157,ok,,120.1
+spiral+mid+long,briggs,-0.97,0.0,15000,4.78119e-05,0.00228105,0.00216832,58.13,0.00222397,0.00981926,0.3203,ok,,116.4
+spiral+mid+long,briggs,-0.57,0.0,15000,4.78119e-05,0.00227791,0.00216506,58.12,0.00222077,0.00979803,0.3203,ok,,115.9
+spiral+mid+long,briggs,-1.8,0.575,15000,0.000115,0.00475853,0.00459288,-35.79,0.00467497,0.0103239,0.2958,ok,,114.8
+spiral+mid+long,briggs,-1.6,0.471,15000,9.42e-05,0.00413946,0.00401468,-31.3,0.00407659,0.0102827,0.3061,ok,,108.3
+spiral+mid+long,briggs,-1.6,0.701,15000,0.0001402,0.00569411,0.00555394,-20.39,0.00562359,0.0102684,0.3175,ok,,126.6
+spiral+mid+long,briggs,-1.4,0.575,15000,0.000115,0.00475854,0.00459289,-35.79,0.00467498,0.0103237,0.2958,ok,,120.1
+spiral+mid+long,briggs,-1.17,0.287,15000,5.74e-05,0.00279694,0.00272578,55.1,0.00276113,0.010281,0.3332,ok,,122.0
+spiral+mid+long,briggs,-0.95,0.0,15000,4.78119e-05,0.00228099,0.00216826,58.13,0.00222391,0.00981887,0.3203,ok,,117.9
+spiral+mid+long,briggs,-0.55,0.0,15000,4.78119e-05,0.00227756,0.00216469,58.12,0.0022204,0.00979563,0.3203,ok,,113.6
+spiral+mid+long,briggs,-1.8,0.48,15000,9.6e-05,0.00423431,0.00408733,-34.42,0.00416017,0.0102489,0.3051,ok,,116.3
+spiral+mid+long,briggs,-1.6,0.394,15000,7.88e-05,0.00357062,0.00352551,-27.06,0.00354799,0.0102811,0.3148,ok,,122.6
+spiral+mid+long,briggs,-1.6,0.586,15000,0.0001172,0.00507225,0.00488884,-34.3,0.0049797,0.0102048,0.2993,ok,,113.5
+spiral+mid+long,briggs,-1.4,0.48,15000,9.6e-05,0.00423432,0.00408733,-34.42,0.00416018,0.0102488,0.3051,ok,,110.4
+spiral+mid+long,briggs,-1.17,0.24,15000,4.8e-05,0.00249766,0.0023735,61.39,0.00243479,0.0103538,0.3359,ok,,123.5

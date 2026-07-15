@@ -168,7 +168,13 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 <div class="wrap">
 <header>
   <p class="eyebrow">NGVLA subarray-selection tool &middot; Track 2 curve generation &middot; 5&ndash;6 Jul 2026</p>
-  <h1>Rev&thinsp;F taperability &amp; sculptability curves</h1>
+  <!-- campaign dropdown: populated + shown by JS only when the injected data
+       is a combined multi-campaign payload; inert in single-combo reports -->
+  <label class="s0-field" id="combo-field" style="display:none; float:right; margin-top:4px">
+    <span>campaign:</span>
+    <select id="combo-select" aria-label="campaign"></select>
+  </label>
+  <h1 id="page-h1">Rev&thinsp;F taperability &amp; sculptability curves</h1>
   <p class="sub">Sensitivity cost (&eta;, the image rms relative to natural weighting) versus achieved
   resolution at the 30&thinsp;GHz reference frequency, measured from noise simulations of each Rev&thinsp;F
   subarray (4&thinsp;h track, dec&thinsp;+24&deg;) over a grid of Briggs robust and uv-taper values.
@@ -178,6 +184,11 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   beam meeting the criterion is shown, and where no beam can meet it the <em>best achievable</em>
   skirt is reported and flagged (hollow), never trading resolution away.</p>
 </header>
+
+<!-- per-campaign caveat (e.g. the snapshot-mode physics note); combined mode only -->
+<div class="card" id="combo-note-card" style="display:none">
+  <p class="note" id="combo-note" style="margin:0"></p>
+</div>
 
 <div class="tiles" id="tiles"></div>
 
@@ -324,7 +335,12 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 <div class="tooltip" id="tt"></div>
 
 <script>
-const DATA = __DATA__;
+// __DATA__ is either one combo's payload (per-campaign report) or, for the
+// combined all-campaigns report, {payloads: {key: payload}, combos: [...],
+// default: key}; the campaign dropdown then swaps DATA and re-renders.
+const INJECTED = __DATA__;
+const COMBINED = Boolean(INJECTED && INJECTED.payloads);
+let DATA = COMBINED ? INJECTED.payloads[INJECTED.default] : INJECTED;
 const SLOT = {"core":"--s-core","spiral":"--s-spiral","mid":"--s-mid",
   "core+spiral":"--s-core-spiral","spiral+mid":"--s-spiral-mid",
   "core+mid":"--s-core-mid","main":"--s-main","core-inner":"--s-core-inner",
@@ -334,12 +350,19 @@ const SLOT = {"core":"--s-core","spiral":"--s-spiral","mid":"--s-mid",
   "mid+spiral+core-outer":"--s-mid-spiral-core-outer",
   "long+mid+spiral+core-outer":"--s-long-mid-spiral-core-outer"};
 const css = name => SLOT[name] ? `var(${SLOT[name]})` : 'var(--muted)';
-const ACTIVE = DATA.order.filter(n => (DATA.samples[n]||[]).length);
-const SKIRT_KEYS = Array.isArray(DATA.skirt_setpoints)
-  ? DATA.skirt_setpoints : Object.keys(DATA.imaging || {});
-const DEFAULT_S0 = (DATA.s0_default && DATA.imaging && DATA.imaging[DATA.s0_default])
-  ? DATA.s0_default : (DATA.imaging && DATA.imaging['0.10'] ? '0.10' : SKIRT_KEYS[0]);
-let currentS0 = DEFAULT_S0 || '0.10';
+// DATA-derived state, rebound by bindData() whenever the campaign changes
+let ACTIVE, SKIRT_KEYS, DEFAULT_S0;
+let currentS0 = '0.10';
+function bindData() {
+  ACTIVE = DATA.order.filter(n => (DATA.samples[n]||[]).length);
+  SKIRT_KEYS = Array.isArray(DATA.skirt_setpoints)
+    ? DATA.skirt_setpoints : Object.keys(DATA.imaging || {});
+  DEFAULT_S0 = (DATA.s0_default && DATA.imaging && DATA.imaging[DATA.s0_default])
+    ? DATA.s0_default : (DATA.imaging && DATA.imaging['0.10'] ? '0.10' : SKIRT_KEYS[0]);
+  // keep the user's s0 across campaign switches when the new payload has it
+  if (!(DATA.imaging && DATA.imaging[currentS0])) currentS0 = DEFAULT_S0 || '0.10';
+}
+bindData();
 
 const fmtRes = mas => mas >= 1000 ? (mas/1000).toPrecision(3) + '″'
                                   : mas.toPrecision(3) + ' mas';
@@ -693,7 +716,7 @@ function calcHasResults() {
     || (summary && summary.textContent.trim()));
 }
 
-(function subarrayCalculator() {
+(function wireSubarrayCalculator() {   // listeners once; renderAll re-runs it
   const form = document.getElementById('calc-form');
   if (!form) return;
   form.addEventListener('submit', ev => {
@@ -701,7 +724,6 @@ function calcHasResults() {
     runSubarrayCalculator();
   });
   document.getElementById('calc-rank').addEventListener('change', runSubarrayCalculator);
-  runSubarrayCalculator();
 })();
 
 // log-x, log-y curve chart --------------------------------------------------
@@ -893,10 +915,9 @@ function renderImagingChart() {
      label: 'Imaging curves: eta vs resolution, PSF skirt <= ' + fmtS0(currentS0)}));
 }
 
-function initS0Selector() {
+(function wireS0Selector() {           // listener once; syncS0Selector per render
   const select = document.getElementById('s0-select');
   if (!select) return;
-  select.value = currentS0;
   select.addEventListener('change', () => {
     if (!DATA.imaging || !DATA.imaging[select.value]) {
       select.value = currentS0;
@@ -907,24 +928,34 @@ function initS0Selector() {
     renderImagingChart();
     if (hadResults) runSubarrayCalculator();
   });
+})();
+
+function syncS0Selector() {
+  const select = document.getElementById('s0-select');
+  if (select) select.value = currentS0;
 }
 
-initS0Selector();
-renderImagingChart();
-legend(document.getElementById('legend-ps'),
-  curveChart(document.getElementById('chart-ps'), DATA.pointsource,
+function renderPsChart() {
+  const chart = document.getElementById('chart-ps');
+  const leg = document.getElementById('legend-ps');
+  clearNode(chart);
+  clearNode(leg);
+  legend(leg, curveChart(chart, DATA.pointsource,
     {...optsCommon, label: 'Point-source curves: eta vs resolution, skirt unconstrained'}));
+}
 
 // stat tiles ------------------------------------------------------------------
-const nPts = ACTIVE.reduce((a, n) => a + DATA.counts[n], 0);
-const tiles = [
-  {v: ACTIVE.length + '<span class="unit"> / ' + DATA.order.length + '</span>',
-   l: 'subarrays with curve data'},
-  {v: String(nPts), l: 'offerable sample points shown'},
-  {v: '0', l: 'failed points', cls: 'ok'},
-];
-document.getElementById('tiles').innerHTML = tiles.map(t =>
-  `<div class="tile"><div class="v ${t.cls||''}">${t.v}</div><div class="l">${t.l}</div></div>`).join('');
+function renderTiles() {
+  const nPts = ACTIVE.reduce((a, n) => a + DATA.counts[n], 0);
+  const tiles = [
+    {v: ACTIVE.length + '<span class="unit"> / ' + DATA.order.length + '</span>',
+     l: 'subarrays with curve data'},
+    {v: String(nPts), l: 'offerable sample points shown'},
+    {v: '0', l: 'failed points', cls: 'ok'},
+  ];
+  document.getElementById('tiles').innerHTML = tiles.map(t =>
+    `<div class="tile"><div class="v ${t.cls||''}">${t.v}</div><div class="l">${t.l}</div></div>`).join('');
+}
 
 // small multiples ---------------------------------------------------------------
 function multiple(el, name) {
@@ -984,10 +1015,15 @@ function multiple(el, name) {
   card.append(svg);
   el.append(card);
 }
-for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
+
+function renderMultiples() {
+  const el = document.getElementById('multiples');
+  clearNode(el);
+  for (const name of ACTIVE) multiple(el, name);
+}
 
 // robust-taper lattice heatmaps --------------------------------------------------
-(function heatmaps() {
+function renderHeatmaps() {
   const RAMP = ['#cde2fb','#9ec5f4','#6da7ec','#3987e5','#256abf','#184f95','#0d366b'];
   const etaColor = eta => RAMP[Math.min(6, Math.max(0,
     Math.round((Math.min(eta, 5) - 1) / 4 * 6)))];
@@ -1050,6 +1086,7 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
     svg.append(hit);
   };
   const holder = document.getElementById('heatmaps');
+  clearNode(holder);
   const heatmapStatus = {capped: false, skipped: false, failed: false, missing: false};
   for (const name of ACTIVE) {
     const hm = DATA.heatmaps[name]; if (!hm) continue;
@@ -1181,11 +1218,12 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
     legendEntry([cellSwatch(drawFailedCell)], 'failed');
   if (heatmapStatus.missing)
     legendEntry([cellSwatch(drawNullCell)], 'not measured');
-})();
+}
 
 // PSF radial profile -----------------------------------------------------------
-(function profileChart() {
+function renderProfile() {
   const P = DATA.profile, el = document.getElementById('chart-profile');
+  clearNode(el);
   const W = 960, H = 320, M = {l: 46, r: 24, t: 16, b: 40};
   const xmax = 1.0;
   const X = v => M.l + v / xmax * (W - M.l - M.r);
@@ -1242,10 +1280,10 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
   });
   svg.append(g);
   el.append(svg);
-})();
+}
 
 // QA table ---------------------------------------------------------------------
-(function qaTable() {
+function renderQaTable() {
   const t = document.getElementById('qa-table');
   t.innerHTML = '<tr><th>subarray</th><th>N ant</th><th>native beam, sim (mas)</th>' +
     '<th>native beam, calc pkl (mas)</th><th>diff</th><th>natural skirt</th><th>LAS @30 GHz</th></tr>' +
@@ -1263,10 +1301,10 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
         `<td>${las ? fmtRes(las.mas) + (las.provisional ? ' †' : '') : ''}</td></tr>`;
     }).join('') +
     `<tr><td colspan="7" style="text-align:left;color:var(--muted);font-size:12px">LAS = 0.80 λ/b<sub>min</sub> uniformly for the 18-m subarrays (memo-67 core value); per-subarray disk-sim measurements pending</td></tr>`;
-})();
+}
 
 // full data table -----------------------------------------------------------------
-(function dataTable() {
+function renderDataTable() {
   const t = document.getElementById('data-table');
   const rows = [];
   for (const name of ACTIVE)
@@ -1277,5 +1315,75 @@ for (const name of ACTIVE) multiple(document.getElementById('multiples'), name);
         `<td>${p.eta.toFixed(3)}</td><td>${p.skirt === null ? '' : (100*p.skirt).toFixed(1) + '%'}</td></tr>`);
   t.innerHTML = '<tr><th>subarray</th><th>weighting</th><th>robust</th><th>taper</th>' +
     '<th>beam</th><th>&eta;</th><th>skirt</th></tr>' + rows.join('');
+}
+
+// campaign dropdown + full-page render ------------------------------------------
+function currentCombo() {
+  // standalone per-combo reports carry their metadata as payload.combo
+  // (older payload JSONs without it just keep the static header)
+  if (!COMBINED) return DATA.combo || null;
+  const sel = document.getElementById('combo-select');
+  const key = sel && sel.value ? sel.value : INJECTED.default;
+  return INJECTED.combos.find(c => c.key === key) || null;
+}
+
+function updateComboHeader() {
+  const combo = currentCombo();
+  if (!combo) return;
+  document.getElementById('page-h1').innerHTML = combo.h1_html;
+  const sub = document.querySelector('header .sub');
+  if (sub) sub.innerHTML = combo.sub_html || '';
+  const noteCard = document.getElementById('combo-note-card');
+  const note = document.getElementById('combo-note');
+  if (combo.note_html) {
+    note.innerHTML = combo.note_html;
+    noteCard.style.display = '';
+  } else {
+    note.innerHTML = '';
+    noteCard.style.display = 'none';
+  }
+  // the PSF-profile and QA cards are Rev F / 4 h track reference diagnostics
+  // (hardcoded values) -- only show them on that campaign
+  const isRef = combo.key === 'revF_track';
+  for (const id of ['chart-profile', 'qa-table']) {
+    const card = document.getElementById(id).closest('.card');
+    if (card) card.style.display = isRef ? '' : 'none';
+  }
+}
+
+function renderAll() {
+  bindData();
+  hideTT();
+  updateComboHeader();
+  syncS0Selector();
+  renderTiles();
+  renderImagingChart();
+  renderPsChart();
+  renderMultiples();
+  renderHeatmaps();
+  renderProfile();
+  renderQaTable();
+  renderDataTable();
+  runSubarrayCalculator();
+}
+
+(function wireComboSelector() {
+  if (!COMBINED) return;
+  const field = document.getElementById('combo-field');
+  const sel = document.getElementById('combo-select');
+  for (const c of INJECTED.combos) {
+    const o = document.createElement('option');
+    o.value = c.key;
+    o.textContent = c.label;
+    sel.append(o);
+  }
+  sel.value = INJECTED.default;
+  field.style.display = '';
+  sel.addEventListener('change', () => {
+    DATA = INJECTED.payloads[sel.value];
+    renderAll();                       // includes updateComboHeader()
+  });
 })();
+
+renderAll();
 </script>

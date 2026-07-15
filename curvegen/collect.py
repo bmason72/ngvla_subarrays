@@ -11,6 +11,7 @@ Run:  .../python3 collect.py            # all result files
 
 import csv
 import glob
+import math
 import os
 
 from config import RESULTS_DIR, REPO, OVERSAMPLE, REV, SIM_MODE
@@ -37,6 +38,12 @@ def registry_paths(rev=REV, sim_mode=SIM_MODE):
 
 
 SUBARRAYS_CSV, OUT = registry_paths()
+
+# provenance tag for the source column; the default combo keeps the original
+# "revf-sim" byte-for-byte (pinned by the 12 Jul 2026 axis work), any other
+# combo is labeled by its (rev, sim_mode) -- e.g. "revD_snapshot-sim"
+SOURCE_TAG = "revf-sim" if (REV, SIM_MODE) == ("revF", "track") \
+    else "%s_%s-sim" % (REV, SIM_MODE)
 
 
 def offered_subarrays():
@@ -73,6 +80,35 @@ def check_cell_convention(r, path):
                r["cell_arcsec"], need))
 
 
+def check_not_degenerate(r, path):
+    """Refuse to publish a degenerate measurement (the 15 Jul 2026 snapshot
+    LONG incident: an empty tclean product recorded ok with a 1e-6 arcsec
+    sentinel beam and sigma 0).  sweep.run_point now records these as failed;
+    this guard catches any that predate the guard -- strip + re-measure
+    (the sweep re-runs a missing lattice point) rather than publishing.
+    NB NaN survives ordinary comparisons, so finiteness is checked
+    explicitly (codex review, 15 Jul 2026)."""
+    try:
+        bmaj = float(r["bmaj_arcsec"])
+        bmin = float(r["bmin_arcsec"])
+        res = float(r["res_geo_arcsec"])
+        sigma = float(r["sigma_dirty"])
+        cell = float(r["cell_arcsec"]) if r["cell_arcsec"] else None
+    except (TypeError, ValueError):
+        raise RuntimeError("%s: unparsable ok-row %s r=%s t=%s"
+                           % (path, r["weighting"], r["robust"], r["taper_mas"]))
+    geom = [bmaj, bmin, res, sigma] + ([cell] if cell is not None else [])
+    bad = (any(not math.isfinite(v) or v <= 0 for v in geom)
+           or (cell is not None and bmin < cell))
+    if bad:
+        raise RuntimeError(
+            "%s: degenerate measurement %s r=%s t=%s (bmaj %s bmin %s "
+            "res %s cell %s sigma %s) -- strip the row and re-sweep"
+            % (path, r["weighting"], r["robust"], r["taper_mas"],
+               r["bmaj_arcsec"], r["bmin_arcsec"], r["res_geo_arcsec"],
+               r["cell_arcsec"], r["sigma_dirty"]))
+
+
 def collect_one(path):
     # capped rows (beam beyond the heterogeneous cap) are collected as
     # interpolation ANCHORS (sample_status=capped_anchor): they extend row
@@ -88,11 +124,13 @@ def collect_one(path):
            and r["weighting"] == "natural" and float(r["taper_mas"]) == 0]
     if not nat:
         raise RuntimeError("%s has no natural/untapered reference point" % path)
+    check_not_degenerate(nat[0], path)     # a bad denominator poisons every eta
     sigma_nat = float(nat[0]["sigma_dirty"])
 
     out, seen = [], set()
     for r in rows:
         check_cell_convention(r, path)
+        check_not_degenerate(r, path)
         taper_mas = float(r["taper_mas"])
         eta = float(r["sigma_dirty"]) / sigma_nat
         # hygiene (post-mortem M4d): -0.0 and 0.0 are one robust value, and
@@ -113,8 +151,9 @@ def collect_one(path):
             robust=robust,
             taper_arcsec_30ghz="" if taper_mas == 0 else "%.6g" % (taper_mas / 1e3),
             freq_orig_ghz="30.0",
-            source="revf-sim:%s:%s_r%s_t%s" % (r["subarray"], r["weighting"],
-                                               r["robust"], r["taper_mas"]),
+            source="%s:%s:%s_r%s_t%s" % (SOURCE_TAG, r["subarray"],
+                                         r["weighting"], r["robust"],
+                                         r["taper_mas"]),
             note="",
             sample_status="ok" if r["status"] == "ok" else "capped_anchor",
         ))
@@ -145,10 +184,14 @@ def main():
             continue
         print("%-28s %3d samples" % (os.path.basename(path), len(got)))
         samples += got
-    with open(OUT, "w", newline="") as f:
+    # atomic replace: the combined report (or another reader) must never see
+    # a truncated curves CSV mid-write (codex review, 15 Jul 2026)
+    tmp = OUT + ".tmp"
+    with open(tmp, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=OUT_FIELDS)
         w.writeheader()
         w.writerows(samples)
+    os.replace(tmp, OUT)
     print("wrote %d samples -> %s" % (len(samples), OUT))
 
 

@@ -1,0 +1,44 @@
+
+=== /work2/10240/bmason72/stampede3/casaenv/bin/python3 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/sweep.py long --points-file /scratch/10240/bmason72/ngvla_curvegen/fill_long_briggs_r2/points.json --shard /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/results/long.csv.shard_fill_briggs_r2.csv ===
+cwd: /scratch/10240/bmason72/ngvla_curvegen/fill_long_briggs_r2
+  briggs_2.00_0.124 superseding recorded skipped row
+reusing existing /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/ms/long.ms
+imsize 8192, native cell 4.7512e-05 arcsec
+  briggs_2.00_0.124 ...
+2026-07-07 12:07:35	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_0.173 superseding recorded skipped row
+  briggs_2.00_0.173 ...
+2026-07-07 12:08:11	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_0.241 superseding recorded skipped row
+  briggs_2.00_0.241 ...
+2026-07-07 12:08:53	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_0.337 superseding recorded skipped row
+  briggs_2.00_0.337 ...
+2026-07-07 12:09:27	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_0.469 superseding recorded skipped row
+  briggs_2.00_0.469 ...
+2026-07-07 12:10:07	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_0.654 superseding recorded skipped row
+  briggs_2.00_0.654 ...
+2026-07-07 12:10:40	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_0.911 superseding recorded skipped row
+  briggs_2.00_0.911 ...
+2026-07-07 12:11:14	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_1.270 superseding recorded skipped row
+  briggs_2.00_1.270 ...
+2026-07-07 12:11:49	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_1.770 superseding recorded skipped row
+  briggs_2.00_1.770 ...
+2026-07-07 12:12:29	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_2.468 superseding recorded skipped row
+  briggs_2.00_2.468 ...
+2026-07-07 12:13:08	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_3.440 superseding recorded skipped row
+  briggs_2.00_3.440 ...
+2026-07-07 12:13:45	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_4.794 superseding recorded skipped row
+  briggs_2.00_4.794 ...
+2026-07-07 12:14:23	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+  briggs_2.00_6.682 superseding recorded skipped row
+  briggs_2.00_6.682 ...
+2026-07-07 12:15:12	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.

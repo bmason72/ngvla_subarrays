@@ -503,6 +503,154 @@ sections, real figures replacing the three placeholders).
   (standing caveat) when node-hours are approved; milestone commit of the
   RevD/snapshot campaign state (uncommitted since 74470c0); optional
   cross-revision/mode comparison report (spec deliberately before building).
+  **[All four addressed in part 2 below, same day.]**
+
+**SESSION DELTA (15 Jul 2026, Fable — part 2: defect diagnosis + fixes +
+combined report + $WORK migration).**  bmason eyeballed the three new
+reports and flagged uneven curve quality; full diagnosis, fixes, and staged
+follow-ups below.  Codex (gpt-5.6-sol) consulted on the physics/diagnosis
+and guard-reviewed the diff; a quantitative "curve census" (subagent,
+reproducing make_report.build_curve exactly per campaign) grounded it.
+
+*Diagnosis — every flagged defect mapped to a cause:*
+1. **Refine starvation, three ways.**  (a) The campaign refine budget (60)
+   was exhausted on the sparse fresh lattices; worst in-band eta steps
+   0.36–1.53 survived (revD-track main+long 1.16 double-jump @0.9 mas,
+   spiral+mid 2x0.36 staircase, mid+long 0.27 spike; snapshot main+long
+   1.42/1.53 @~3.3 mas; etc.).  (b) `refine.samples_from` did NOT apply the
+   report's eta<=5 display trim, so budgets were BURNED on invisible eta~5+
+   fringe jumps — e.g. snapshot spiral "worst step 0.92" (identical in both
+   revisions, suspicious-looking) while its rendered curve was already
+   smooth at 0.10.  (c) refine only ever chased the IMAGING curve, so
+   point-source steps (revF-snapshot main 0.45, main+long 1.42; even
+   revF-track main+long 0.38) were never targets.
+2. **One corrupt measurement**: revF-snapshot `long` briggs r=-2 t=6.332mas
+   recorded ok with bmaj=bmin=1e-6", sigma=0, skirt=0 (an empty tclean
+   product with a sentinel beam).  It alone caused the "LONG = dots" render
+   (a lone curve point 324x finer than everything else).  Archived to
+   `results-revF_snapshot/attic-degenerate/`, re-collected.
+3. **Snapshot sub-natural absence is PHYSICS, not missing data**: with one
+   60 s integration each baseline is one uv sample; on the Briggs density
+   grid (uv cell = 1/(imsize*cell)) nearly every occupied cell holds <=1
+   visibility, so Briggs == natural (core snapshot r=-2 shrinks the beam
+   0.5% vs 30% for the track).  Established on the UNTAPERED lattice rows,
+   where cell (hence the density grid) is identical across robust — immune
+   to the adaptive-cell caveat below.
+   Only composites (dense multi-occupancy core cluster) go sub-natural
+   (main 0.55x). Verified numerically; codex concurs, with the caveat that a
+   REAL snapshot has bandwidth/multi-dump uv filling — a monochromatic
+   1-dump sim understates robust's lever (logged as an open control, below).
+   Documented in-report (snapshot combos get a header note).
+4. **mid+long snapshot ~53 usable points is real cap censoring** (175/228
+   lattice points land beyond mid's natural-beam cap) and **LONG snapshot
+   fragmentation is honest sparse instantaneous coverage** (plus item 2 in
+   revF's case); revD-snapshot long keeps 3 genuine x1.4–2.0 in-window gaps
+   (taper grid too coarse where beam(taper) moves fast).
+
+*Fixes implemented (98 tests green):*
+- `sweep.py run_point`: degenerate-product guard — fail (never ok) when
+  bmin < 1 CELL or sigma<=0 or non-finite; stderr warning below 3 cells.
+  (1 cell, not 2: legitimate far-coarse LONG rows fit bmin ~1.6–2.0 cells
+  under the adaptive-cell convention — the sentinel sits at 0.001 cells.)
+- `collect.py`: same check at publish time (hard fail, like the stale-cell
+  guard); provenance `source` tag now rev/mode-aware for non-default combos
+  (default stays byte-identical "revf-sim").
+- `refine.py`: samples now eta<=ETA_CAP-trimmed EXACTLY like the report;
+  chases BOTH imaging and point-source curves (same bracketing generator,
+  jumps unioned); res-gap chasing still capped-subarrays-only.
+- Campaign plumbing: `submit_campaign.sh --refine-budget N --refine-rounds M`
+  -> `NGVLA_REFINE_BUDGET/ROUNDS` -> `campaign_sweep.sbatch` refine call.
+- 3 new campaigns re-collected (revf_snapshot_curves.csv is 1 corrupt row
+  lighter; labels fixed).
+- **Staged for bmason (RUN_CAMPAIGNS.md §1): four POLISH campaigns**
+  (budget 200, rounds 8; prep/sweep/fill are resumable no-ops, only refine
+  runs).  Order free; revF/track last/optional (its two ptsrc steps).
+- **NOT changed on purpose**: mid+long snapshot capping (honest physics),
+  LONG snapshot dot/segment rendering (honest gaps — now explained by the
+  in-report snapshot note), the fixed-FOV adaptive-cell weighting convention
+  (documented trade-off; codex flagged that FOV varies with cell across a
+  taper row — acknowledged, deliberate, collector-enforced since 9 Jul).
+
+*Combined all-campaigns report (bmason feature):*
+`make_report.py --combined reports/ngvla-curves.html` gathers ONE payload
+per registered combo (each built by a subprocess with that combo's env —
+config freezes RESULTS_DIR at import) and injects
+`{payloads, combos, default}`; the template now has a **campaign dropdown**
+(top-right of the header) that swaps DATA and re-renders the whole page.
+Template re-architected from render-once to `bindData()` + idempotent
+`render*()` functions under `renderAll()`; listeners wired once; s0 choice
+survives campaign switches; snapshot combos show the physics note card; the
+hardcoded Rev-F profile/QA diagnostic cards hide on other combos (closing
+the old "cosmetic limitation").  Per-combo reports build exactly as before;
+`campaign_collect.sbatch` now refreshes BOTH.  JS syntax esprima-checked;
+subagent logic review of the refactor.  16 MB with all four campaigns.
+`--payload-json` is the new subprocess interface.
+
+*MS migration + regeneration insurance (bmason directive):*
+- MS stores (the only expensive scratch assets; results CSVs live in git)
+  **moved to `$WORK/ngvla_curvegen/`** (8.7 GB rsync, verified 16/16 MSes)
+  because $SCRATCH is purged.  `curvegen/ms` symlink repointed; non-default
+  combos route via new env `NGVLA_MS_BASE` (default `$WORK/ngvla_curvegen`
+  in every campaign sbatch; falls back to NGVLA_SCRATCH for laptops).
+  tclean work dirs (TempLattice churn) deliberately STAY on scratch.
+  NB an interactive sweep without NGVLA_MS_BASE set still resolves the old
+  scratch path for non-default combos — export it (or use the sbatches).
+- `curvegen/regen_ms.sbatch` (`sbatch --array=0-3 ...`): one task per combo
+  re-simulates any MISSING MS into $WORK; idempotent insurance, a few
+  node-hours from nothing.  Old scratch copies left in place (purge will
+  reap them).
+
+*Codex guard review of the diff (gpt-5.6-sol, threaded) — adjudication:*
+- FIXED per review: NaN/Inf fail-open in both degenerate guards (finiteness
+  + positivity on bmaj/bmin/res/sigma/cell, natural-reference row validated
+  before eta division); standalone per-combo reports now carry
+  `payload.combo` so the snapshot note / per-combo header / Rev-F-reference
+  card gating work OUTSIDE the combined report too; refine-budget env vars
+  are always exported explicitly (a stale NGVLA_REFINE_* in the submitting
+  shell could silently make a default campaign a polish pass) + integer
+  validation; refine candidate selection is now severity-ranked round-robin
+  per jump (flat sorted-set truncation could let one pathological jump
+  starve the rest); collect.py + make_report.py write via tmp+os.replace
+  (4 concurrent polish collects share ngvla-curves.html); MS migration
+  verified by rsync checksum pass.
+- REJECTED with rationale: 2-cell hard floor (legit LONG rows at 1.6-2.0
+  cells; codex accepted the 1-cell floor + 3-cell warning split).
+- REWORDED per review: the snapshot note no longer claims a "fixed-FOV"
+  convention (imsize is fixed, cell adapts to taper, so FOV/density grid DO
+  vary along a taper row — a deliberate, collector-enforced convention since
+  v2) and states the sub-natural conclusion via the untapered rows; LONG
+  fragmentation now "consistent with sparse instantaneous coverage" rather
+  than conclusively "honest gaps" (dense diagnostic scans still pending).
+
+*Logged-for-later (codex advisories, not blocking):* dense 1-D taper scans
+as a diagnostic for any jump that survives the polish pass (distinguishes
+budget artifact / beam-fit lobe switch / constraint-branch transition);
+bisection-style direct resolution targeting in refine; a bandwidth+
+multi-dump-realistic snapshot control sim (does robust get a lever back?);
+reporting bmaj/bmin/axis ratio for snapshot beams (res_geo hides
+elongation; data exists in results CSVs, needs schema thought); analytic
+eta from gridded weights as a noise-free cross-check; PSF-peak/main-lobe
+independent beam sanity checks.
+
+*ASK BMASON (non-blocking, defaults chosen):*
+1. Snapshot convention: we ACCEPT "snapshot curves start at ~natural for
+   sparse subarrays" as the honest answer under the standard memo-121
+   convention (report says so).  If snapshot forecasting fidelity matters,
+   the bandwidth-realistic control sim above would tell us how much lever
+   real continuum snapshots recover.  OK?
+2. Keep offering LONG-family snapshot curves at all (fragmented but
+   honest), or drop them from the snapshot registry rows?
+3. Eyeball the new combined report (reports/ngvla-curves.html) — the four
+   per-combo reports remain but the combined one is intended to be THE
+   report going forward.
+
+*Future goal noted (bmason, 15 Jul): per-subarray PSF plots and cuts in the
+report for the selected subarrays.*  Groundwork already exists: every sweep
+point captures an azimuthal radial profile (results*/profiles/*.jsonl,
+feature v11), and the payload/dropdown architecture takes per-combo panels
+cleanly.  When picked up: add a per-subarray PSF panel (profile at the
+selected operating point + cuts), fed from the profile JSONLs at
+collect/report time.
 
 
 **Where things stand.** 14 offered subarrays now: the homogeneous set

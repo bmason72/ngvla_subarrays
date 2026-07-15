@@ -11,36 +11,42 @@
 \citation{memo121}
 \@writefile{toc}{\contentsline {section}{\numberline {2}Definitions}{2}{section.2}\protected@file@percent }
 \citation{memo67}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Rev F subarrays in the current memo scope. Baselines are physical 3-D separations from the Rev F configuration files. Native beam is the untapered natural-weighting geometric-mean FWHM at 30 GHz from the Rev F curve table. The LAS coefficient is the uniform adopted 18-m value, not a per-subarray measurement.}}{3}{table.1}\protected@file@percent }
-\newlabel{tab:subarrays}{{1}{3}{Rev F subarrays in the current memo scope. Baselines are physical 3-D separations from the Rev F configuration files. Native beam is the untapered natural-weighting geometric-mean FWHM at 30 GHz from the Rev F curve table. The LAS coefficient is the uniform adopted 18-m value, not a per-subarray measurement}{table.1}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3}Curve generation: offline}{3}{section.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Figure to add: point-source/taperability envelopes at 30 GHz.}}{4}{figure.1}\protected@file@percent }
-\newlabel{fig:taperability}{{1}{4}{Figure to add: point-source/taperability envelopes at 30 GHz}{figure.1}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Figure to add: imaging envelopes under the skirt trade.}}{4}{figure.2}\protected@file@percent }
-\newlabel{fig:imaging}{{2}{4}{Figure to add: imaging envelopes under the skirt trade}{figure.2}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Curve engine: query time}{4}{section.4}\protected@file@percent }
+\newlabel{sec:curvegen}{{3}{3}{Curve generation: offline}{section.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Rev F subarrays in the current memo scope. Baselines are physical 3-D separations from the Rev F configuration files; for the uv-filtered long-baseline subarrays (\S  \ref {sec:curvegen}), $b_{\min }$ is the shortest baseline surviving the 178 m spurious-shorts cut. Native beam is the untapered natural-weighting geometric-mean FWHM at 30 GHz from the Rev F curve table. The LAS coefficient is the uniform adopted 18-m value, not a per-subarray measurement.}}{4}{table.1}\protected@file@percent }
+\newlabel{tab:subarrays}{{1}{4}{Rev F subarrays in the current memo scope. Baselines are physical 3-D separations from the Rev F configuration files; for the uv-filtered long-baseline subarrays (\S \ref {sec:curvegen}), $b_{\min }$ is the shortest baseline surviving the 178 m spurious-shorts cut. Native beam is the untapered natural-weighting geometric-mean FWHM at 30 GHz from the Rev F curve table. The LAS coefficient is the uniform adopted 18-m value, not a per-subarray measurement}{table.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Simulation modes and campaign parameterization}{5}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:campaigns}{{3.1}{5}{Simulation modes and campaign parameterization}{subsection.3.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Point-source (taperability) envelopes at 30 GHz for the fourteen offered Rev F subarrays: minimum $\eta $ versus achievable geometric-mean beam, ignoring PSF shape. Left: the compact/core family; right: the long-baseline family (the panels intentionally do not share an x-axis). Curves are the engine's interpolated envelopes over the measured (robust, taper) lattice --- the same code path the selector uses --- clipped at each heterogeneous subarray's beam cap and at the report's $\eta \le 5$ display trim; gaps are unmeasured stretches, not interpolation.}}{6}{figure.1}\protected@file@percent }
+\newlabel{fig:taperability}{{1}{6}{Point-source (taperability) envelopes at 30 GHz for the fourteen offered Rev F subarrays: minimum $\eta $ versus achievable geometric-mean beam, ignoring PSF shape. Left: the compact/core family; right: the long-baseline family (the panels intentionally do not share an x-axis). Curves are the engine's interpolated envelopes over the measured (robust, taper) lattice --- the same code path the selector uses --- clipped at each heterogeneous subarray's beam cap and at the report's $\eta \le 5$ display trim; gaps are unmeasured stretches, not interpolation}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Imaging (sculptability) envelopes for the same subarrays under the default threshold policy with $s_{\max }=0.10$ (panels as in Fig.~\ref {fig:taperability}). Solid: strict ($s \le 0.10$ achieved). Dashed: relaxed points whose best achievable skirt is $\le 0.25$ (the retired trade cap, kept here purely as a readability bucket). Dotted: relaxed points whose best achievable skirt exceeds $0.25$, concentrated near the finest resolutions of the long-containing composites. Five of those composites (mid+long, spiral+mid+long, main+long, mid+spiral+core-outer, long+mid+spiral+core-outer) never reach the strict threshold anywhere in their offered range.}}{7}{figure.2}\protected@file@percent }
+\newlabel{fig:imaging}{{2}{7}{Imaging (sculptability) envelopes for the same subarrays under the default threshold policy with $s_{\max }=0.10$ (panels as in Fig.~\ref {fig:taperability}). Solid: strict ($s \le 0.10$ achieved). Dashed: relaxed points whose best achievable skirt is $\le 0.25$ (the retired trade cap, kept here purely as a readability bucket). Dotted: relaxed points whose best achievable skirt exceeds $0.25$, concentrated near the finest resolutions of the long-containing composites. Five of those composites (mid+long, spiral+mid+long, main+long, mid+spiral+core-outer, long+mid+spiral+core-outer) never reach the strict threshold anywhere in their offered range}{figure.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Curve engine: query time}{7}{section.4}\protected@file@percent }
+\newlabel{sec:engine}{{4}{7}{Curve engine: query time}{section.4}{}}
 \citation{postmortem}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Figure to add: example lattice heatmap and selected envelope path.}}{5}{figure.3}\protected@file@percent }
-\newlabel{fig:heatmap}{{3}{5}{Figure to add: example lattice heatmap and selected envelope path}{figure.3}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Selection and ranking}{5}{section.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces The measured robust--taper lattice for the main subarray, colored by $\eta $ (clamped at 5). The untapered column and the natural-weighting row appear as labeled sentinel bands on the otherwise log-scaled taper axis. Black contours mark skirt $=0.10$ (solid) and $0.25$ (dashed); their blockiness is lattice quantization, not a smoothing artifact. Red circles mark the lattice cells that anchor the default $s_{\max }=0.10$ imaging curve. This lattice is essentially complete (255 of 259 cells measured \texttt  {ok}, 4 beam-capped).}}{9}{figure.3}\protected@file@percent }
+\newlabel{fig:heatmap}{{3}{9}{The measured robust--taper lattice for the main subarray, colored by $\eta $ (clamped at 5). The untapered column and the natural-weighting row appear as labeled sentinel bands on the otherwise log-scaled taper axis. Black contours mark skirt $=0.10$ (solid) and $0.25$ (dashed); their blockiness is lattice quantization, not a smoothing artifact. Red circles mark the lattice cells that anchor the default $s_{\max }=0.10$ imaging curve. This lattice is essentially complete (255 of 259 cells measured \texttt {ok}, 4 beam-capped)}{figure.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Selection and ranking}{9}{section.5}\protected@file@percent }
 \citation{memo96}
 \citation{stroh}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Validation}{6}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Validation}{10}{section.6}\protected@file@percent }
+\newlabel{sec:validation}{{6}{10}{Validation}{section.6}{}}
 \citation{plan}
 \bibcite{memo55}{1}
 \bibcite{memo65}{2}
 \bibcite{memo67}{3}
 \bibcite{memo72}{4}
 \bibcite{memo76}{5}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Limitations and future work}{7}{section.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {A}Data products}{7}{appendix.A}\protected@file@percent }
 \bibcite{memo96}{6}
 \bibcite{memo121}{7}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Limitations and future work}{11}{section.7}\protected@file@percent }
+\newlabel{sec:limitations}{{7}{11}{Limitations and future work}{section.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Data products}{11}{appendix.A}\protected@file@percent }
 \bibcite{plan}{8}
 \bibcite{postmortem}{9}
 \bibcite{stroh}{10}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Primary data products used by the memo and selector.}}{8}{table.2}\protected@file@percent }
-\newlabel{tab:products}{{2}{8}{Primary data products used by the memo and selector}{table.2}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces \texttt  {revf\_curves.csv} schema.}}{8}{table.3}\protected@file@percent }
-\newlabel{tab:schema}{{3}{8}{\texttt {revf\_curves.csv} schema}{table.3}{}}
-\gdef \@abspage@last{8}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Primary data products used by the memo and selector.}}{12}{table.2}\protected@file@percent }
+\newlabel{tab:products}{{2}{12}{Primary data products used by the memo and selector}{table.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces \texttt  {revf\_curves.csv} schema.}}{13}{table.3}\protected@file@percent }
+\newlabel{tab:schema}{{3}{13}{\texttt {revf\_curves.csv} schema}{table.3}{}}
+\gdef \@abspage@last{13}

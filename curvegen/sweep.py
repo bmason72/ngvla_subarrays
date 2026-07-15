@@ -271,6 +271,27 @@ class Sweep:
             bmaj, bmin, bpa = beam_arcsec(name + ".image")
             res_geo = float(np.sqrt(bmaj * bmin))
             sigma = image_rms(name + ".image")
+            # degenerate-product guard (15 Jul 2026): a pathological tclean
+            # run (e.g. snapshot LONG at extreme robust+taper) can "succeed"
+            # with an empty image and a sentinel restoring beam (1e-6 arcsec,
+            # sigma 0).  The MINOR axis is the binding sampling constraint
+            # (snapshot/LONG beams are legitimately elongated): a fitted bmin
+            # under ONE pixel, or a non-positive rms, is garbage and must be
+            # recorded failed, never ok.  (Threshold is 1 cell, not 2: LONG's
+            # far-coarse tapered rows legitimately fit bmin ~1.7 cells under
+            # the adaptive-cell convention -- marginal but real; the sentinel
+            # sits at ~0.001 cells.)
+            geom = (bmaj, bmin, res_geo, sigma, cell_pt)
+            if (any(not np.isfinite(v) or v <= 0 for v in geom)
+                    or bmin < cell_pt):
+                raise RuntimeError(
+                    "degenerate tclean product: bmaj %.4g bmin %.4g res %.4g "
+                    "arcsec, cell %.4g, rms %.4g"
+                    % (bmaj, bmin, res_geo, cell_pt, sigma))
+            if bmin < 3.0 * cell_pt:
+                print("  warning: %s bmin %.4g arcsec only %.1f cells -- "
+                      "marginally sampled minor axis"
+                      % (key, bmin, bmin / cell_pt), file=sys.stderr)
             skirt, _ = psf_skirt(name + ".psf", res_geo)
             # beyond the beam cap the point is a measured diagnostic, not
             # usable curve data (collect.py exports only status="ok")

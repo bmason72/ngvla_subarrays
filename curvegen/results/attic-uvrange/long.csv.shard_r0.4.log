@@ -1,0 +1,51 @@
+
+=== /work2/10240/bmason72/stampede3/casaenv/bin/python3 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/sweep.py long --only-row briggs:0.4 --shard /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/results/long.csv.shard_r0.4.csv ===
+cwd: /scratch/10240/bmason72/ngvla_curvegen/run_long_row0.4
+long: lattice 180 points (res_fine 0.2972 mas, res_nat 0.3341 mas); 72 already recorded
+reusing existing /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/ms/long.ms
+imsize 8192, native cell 4.7512e-05 arcsec
+  briggs_0.40_0.000 ...
+2026-07-07 11:49:37	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.0003118"  eta 0.977  skirt 0.1339  (40.2s)
+  briggs_0.40_0.089 ...
+2026-07-07 11:50:15	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.000327511"  eta 0.981  skirt 0.1302  (36.8s)
+  briggs_0.40_0.124 ...
+
+0%....10....20....30....40....50....60....70....80....90....100%
+2026-07-07 11:51:04	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.000343798"  eta 0.994  skirt 0.121  (54.4s)
+  briggs_0.40_0.173 ...
+2026-07-07 11:51:56	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.000377375"  eta 1.032  skirt 0.1033  (45.4s)
+  briggs_0.40_0.241 ...
+2026-07-07 11:52:36	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.000442145"  eta 1.112  skirt 0.08819  (41.0s)
+  briggs_0.40_0.337 ...
+2026-07-07 11:53:16	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.000531043"  eta 1.246  skirt 0.09157  (38.2s)
+  briggs_0.40_0.469 ...
+2026-07-07 11:53:53	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.000649009"  eta 1.452  skirt 0.07806  (40.6s)
+  briggs_0.40_0.654 ...
+2026-07-07 11:54:35	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.000805858"  eta 1.731  skirt 0.0291  (37.5s)
+  briggs_0.40_0.911 ...
+2026-07-07 11:55:17	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.000988192"  eta 2.068  skirt -0.02977  (42.0s)
+  briggs_0.40_1.270 ...
+2026-07-07 11:55:55	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.0011987"  eta 2.551  skirt -0.008693  (39.8s)
+  briggs_0.40_1.770 ...
+2026-07-07 11:56:37	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.00158085"  eta 3.322  skirt 0.03372  (39.2s)
+  briggs_0.40_2.468 ...
+2026-07-07 11:57:16	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.00352297"  eta 3.982  skirt 0.1967  (40.0s)
+  briggs_0.40_3.440 ...
+2026-07-07 11:58:00	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.0364168"  eta 4.320  skirt 0.6024  (43.2s)
+  briggs_0.40_4.794 ...
+2026-07-07 11:58:44	WARN	task_tclean::SIImageStore::restore (file /source/casa6/casatools/src/code/synthesis/ImagerObjects/SIImageStore.cc, line 2352)	Restoring with an empty model image. Only residuals will be processed to form the output restored image.
+    beam 0.165811"  eta 5.304  skirt 0.9459  (48.0s)
+long done: 74 ok, 13 skipped, 0 beam-capped, 0 failed

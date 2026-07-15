@@ -269,7 +269,12 @@ def build_sens_table(las):
     return out
 
 
-def main(out_path, title_label=None):
+def build_payload():
+    """The report's full data payload (the JSON injected as __DATA__) for the
+    ACTIVE (rev, sim_mode) routing.  Factored out of main() so the combined
+    all-campaigns report can gather one payload per combo (each built in a
+    subprocess with that combo's environment, honoring config's env-frozen
+    RESULTS_DIR/grid state)."""
     samples_by = {name: [] for name in ACTIVE_ORDER}
     display_by = {name: [] for name in ACTIVE_ORDER}
     with open(CURVES_CSV) as f:
@@ -399,6 +404,15 @@ def main(out_path, title_label=None):
         dict(sa="main", nat_sim=None, nat_calc=2.42, skirt_nat=None),
     ]
 
+    # per-combo header/labels/notes: the template applies these in BOTH the
+    # combined report and standalone per-combo reports (so e.g. the snapshot
+    # physics note and the Rev-F-reference card gating work everywhere)
+    data["combo"] = combo_entry(REV, SIM_MODE)
+    return data
+
+
+def main(out_path, title_label=None):
+    data = build_payload()
     with open(TEMPLATE) as f:
         html = f.read()
     html = html.replace("__DATA__", json.dumps(data))
@@ -416,12 +430,133 @@ def main(out_path, title_label=None):
                          "%s taperability" % title_label)
                 .replace("simulations of each Rev&thinsp;F",
                          "simulations of each %s" % title_label))
-    with open(out_path, "w") as f:
-        f.write(html)
+    _atomic_write(out_path, html)
     print("wrote", out_path)
 
 
+def _atomic_write(out_path, html):
+    """tmp + os.replace so concurrent collect jobs (four polish campaigns can
+    finish together) never leave a truncated or interleaved report."""
+    tmp = out_path + ".tmp.%d" % os.getpid()
+    with open(tmp, "w") as f:
+        f.write(html)
+    os.replace(tmp, out_path)
+
+
 _REV_DISPLAY = {"revF": "Rev F", "revD": "Rev D"}
+_REV_HTML = {"revF": "Rev&thinsp;F", "revD": "Rev&thinsp;D"}
+_SIM_LABEL = {"track": "4 h track", "snapshot": "snapshot"}
+_SIM_DESC_HTML = {"track": "4&thinsp;h track",
+                  "snapshot": "single 60&thinsp;s snapshot at transit"}
+
+# rendered under the header for snapshot combos (the 15 Jul 2026 diagnosis:
+# the missing sub-natural branch is physics under the adopted convention, and
+# fragmented LONG-family segments are honest coverage gaps)
+_SNAPSHOT_NOTE_HTML = (
+    "<strong>Snapshot mode:</strong> a single 60&thinsp;s monochromatic "
+    "integration gives each baseline one uv sample, so on the density grid "
+    "used by Briggs weighting here (set by the untapered image&rsquo;s "
+    "imsize&thinsp;&times;&thinsp;cell) nearly every occupied uv cell holds "
+    "&le;&thinsp;1 visibility and robust weighting has almost no lever "
+    "&mdash; for sparse single-component subarrays (core, spiral, mid, "
+    "core-inner, long) the curves legitimately <em>begin at &asymp; the "
+    "natural-weighting beam</em> (verified on the untapered lattice rows, "
+    "where the gridding convention is identical for every robust). Only "
+    "composite subarrays, whose dense core cluster still multi-occupies uv "
+    "cells, reach finer-than-natural beams. A real continuum snapshot has "
+    "bandwidth + multi-dump uv filling that this monochromatic sim omits, "
+    "so robust may recover some lever in practice (open control, PLAN.md). "
+    "Snapshot beams are also strongly elongated (the geometric-mean "
+    "resolution shown hides the axis ratio), and fragmented (dotted) "
+    "LONG-family segments are rendered exactly as measured &mdash; "
+    "consistent with sparse instantaneous uv coverage. "
+    "Diagnosis 15 Jul 2026, PLAN.md.")
+
+# the imaging-curve explanation shared by every combo's subtitle (matches the
+# template's static paragraph)
+_SUB_TAIL_HTML = (
+    "The <em>imaging</em> curves constrain the PSF skirt &mdash; the "
+    "azimuthally averaged PSF level at a radius of one FWHM (memo&thinsp;65 "
+    "metric&thinsp;2b) &mdash; to a selectable threshold s<sub>0</sub> (10% "
+    "by default, the memo&thinsp;121 criterion): at each resolution the "
+    "cheapest (min-&eta;) beam meeting the criterion is shown, and where no "
+    "beam can meet it the <em>best achievable</em> skirt is reported and "
+    "flagged (hollow), never trading resolution away.")
+
+
+def combo_entry(rev, sim_mode):
+    """Dropdown metadata + per-combo header HTML for the combined report."""
+    rev_html = _REV_HTML.get(rev, rev)
+    snap = sim_mode == "snapshot"
+    h1 = "%s %staperability &amp; sculptability curves" % (
+        rev_html, "snapshot " if snap else "")
+    sub = ("Sensitivity cost (&eta;, the image rms relative to natural "
+           "weighting) versus achieved resolution at the 30&thinsp;GHz "
+           "reference frequency, measured from noise simulations of each "
+           "%s subarray (%s, dec&thinsp;+24&deg;) over a grid of Briggs "
+           "robust and uv-taper values. %s"
+           % (rev_html, _SIM_DESC_HTML.get(sim_mode, sim_mode),
+              _SUB_TAIL_HTML))
+    return dict(key="%s_%s" % (rev, sim_mode),
+                label="%s — %s" % (_REV_DISPLAY.get(rev, rev),
+                                   _SIM_LABEL.get(sim_mode, sim_mode)),
+                h1_html=h1, sub_html=sub,
+                note_html=_SNAPSHOT_NOTE_HTML if snap else "")
+
+
+def build_combined(out_path):
+    """The all-campaigns report: one payload per registered (rev, sim_mode)
+    with curve data, each built by a SUBPROCESS running this script with that
+    combo's environment (config freezes RESULTS_DIR / grid state at import,
+    so a single process cannot build them all), injected together with a
+    campaign dropdown the page uses to swap its contents."""
+    import subprocess
+    import tempfile
+
+    reg = os.path.join(DATA_DIR, "config_registry.csv")
+    with open(reg, newline="") as f:
+        reg_rows = list(csv.DictReader(f))
+    combos, payloads = [], {}
+    for r in reg_rows:
+        rev, mode = r["rev"].strip(), r["sim_mode"].strip()
+        samples_csv = os.path.join(DATA_DIR, r["samples_csv"].strip())
+        if not os.path.isfile(samples_csv) or os.path.getsize(samples_csv) < 100:
+            print("combined: skipping %s/%s (no curve samples yet)"
+                  % (rev, mode))
+            continue
+        fd, tmp = tempfile.mkstemp(suffix=".json", prefix="payload_")
+        os.close(fd)
+        try:
+            env = dict(os.environ, NGVLA_REV=rev, NGVLA_SIM_MODE=mode)
+            subprocess.run(
+                [sys.executable, os.path.abspath(__file__),
+                 "--rev", rev, "--sim-mode", mode, "--payload-json", tmp],
+                env=env, check=True)
+            with open(tmp) as f:
+                payload = json.load(f)
+        finally:
+            os.unlink(tmp)
+        entry = combo_entry(rev, mode)
+        combos.append(entry)
+        payloads[entry["key"]] = payload
+        print("combined: gathered %s/%s (%d subarrays)"
+              % (rev, mode, len(payload.get("order", []))))
+    if not combos:
+        raise SystemExit("combined: no combo has curve data")
+    # dropdown order per bmason: Rev F track, Rev F snapshot, Rev D track,
+    # Rev D snapshot (rev first, track before snapshot; unknowns last)
+    pref = ["revF_track", "revF_snapshot", "revD_track", "revD_snapshot"]
+    combos.sort(key=lambda c: (pref.index(c["key"]) if c["key"] in pref
+                               else len(pref), c["key"]))
+    default = "revF_track" if "revF_track" in payloads else combos[0]["key"]
+    data = dict(payloads=payloads, combos=combos, default=default)
+    with open(TEMPLATE) as f:
+        html = f.read()
+    html = html.replace("__DATA__", json.dumps(data))
+    html = html.replace("NGVLA Rev F subarray curves",
+                        "NGVLA subarray curves — all campaigns")
+    _atomic_write(out_path, html)
+    print("wrote", out_path)
 
 
 if __name__ == "__main__":
@@ -433,7 +568,18 @@ if __name__ == "__main__":
                     help="config revision (default: $NGVLA_REV or revF)")
     ap.add_argument("--sim-mode", default=SIM_MODE, dest="sim_mode",
                     help="simulation mode (default: $NGVLA_SIM_MODE or track)")
+    ap.add_argument("--payload-json", default=None, metavar="PATH",
+                    help="write the combo's data payload as JSON instead of "
+                         "an HTML report (used by --combined)")
+    ap.add_argument("--combined", action="store_true",
+                    help="build the all-campaigns report (one payload per "
+                         "registered combo with data, campaign dropdown); "
+                         "ignores --rev/--sim-mode/the environment")
     args = ap.parse_args()
+
+    if args.combined:
+        build_combined(args.out_path or "reports/ngvla-curves.html")
+        sys.exit(0)
 
     # RESULTS_DIR (the heatmap source) is derived from the environment at
     # import time, so --rev/--sim-mode MUST agree with NGVLA_REV/NGVLA_SIM_MODE.
@@ -454,4 +600,11 @@ if __name__ == "__main__":
     else:
         label = None
         default_out = "revf-curves.html"
+
+    if args.payload_json:
+        with open(args.payload_json, "w") as f:
+            json.dump(build_payload(), f)
+        print("wrote payload", args.payload_json)
+        sys.exit(0)
+
     main(args.out_path or default_out, title_label=label)
