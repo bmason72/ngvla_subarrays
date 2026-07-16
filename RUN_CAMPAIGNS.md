@@ -26,6 +26,40 @@ resumable: re-running a campaign continues where it left off.
   purged periodically; only the disposable tclean work dirs stay on scratch.
   `curvegen/ms` symlink + `NGVLA_MS_BASE` route everything automatically.
 
+## State after the 15 Jul evening polish attempt (diagnosed + fixed 16 Jul)
+
+The four polish campaigns were submitted 15 Jul ~18:20.  Outcome:
+
+- **Every refine stage that had real work CORE-DUMPED** with
+  `casacore FiledesIO ... Disk quota exceeded`: Slurm jobs inherit the cwd of
+  the SUBMISSION directory (the repo, on $HOME, 14 GB quota), and plain
+  `refine.py` — unlike sweep_parallel/fill_grid — has no scratch-cwd
+  management, so its big tcleans dumped multi-GB TempLattice images into the
+  repo until home filled.  The earlier campaigns dodged this only by
+  submission-directory luck.  **FIXED**: all three campaign sbatches now pin
+  their cwd to `$NGVLA_SCRATCH/run_<jobid>[_<task>]`.  The ~9 GB of
+  TempLattice/casa-log debris in the repo has been deleted.
+- **revF/track prep FAILED instantly** (job 3314391): `fill_beam_caps.py`
+  hard-exited on the default combo instead of no-op'ing (first time
+  revF/track ever went through submit_campaign.sh).  **FIXED** (successful
+  no-op, like `--verify`).  Its dependent sweep/collect jobs can never run.
+- **revD/track's collect job was never created** (prep 3314261 + sweep
+  3314262 exist; no collect) — most likely the third sbatch submission
+  failed silently; its curves CSV is stale.  A clean resubmit supersedes it.
+- **Partial gains landed anyway** (refine points measured before the crash
+  are recorded; everything is resumable): both snapshot campaigns collected
+  and refreshed their CSVs + reports (e.g. revD/snapshot `long` +54 points,
+  worst step 1.02 → 0.72).
+
+### Relaunch (after `git pull`-ing / with the 16 Jul fixes in the tree)
+
+```
+scancel 3314392 3314393      # dead revF/track chain (DependencyNeverSatisfied)
+```
+
+then resubmit all four (same commands as §1 below — safe: every stage is
+resumable, prior refine points are kept, only remaining work runs).
+
 ## 1. POLISH campaigns — the follow-up refine passes (launch these)
 
 Base grids are complete, so prep + sweep_parallel + fill_grid are fast no-ops;

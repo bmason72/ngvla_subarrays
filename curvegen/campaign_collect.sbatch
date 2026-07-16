@@ -21,6 +21,9 @@ export NGVLA_SCRATCH="${NGVLA_SCRATCH:-$SCRATCH/ngvla_curvegen}"
 export NGVLA_MS_BASE="${NGVLA_MS_BASE:-$WORK/ngvla_curvegen}"
 mkdir -p "$NGVLA_MS_BASE"
 mkdir -p "$CG/reports"
+# pin cwd to scratch (CASA droppings land in the cwd; never the submit dir)
+RUN_CWD="$NGVLA_SCRATCH/run_${SLURM_JOB_ID:-manual}"
+mkdir -p "$RUN_CWD"; cd "$RUN_CWD"
 
 echo "=== COLLECT + REPORT  rev=$NGVLA_REV  mode=$NGVLA_SIM_MODE ==="
 "$PY" "$CG/collect.py" || { echo "COLLECT FAILED"; exit 1; }

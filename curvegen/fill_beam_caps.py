@@ -112,8 +112,13 @@ def verify():
 
 def main(dry_run=False):
     if (REV, SIM_MODE) == ("revF", "track"):
-        raise SystemExit("(revF, track) caps are hardcoded in config.py; "
-                         "nothing to fill.  Set NGVLA_REV/NGVLA_SIM_MODE.")
+        # SUCCESSFUL no-op, exactly like verify(): the default combo's caps
+        # are hardcoded in config.py.  This used to exit nonzero, which
+        # failed the whole campaign_prep stage the first time a revF/track
+        # campaign was submitted through submit_campaign.sh (polish pass,
+        # 15 Jul 2026 job 3314391).
+        print("(revF, track): caps hardcoded in config; nothing to fill.")
+        return
     subs_csv = registry_subarrays_csv()
     rows, fields = _read_metadata(subs_csv)
 

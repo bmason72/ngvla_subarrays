@@ -26,6 +26,12 @@ export NGVLA_SCRATCH="${NGVLA_SCRATCH:-$SCRATCH/ngvla_curvegen}"
 export NGVLA_MS_BASE="${NGVLA_MS_BASE:-$WORK/ngvla_curvegen}"
 mkdir -p "$NGVLA_MS_BASE"
 mkdir -p "$NGVLA_SCRATCH"
+# CASA writes multi-GB TempLattice* images to the process cwd, which Slurm
+# inherits from the SUBMISSION directory -- pin it to scratch so submitting
+# from $HOME/the repo can never blow the home quota (the 15 Jul 2026 polish
+# refines core-dumped exactly this way: "FiledesIO ... Disk quota exceeded").
+RUN_CWD="$NGVLA_SCRATCH/run_${SLURM_JOB_ID:-manual}${SLURM_ARRAY_TASK_ID:+_$SLURM_ARRAY_TASK_ID}"
+mkdir -p "$RUN_CWD"; cd "$RUN_CWD"
 
 echo "=== CAMPAIGN PREP  rev=$NGVLA_REV  mode=$NGVLA_SIM_MODE ==="
 "$PY" -c "import config as c; print('manifest: results=%s\n          ms=%s\n          n_subarrays=%d' % (c.RESULTS_DIR, c.MS_DIR, len(c.SUBARRAYS)))"

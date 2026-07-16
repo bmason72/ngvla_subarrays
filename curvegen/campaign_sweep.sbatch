@@ -24,6 +24,14 @@ export NGVLA_SCRATCH="${NGVLA_SCRATCH:-$SCRATCH/ngvla_curvegen}"
 export NGVLA_MS_BASE="${NGVLA_MS_BASE:-$WORK/ngvla_curvegen}"
 mkdir -p "$NGVLA_MS_BASE"
 mkdir -p "$NGVLA_SCRATCH"
+# CASA writes multi-GB TempLattice* images to the process cwd, which Slurm
+# inherits from the SUBMISSION directory -- pin it to scratch so submitting
+# from $HOME/the repo can never blow the home quota.  refine.py in particular
+# has no scratch-cwd management of its own (sweep_parallel/fill_grid do): the
+# 15 Jul 2026 polish refines core-dumped on exactly this
+# ("FiledesIO ... Disk quota exceeded", TempLattice debris in the repo).
+RUN_CWD="$NGVLA_SCRATCH/run_${SLURM_JOB_ID:-manual}${SLURM_ARRAY_TASK_ID:+_$SLURM_ARRAY_TASK_ID}"
+mkdir -p "$RUN_CWD"; cd "$RUN_CWD"
 # refine intensity: the default (60/3) matches the original campaigns; a
 # POLISH pass (base grids already swept, so sweep_parallel/fill_grid are
 # fast no-ops) raises these via submit_campaign.sh --refine-budget/-rounds
