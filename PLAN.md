@@ -648,6 +648,39 @@ independent beam sanity checks.
 report for the selected subarrays.*  DESIGNED same day — see the dedicated
 section below ("PSF inspector plan").
 
+**SESSION DELTA (16 Jul 2026, Fable — polish crash + relaunch + P3/P4).**
+1. *15 Jul polish attempt crashed*: Slurm inherits the SUBMISSION dir as
+   cwd; refine.py's big tcleans dumped TempLattice into the repo on $HOME
+   until the 14 GB quota filled (casacore "Disk quota exceeded" core
+   dumps).  FIXED: all campaign sbatches pin cwd to
+   `$NGVLA_SCRATCH/run_<jobid>[_<task>]`; ~9 GB debris deleted; also fixed
+   `fill_beam_caps.py` hard-exiting on the default combo (first
+   revF/track-through-submit_campaign ever).  Commit 553a765; post-mortem
+   in RUN_CAMPAIGNS.md.  Second failure mode found: the per-user
+   queued-job LIMIT silently kills later sbatch calls when 3-4 campaign
+   chains stack up (cost revD/track its collect job TWICE) — gotcha below.
+2. *16 Jul relaunch (bmason, 3 campaigns): DONE.*  All sweeps completed;
+   revD/track's collect was run locally (queue limit again).  All three
+   campaigns' curve CSVs + reports + PSF payloads are CURRENT.  Polish
+   verdict: budget exhaustion is gone (except revD/track `long`, 1.21
+   imaging, budget-limited — a resubmit continues it); most flagged
+   defects FIXED (revF/snapshot main+long imaging 1.42→0.24; revD/track
+   mid+long spike and main ptsrc gone); survivors (residual table in
+   RUN_CAMPAIGNS.md) all stopped on CANDIDATES EXHAUSTED — dense local
+   sampling didn't move them, which per the polish assumption is now real
+   evidence of physics/branch transitions (esp. the snapshot natural-end
+   ptsrc cliffs: main+long revD/snapshot 1.58).  Next levers = dense 1-D
+   taper scans / bisection targeting in refine (codex advisories), or
+   accept + document.  bmason decision point.
+3. *P3+P4 BUILT* (see the PSF inspector section): exporter + report panel,
+   codex build mode (sandbox works again), commit be0003e.  revF/track
+   polish is the one campaign still to launch; P1 (cut capture) next,
+   then P2 backfill AFTER revF/track polish lands.
+4. bmason wrote two reference notes at repo root (untracked, theirs):
+   `ETA_JUMPS.md` (why eta jumps happen; the polish assumption) and
+   `POLISH_AND_STORAGE.md` (how polish samples; the $WORK/$SCRATCH
+   layout).
+
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul)
 
 **Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage
@@ -1146,6 +1179,23 @@ high effort. Plumbing/IO/CLI → mid model, medium effort.
 
 ## 13. Gotchas log
 
+- **Slurm jobs inherit the SUBMISSION directory as cwd (15 Jul 2026
+  incident).**  CASA writes multi-GB TempLattice* images to the process
+  cwd, so a campaign submitted from the repo (on 14 GB $HOME) core-dumped
+  every heavy refine with casacore "FiledesIO ... Disk quota exceeded" and
+  left ~9 GB of TempLattice debris in the repo.  Symptom signature:
+  `terminate called after throwing ... casacore::AipsError` + "Aborted
+  (core dumped)" in a stage with no scratch-cwd management.  Every campaign
+  sbatch now pins cwd to `$NGVLA_SCRATCH/run_<jobid>[_<task>]` — keep that
+  in any NEW sbatch that touches CASA.
+- **The per-user queued-job limit silently truncates campaign chains
+  (15-16 Jul 2026, twice).**  Array elements count individually, so 3-4
+  concurrent campaigns make later `sbatch` calls fail and
+  `submit_campaign.sh` exits mid-chain — a prep without its sweep, or a
+  sweep without its collect (revD/track lost its collect BOTH times).
+  After a multi-campaign submission, verify each campaign printed all
+  three job ids; a missing collect can simply be run locally
+  (collect.py + make_report.py + export_psf_data.py with the combo env).
 - **Never name a shell variable `GROUPS` (12 Jul 2026 incident).**  `GROUPS`
   (like `UID`, `EUID`, `BASH*`, `SHELLOPTS`) is a bash special variable;
   `GROUPS=$(cmd)` fails with status 1 without running any failure path you

@@ -239,3 +239,57 @@ long,briggs,0.0,2.017,8192,0.0004034,0.0134047,0.00436232,-6.171,0.00764693,0.16
 long,briggs,0.0,2.313,8192,0.0004626,0.0181667,0.00502851,-89.76,0.00955779,0.116412,-0.283,ok,,39.0
 long,briggs,0.0,2.389,8192,0.0004778,0.00720557,0.00583189,-12.68,0.00648245,0.125476,-0.1032,ok,,38.6
 long,briggs,0.0,2.534,8192,0.0005068,0.00699365,0.00590813,-14.96,0.00642801,0.122225,-0.08056,ok,,39.7
+long,briggs,-0.4,1.934,8192,0.0003868,0.00714655,0.00579452,-12.09,0.00643512,0.126236,-0.0788,ok,,39.6
+long,briggs,-0.58,1.038,8192,0.0002076,0.00722791,0.00220754,56.73,0.00399449,0.0835238,0.2595,ok,,34.0
+long,briggs,-0.4,1.426,8192,0.0002852,0.00704845,0.00547391,-49.76,0.00621149,0.0834294,0.001435,ok,,33.9
+long,briggs,-0.26,1.577,8192,0.0003154,0.00845502,0.00436976,-25.6,0.00607836,0.0955707,-0.005795,ok,,35.5
+long,briggs,-0.2,1.487,8192,0.0002974,0.00825463,0.00571605,-28.78,0.00686905,0.0988838,-0.08583,ok,,35.7
+long,briggs,-0.58,1.492,8192,0.0002984,0.00826568,0.00572191,-28.81,0.00687717,0.0988588,-0.08677,ok,,32.6
+long,briggs,-0.2,1.169,8192,0.0002338,0.00818177,0.0016427,53.13,0.00366609,0.191466,0.1976,ok,,32.8
+long,briggs,-0.2,1.461,8192,0.0002922,0.00705972,0.00550084,-52.86,0.00623172,0.0844951,-0.002276,ok,,32.8
+long,briggs,-0.2,1.585,8192,0.000317,0.00841241,0.00437469,-26.95,0.00606644,0.0960642,-0.005578,ok,,36.7
+long,briggs,-0.38,0.851,8192,0.0001702,0.0054787,0.00124911,-65.55,0.00261601,0.0942669,0.1447,ok,,34.0
+long,briggs,-0.2,1.74,8192,0.000348,0.00833656,0.00599353,-25.13,0.00706862,0.138226,-0.1217,ok,,33.3
+long,briggs,-0.06,1.293,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_476: Disk quota exceeded,
+long,briggs,-0.2,2.36,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_488: Disk quota exceeded,
+long,briggs,-0.38,1.223,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_500: Disk quota exceeded,
+long,briggs,-0.11,1.635,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_512: Disk quota exceeded,
+long,briggs,-0.06,1.924,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_524: Disk quota exceeded,
+long,briggs,-0.1,1.696,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_536: Disk quota exceeded,
+long,briggs,-0.38,1.245,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_548: Disk quota exceeded,
+long,briggs,-0.05,1.527,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_560: Disk quota exceeded,
+long,briggs,-0.03,1.518,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_572: Disk quota exceeded,
+long,briggs,0.0,1.219,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_584: Disk quota exceeded,
+long,briggs,-0.38,1.267,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_596: Disk quota exceeded,
+long,briggs,0.0,1.426,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_608: Disk quota exceeded,
+long,briggs,0.0,1.198,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_620: Disk quota exceeded,
+long,briggs,0.0,1.814,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_632: Disk quota exceeded,
+long,briggs,-0.38,1.821,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_644: Disk quota exceeded,
+long,briggs,0.09,1.34,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_656: Disk quota exceeded,
+long,briggs,0.0,1.783,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_668: Disk quota exceeded,
+long,briggs,0.0,1.934,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_680: Disk quota exceeded,
+long,briggs,-0.18,1.038,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_692: Disk quota exceeded,
+long,briggs,0.09,1.995,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_704: Disk quota exceeded,
+long,briggs,0.14,1.577,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_716: Disk quota exceeded,
+long,briggs,0.2,1.487,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_728: Disk quota exceeded,
+long,briggs,-0.18,1.492,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_740: Disk quota exceeded,
+long,briggs,0.29,1.635,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_752: Disk quota exceeded,
+long,briggs,0.2,1.461,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_764: Disk quota exceeded,
+long,briggs,-0.4,1.485,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_776: Disk quota exceeded,
+long,briggs,-0.4,1.366,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_788: Disk quota exceeded,
+long,briggs,-0.4,1.926,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_800: Disk quota exceeded,
+long,briggs,-0.2,1.12,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_812: Disk quota exceeded,
+long,briggs,-0.2,1.217,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_824: Disk quota exceeded,
+long,briggs,-0.2,1.666,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_836: Disk quota exceeded,
+long,briggs,-0.2,1.578,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_848: Disk quota exceeded,
+long,briggs,0.0,1.366,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_860: Disk quota exceeded,
+long,briggs,-0.2,1.691,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_872: Disk quota exceeded,
+long,briggs,0.0,1.491,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_884: Disk quota exceeded,
+long,briggs,-0.2,1.812,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_896: Disk quota exceeded,
+long,briggs,0.0,1.627,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_908: Disk quota exceeded,
+long,briggs,-0.2,2.349,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_920: Disk quota exceeded,
+long,briggs,0.2,1.334,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_932: Disk quota exceeded,
+long,briggs,0.0,1.485,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_944: Disk quota exceeded,
+long,briggs,0.2,1.985,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_956: Disk quota exceeded,
+long,briggs,0.0,1.926,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_968: Disk quota exceeded,
+long,briggs,0.4,1.627,8192,,,,,,,,failed,Error in Weighting : Directory::create error on /home1/10240/bmason72/Code/ngvla_subarrays/TempLattice1443040_980: Disk quota exceeded,

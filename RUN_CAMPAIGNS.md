@@ -51,14 +51,39 @@ The four polish campaigns were submitted 15 Jul ~18:20.  Outcome:
   and refreshed their CSVs + reports (e.g. revD/snapshot `long` +54 points,
   worst step 1.02 → 0.72).
 
-### Relaunch (after `git pull`-ing / with the 16 Jul fixes in the tree)
+### 16 Jul relaunch — OUTCOME (three campaigns DONE)
+
+bmason relaunched revF/snapshot, revD/snapshot, revD/track the morning of
+16 Jul; all sweeps COMPLETED cleanly with the cwd fix (no crashes, no
+budget exhaustion except revD/track `long`).  revD/track's collect job was
+again lost to the queue limit (see "If a submit fails") — its collect +
+report + PSF export were run locally the same day, so **all three
+campaigns' curve CSVs, reports, and PSF payloads are current.**
+
+Post-polish residual steps (from the refine logs; everything else ≤ 0.25
+on BOTH curves — e.g. revF/snapshot main+long imaging 1.42 → 0.24,
+revD/track mid+long spike and main ptsrc: FIXED):
+
+| campaign | survivors (worst in-band Δη) | why it survived |
+|---|---|---|
+| revF snapshot | main+long ptsrc 0.48, l+m+s+c-o ptsrc 0.50, main ptsrc 0.45 | candidates exhausted (not budget) |
+| revD snapshot | main+long ptsrc 1.58, long 0.72 both curves, main ptsrc 0.41 | candidates exhausted; long +0 points |
+| revD track | long imaging 1.21 (**budget hit** — a resubmit continues), main+long imaging 1.09, spiral+mid imaging 0.36, main+long ptsrc 0.33 | long: budget; others: candidates exhausted |
+
+"Candidates exhausted" = refine measured every bracketing probe its
+generator can propose and the jump stayed — per the polish assumption
+(ETA_JUMPS.md), that is now real evidence of physics/branch transitions
+(the snapshot natural-end eta cliffs especially), not under-sampling.
+Next levers, bmason's call: (a) resubmit revD/track polish (helps `long`
+only), (b) the logged codex advisories — dense 1-D taper scans through the
+surviving intervals and/or bisection-style direct resolution targeting in
+refine, (c) accept + document.
+
+### Remaining launch: revF/track polish (queue is empty — good time)
 
 ```
-scancel 3314392 3314393      # dead revF/track chain (DependencyNeverSatisfied)
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh revF track --time 47:00:00 --refine-budget 200 --refine-rounds 8
 ```
-
-then resubmit all four (same commands as §1 below — safe: every stage is
-resumable, prior refine points are kept, only remaining work runs).
 
 ## 1. POLISH campaigns — the follow-up refine passes (launch these)
 
