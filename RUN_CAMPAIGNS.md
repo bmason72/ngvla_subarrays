@@ -70,8 +70,8 @@ arbitrary; they can run concurrently (each has its own results dirs).
 ```
 bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh revF snapshot --time 24:00:00 --refine-budget 200 --refine-rounds 8
 bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh revD snapshot --time 24:00:00 --refine-budget 200 --refine-rounds 8
-bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh revD track     --time 48:00:00 --refine-budget 200 --refine-rounds 8
-bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh revF track     --time 48:00:00 --refine-budget 200 --refine-rounds 8
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh revD track     --time 47:00:00 --refine-budget 200 --refine-rounds 8
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh revF track     --time 47:00:00 --refine-budget 200 --refine-rounds 8
 ```
 
 The revF/track pass is last/optional but recommended: its two known
@@ -151,6 +151,13 @@ scancel -u bmason72 --name=ngvla_collect
 
 ## If a submit fails
 
+- **A campaign chain missing its later stage(s)** (a prep with no sweep, or a
+  sweep with no collect — seen 15 Jul revD/track and 16 Jul revF/track) →
+  almost certainly the per-user queued-job limit: array elements count
+  individually, so 3-4 concurrent campaigns (~20+ queued jobs) make later
+  `sbatch` calls fail and `submit_campaign.sh` exits mid-chain.  Wait for the
+  queue to drain and resubmit that campaign (resumable, harmless); an
+  orphaned prep with no dependents just runs its cheap idempotent prep.
 - "Job dependency problem" → the captured job id was malformed — run the
   failing `sbatch` alone and read what it printed (see `submit_campaign.sh`).
 - Instant task deaths with a bare "SWEEP: ... FAILED" and no Python traceback →

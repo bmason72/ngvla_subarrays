@@ -198,7 +198,12 @@ def build_heatmap(subarray, results_rows, sigma_nat, imaging_curve):
             display_rows.append(row_by_robust[rkey])
 
     def row_label(weighting, robust):
-        return "natural" if weighting == "natural" else "%+.1f" % robust
+        # fold -0.0 -> 0.0 (config's ROBUST_LIST holds a genuine -0.0; the
+        # collect/envelope paths already canonicalize it, this display path
+        # read raw rows and showed "-0.0" -- QA review 16 Jul 2026)
+        if weighting == "natural":
+            return "natural"
+        return "%+.1f" % (abs(robust) if robust == 0 else robust)
 
     rows = []
     for weighting, robust, _row_tapers in display_rows:

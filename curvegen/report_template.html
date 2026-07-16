@@ -160,6 +160,19 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   color: var(--muted); font-size: 12px; margin: 4px 0 0;
   font-variant-numeric: tabular-nums;
 }
+.psf-controls {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px;
+  margin: 10px 0 8px;
+}
+#psf-status { color: var(--muted); font-size: 12.5px; }
+.psf-button {
+  border: 1px solid var(--ring); border-radius: 4px; background: var(--page);
+  color: var(--ink); font: inherit; font-size: 12px; font-weight: 650;
+  padding: 2px 7px; cursor: pointer;
+}
+.psf-button:focus-visible {
+  outline: 2px solid var(--s-core); outline-offset: 1px;
+}
 @media (prefers-reduced-motion: no-preference) {
   .series-g, .mark { transition: opacity 0.15s ease; }
 }
@@ -292,6 +305,19 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   <div class="grid3" style="grid-template-columns: repeat(auto-fit, minmax(460px, 1fr))" id="heatmaps"></div>
 </div>
 
+<div class="card" id="psf-inspector">
+  <h2>PSF inspector</h2>
+  <p class="note">Inspect the captured PSF at any measured lattice point. Choose a subarray here,
+  click a raw-sample mark or heatmap cell, or use a calculator result&rsquo;s PSF button. Profile files
+  load only when requested and must travel with this HTML report in the <code>psf/</code> directory.</p>
+  <div class="psf-controls">
+    <label class="s0-field"><span>subarray:</span><select id="psf-sa"></select></label>
+    <span id="psf-status" role="status" aria-live="polite"></span>
+  </div>
+  <p class="note" id="psf-params"></p>
+  <div id="psf-chart"></div>
+</div>
+
 <div class="card">
   <h2>Why composite subarrays disagree with the calculator&rsquo;s native beams</h2>
   <p class="note">The natural-weight PSF of core+spiral is a two-component composite: a narrow
@@ -341,6 +367,49 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 const INJECTED = __DATA__;
 const COMBINED = Boolean(INJECTED && INJECTED.payloads);
 let DATA = COMBINED ? INJECTED.payloads[INJECTED.default] : INJECTED;
+const PSF_CACHE = {};
+const PSF_WAITING = {};
+const PSF_STATE = {sa: null, key: null};
+let PSF_RENDER_TOKEN = 0;
+window.PSF_REGISTER = function (id, data) {
+  PSF_CACHE[id] = data;
+};
+
+function loadPsfData(comboKey, saName, cb) {
+  const id = comboKey + '/' + saName;
+  const owns = Object.prototype.hasOwnProperty;
+  if (owns.call(PSF_CACHE, id)) {
+    cb(PSF_CACHE[id]);
+    return;
+  }
+  if (PSF_WAITING[id]) {
+    PSF_WAITING[id].push(cb);
+    return;
+  }
+  PSF_WAITING[id] = [cb];
+  const script = document.createElement('script');
+  const stem = saName.replace(/[+-]/g, '_');
+  script.src = 'psf/' + comboKey + '/' + stem + '.js';
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    if (!owns.call(PSF_CACHE, id)) PSF_CACHE[id] = null;
+    const callbacks = PSF_WAITING[id] || [];
+    delete PSF_WAITING[id];
+    script.onload = null;
+    script.onerror = null;
+    if (script.parentNode) script.parentNode.removeChild(script);
+    callbacks.forEach(fn => fn(PSF_CACHE[id]));
+  };
+  script.onload = finish;
+  script.onerror = finish;
+  try {
+    document.head.append(script);
+  } catch (error) {
+    finish();
+  }
+}
 const SLOT = {"core":"--s-core","spiral":"--s-spiral","mid":"--s-mid",
   "core+spiral":"--s-core-spiral","spiral+mid":"--s-spiral-mid",
   "core+mid":"--s-core-mid","main":"--s-main","core-inner":"--s-core-inner",
@@ -379,6 +448,90 @@ function svgEl(tag, attrs) {
   const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
   for (const k in attrs) e.setAttribute(k, attrs[k]);
   return e;
+}
+
+function psfComboKey() {
+  const combo = currentCombo();
+  if (COMBINED) return combo ? combo.key : null;
+  return DATA && DATA.combo && DATA.combo.key ? DATA.combo.key : null;
+}
+
+function psfPointKey(weighting, robust, taper) {
+  const r = weighting === 'natural' || robust === null ? 2.0 : Number(robust);
+  const t = Number.isFinite(Number(taper)) ? Number(taper) : 0.0;
+  return (weighting + '_' + r.toFixed(2) + '_' + t.toFixed(3))
+    .replace('_-0.00_', '_0.00_');
+}
+
+function parsePsfKey(key) {
+  const bits = String(key).split('_');
+  return {weighting: bits[0], robust: Number(bits[1]), taper: Number(bits[2])};
+}
+
+function scrollToPsf() {
+  const card = document.getElementById('psf-inspector');
+  if (card) card.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+function openMeasuredPsf(saName, weighting, robust, taper) {
+  PSF_STATE.sa = saName;
+  PSF_STATE.key = psfPointKey(weighting, robust, taper);
+  const select = document.getElementById('psf-sa');
+  if (select) select.value = saName;
+  renderPsfPanel();
+  scrollToPsf();
+}
+
+function nearestPsfKey(data, point) {
+  const targetRes = Number(point.res);
+  const targetWeighting = point.weighting;
+  const targetRobust = targetWeighting === 'natural' || point.robust === null
+    ? 2.0 : Number(point.robust);
+  let best = null;
+  Object.keys(data || {}).forEach(key => {
+    const entry = data[key];
+    const res = entry ? Number(entry.res_geo_arcsec) * 1e3 : NaN;
+    if (!(res > 0) || !(targetRes > 0)) return;
+    const parsed = parsePsfKey(key);
+    const candidate = {
+      key,
+      distance: Math.abs(Math.log(res / targetRes)),
+      family: parsed.weighting === targetWeighting ? 0 : 1,
+      robust: Math.abs(parsed.robust - targetRobust),
+    };
+    if (!best || candidate.distance < best.distance - 1e-12 ||
+        (Math.abs(candidate.distance - best.distance) <= 1e-12 &&
+         (candidate.family < best.family ||
+          (candidate.family === best.family && candidate.robust < best.robust))))
+      best = candidate;
+  });
+  return best ? best.key : null;
+}
+
+function openNearestPsf(saName, point) {
+  PSF_STATE.sa = saName;
+  PSF_STATE.key = null;
+  const select = document.getElementById('psf-sa');
+  if (select) select.value = saName;
+  scrollToPsf();
+  const comboKey = psfComboKey();
+  if (!comboKey) {
+    renderPsfPanel();
+    return;
+  }
+  const token = ++PSF_RENDER_TOKEN;
+  const status = document.getElementById('psf-status');
+  const params = document.getElementById('psf-params');
+  const chart = document.getElementById('psf-chart');
+  status.textContent = 'loading PSF data ...';
+  clearNode(params);
+  clearNode(chart);
+  loadPsfData(comboKey, saName, data => {
+    if (token !== PSF_RENDER_TOKEN || psfComboKey() !== comboKey ||
+        PSF_STATE.sa !== saName) return;
+    PSF_STATE.key = data ? nearestPsfKey(data, point) : null;
+    renderPsfPanel();
+  });
 }
 
 // in-page subarray calculator -------------------------------------------------
@@ -629,7 +782,7 @@ function renderCalcTable(table, feasible, request) {
   clearNode(table);
   const header = document.createElement('tr');
   ['rank', 'subarray', 'observing time', 'antenna hours', 'eta', 'skirt',
-   'tclean parameters', 'flags'].forEach(label => {
+   'tclean parameters', 'flags', 'PSF'].forEach(label => {
     const th = document.createElement('th');
     th.textContent = label;
     header.append(th);
@@ -638,7 +791,7 @@ function renderCalcTable(table, feasible, request) {
   if (!feasible.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 8;
+    td.colSpan = 9;
     td.style.textAlign = 'left';
     td.textContent = 'No feasible subarray.';
     tr.append(td);
@@ -658,6 +811,14 @@ function renderCalcTable(table, feasible, request) {
     const flags = flagInfo(p);
     const flagCell = addCell(tr, flags.text || '—', flags.title);
     flagCell.className = 'calc-flags';
+    const psfCell = addCell(tr, '');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'psf-button';
+    button.textContent = 'PSF';
+    button.title = 'Show the nearest measured PSF';
+    button.addEventListener('click', () => openNearestPsf(row.name, p));
+    psfCell.append(button);
     table.append(tr);
   });
 }
@@ -926,6 +1087,7 @@ function renderImagingChart() {
     const hadResults = calcHasResults();
     currentS0 = select.value;
     renderImagingChart();
+    renderPsfPanel();
     if (hadResults) runSubarrayCalculator();
   });
 })();
@@ -1008,8 +1170,13 @@ function multiple(el, name) {
     m.setAttribute('stroke', css(name));
     m.setAttribute('stroke-width', 1.5);
     m.setAttribute('class', 'mark');
+    m.style.cursor = 'pointer';
     m.addEventListener('mousemove', ev => showTT(ev, ttHtml(name, p)));
     m.addEventListener('mouseleave', hideTT);
+    m.addEventListener('click', () => openMeasuredPsf(
+      name, p.weighting,
+      p.weighting === 'natural' || p.robust === null ? 2.0 : Number(p.robust),
+      Number(p.taper) || 0.0));
     svg.append(m);
   }
   card.append(svg);
@@ -1079,10 +1246,14 @@ function renderHeatmaps() {
       fill: 'none', stroke: 'var(--grid)', 'stroke-width': 1,
       'stroke-dasharray': '2 2'}));
   };
-  const addHit = (svg, x, y, w, h, html) => {
+  const addHit = (svg, x, y, w, h, html, onClick) => {
     const hit = svgEl('rect', {x, y, width: w, height: h, fill: 'transparent'});
     hit.addEventListener('mousemove', ev => showTT(ev, html));
     hit.addEventListener('mouseleave', hideTT);
+    if (onClick) {
+      hit.style.cursor = 'pointer';
+      hit.addEventListener('click', onClick);
+    }
     svg.append(hit);
   };
   const holder = document.getElementById('heatmaps');
@@ -1139,7 +1310,10 @@ function renderHeatmaps() {
           addHit(svg, x, y, CW, CH, params +
             `<br>beam ${fmtRes(c.res)}<br>η = ${Number(c.eta).toFixed(2)}` +
             `<br>skirt ${skirtText(c)}${c.env ? '<br>← on the 10% default imaging curve' : ''}` +
-            extra);
+            extra, () => openMeasuredPsf(
+              name, row.label === 'natural' ? 'natural' : 'briggs',
+              row.label === 'natural' ? 2.0 : Number(row.label),
+              Number(hm.tapers[j]) || 0.0));
         } else if (c.status === 'skipped') {
           drawSkippedCell(svg, x, y, CW, CH);
           addHit(svg, x, y, CW, CH, params +
@@ -1219,6 +1393,238 @@ function renderHeatmaps() {
   if (heatmapStatus.missing)
     legendEntry([cellSwatch(drawNullCell)], 'not measured');
 }
+
+// lazy-loaded PSF inspector ----------------------------------------------------
+function matchingPsfSample(saName, point) {
+  const samples = DATA.samples && Array.isArray(DATA.samples[saName])
+    ? DATA.samples[saName] : [];
+  return samples.find(sample => {
+    if (!sample || sample.weighting !== point.weighting) return false;
+    const robustMatch = point.weighting === 'natural'
+      ? sample.robust === null
+      : Number.isFinite(Number(sample.robust)) &&
+        Math.abs(Number(sample.robust) - point.robust) < 0.005;
+    return robustMatch && Math.abs((Number(sample.taper) || 0) - point.taper) < 0.0015;
+  }) || null;
+}
+
+function psfHasCuts(entry) {
+  return Array.isArray(entry.cut_r_arcsec) && Array.isArray(entry.cut_maj) &&
+         Array.isArray(entry.cut_min);
+}
+
+function renderPsfParams(saName, point, entry, sample) {
+  const parts = [saName];
+  parts.push(point.weighting === 'natural'
+    ? 'natural' : 'briggs robust ' + point.robust.toFixed(2));
+  parts.push(point.taper ? 'taper ' + fmtRes(point.taper) : 'no taper');
+  parts.push('beam ' + fmtRes(Number(entry.res_geo_arcsec) * 1e3));
+  const bmaj = Number(entry.bmaj_arcsec), bmin = Number(entry.bmin_arcsec);
+  if (bmaj > 0 && bmin > 0) {
+    const bpa = Number(entry.bpa_deg);
+    parts.push(fmtRes(bmaj * 1e3) + ' × ' + fmtRes(bmin * 1e3) + ' @ ' +
+      (Number.isFinite(bpa) ? bpa.toFixed(1) + '°' : '—') +
+      ', axis ratio ' + (bmaj / bmin).toFixed(2));
+  }
+  if (sample) {
+    const skirt = Number.isFinite(Number(sample.skirt))
+      ? (100 * Number(sample.skirt)).toFixed(1) + '%' : '—';
+    parts.push('eta ' + Number(sample.eta).toFixed(2) + ', skirt ' + skirt);
+  }
+  document.getElementById('psf-params').textContent = parts.join('; ');
+}
+
+function renderPsfChart(chart, saName, entry, sample) {
+  const W = 960, H = 360, M = {l: 46, r: 24, t: 16, b: 40};
+  const fwhm = Number(entry.res_geo_arcsec);
+  const radialR = Array.isArray(entry.r_arcsec) ? entry.r_arcsec : [];
+  const radialP = Array.isArray(entry.psf) ? entry.psf : [];
+  const hasCuts = psfHasCuts(entry);
+  const values = radialP.slice();
+  if (hasCuts) values.push(...entry.cut_maj, ...entry.cut_min);
+  const finiteValues = values.map(Number).filter(Number.isFinite);
+  const ymin = Math.min(0, finiteValues.length ? Math.min(...finiteValues) : 0);
+  const X = v => M.l + v / 3 * (W - M.l - M.r);
+  const Y = v => H - M.b - (v - ymin) / (1 - ymin) * (H - M.t - M.b);
+
+  const legend = document.createElement('p');
+  legend.className = 'note';
+  legend.style.marginBottom = '2px';
+  legend.textContent = hasCuts
+    ? 'azimuthal profile: solid 2 px; major-axis cuts: solid light; ' +
+      'minor-axis cuts: dashed light'
+    : 'azimuthal profile: solid 2 px';
+  chart.append(legend);
+
+  const svg = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img',
+    'aria-label': saName + ' PSF profile at the selected lattice point'});
+  const yTicks = ymin < 0 ? [ymin, 0, 0.25, 0.5, 0.75, 1] : [0, 0.25, 0.5, 0.75, 1];
+  yTicks.forEach((tick, i) => {
+    svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: Y(tick), y2: Y(tick),
+      stroke: 'var(--grid)', 'stroke-width': 1}));
+    const label = svgEl('text', {x: M.l - 7, y: Y(tick) + 4,
+      'text-anchor': 'end', 'class': 'tick-num'});
+    label.textContent = i === 0 && tick < 0 ? tick.toFixed(3) : tick.toFixed(2);
+    svg.append(label);
+  });
+  for (let tick = 0; tick <= 3.0001; tick += 0.5) {
+    const label = svgEl('text', {x: X(tick), y: H - M.b + 16,
+      'text-anchor': 'middle', 'class': 'tick-num'});
+    label.textContent = tick.toFixed(1);
+    svg.append(label);
+  }
+  svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: H - M.b, y2: H - M.b,
+    stroke: 'var(--axis)', 'stroke-width': 1}));
+  const xTitle = svgEl('text', {x: (M.l + W - M.r) / 2, y: H - 6,
+    'text-anchor': 'middle'});
+  xTitle.textContent = 'r / FWHM';
+  svg.append(xTitle);
+  const yTitle = svgEl('text', {x: 12, y: (H - M.b + M.t) / 2,
+    'text-anchor': 'middle',
+    transform: `rotate(-90 12 ${(H - M.b + M.t) / 2})`});
+  yTitle.textContent = 'PSF value';
+  svg.append(yTitle);
+
+  const fwhmX = X(1);
+  svg.append(svgEl('line', {x1: fwhmX, x2: fwhmX, y1: M.t, y2: H - M.b,
+    stroke: 'var(--muted)', 'stroke-width': 1.2, 'stroke-dasharray': '4 3'}));
+  const fwhmLabel = svgEl('text', {x: fwhmX + 4, y: M.t + 12});
+  fwhmLabel.textContent = '1 FWHM';
+  svg.append(fwhmLabel);
+  const s0 = Number(currentS0);
+  if (Number.isFinite(s0)) {
+    svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: Y(s0), y2: Y(s0),
+      stroke: 'var(--muted)', 'stroke-width': 1.2, 'stroke-dasharray': '3 3'}));
+    const s0Label = svgEl('text', {x: W - M.r - 4, y: Y(s0) - 5,
+      'text-anchor': 'end'});
+    s0Label.textContent = 's0 = ' + fmtS0(currentS0);
+    svg.append(s0Label);
+  }
+
+  const radial = radialR.map((radius, i) => ({
+    radius: Number(radius), value: Number(radialP[i]),
+  })).filter(p => Number.isFinite(p.radius) && Number.isFinite(p.value) &&
+                      fwhm > 0 && p.radius / fwhm <= 3);
+  const radialPath = radial.map((p, i) => (i ? 'L' : 'M') +
+    X(p.radius / fwhm).toFixed(1) + ' ' + Y(p.value).toFixed(1)).join('');
+  svg.append(svgEl('path', {d: radialPath, fill: 'none', stroke: css(saName),
+    'stroke-width': 2, 'stroke-linejoin': 'round'}));
+
+  if (hasCuts && fwhm > 0) {
+    const drawCuts = (cutValues, dash) => {
+      const arms = [[], []];
+      entry.cut_r_arcsec.forEach((radius, i) => {
+        const r = Number(radius), value = Number(cutValues[i]);
+        if (!Number.isFinite(r) || !Number.isFinite(value) || Math.abs(r) / fwhm > 3)
+          return;
+        if (r <= 0) arms[0].push([Math.abs(r) / fwhm, value]);
+        if (r >= 0) arms[1].push([Math.abs(r) / fwhm, value]);
+      });
+      arms.forEach(arm => {
+        const path = arm.map((p, i) => (i ? 'L' : 'M') +
+          X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1)).join('');
+        const attrs = {d: path, fill: 'none', stroke: css(saName),
+          'stroke-width': 1.2, opacity: 0.55, 'stroke-linejoin': 'round'};
+        if (dash) attrs['stroke-dasharray'] = dash;
+        svg.append(svgEl('path', attrs));
+      });
+    };
+    drawCuts(entry.cut_maj, '');
+    drawCuts(entry.cut_min, '4 3');
+  }
+
+  radial.forEach(p => {
+    const hit = svgEl('circle', {cx: X(p.radius / fwhm), cy: Y(p.value), r: 8,
+      fill: 'transparent'});
+    hit.addEventListener('mousemove', ev => showTT(ev,
+      `<b>${saName} azimuthal PSF</b><br>r = ${fmtRes(p.radius * 1e3)}` +
+      `<br>PSF = ${p.value.toFixed(3)}`));
+    hit.addEventListener('mouseleave', hideTT);
+    svg.append(hit);
+  });
+  if (sample && Number.isFinite(Number(sample.skirt))) {
+    const skirt = Number(sample.skirt);
+    const dot = svgEl('circle', {cx: X(1), cy: Y(skirt), r: 4,
+      fill: css(saName), stroke: 'var(--surface)', 'stroke-width': 1.5});
+    dot.addEventListener('mousemove', ev => showTT(ev,
+      `<b>measured skirt</b><br>${(100 * skirt).toFixed(1)}% at 1 FWHM`));
+    dot.addEventListener('mouseleave', hideTT);
+    svg.append(dot);
+  }
+  chart.append(svg);
+}
+
+function renderPsfPanel() {
+  const token = ++PSF_RENDER_TOKEN;
+  const select = document.getElementById('psf-sa');
+  const status = document.getElementById('psf-status');
+  const params = document.getElementById('psf-params');
+  const chart = document.getElementById('psf-chart');
+  clearNode(select);
+  clearNode(status);
+  clearNode(params);
+  clearNode(chart);
+  hideTT();
+
+  if (!PSF_STATE.sa || !ACTIVE.includes(PSF_STATE.sa)) {
+    PSF_STATE.sa = ACTIVE.length ? ACTIVE[0] : null;
+    PSF_STATE.key = 'natural_2.00_0.000';
+  }
+  if (!PSF_STATE.key) PSF_STATE.key = 'natural_2.00_0.000';
+  ACTIVE.forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    select.append(option);
+  });
+  if (PSF_STATE.sa) select.value = PSF_STATE.sa;
+
+  const comboKey = psfComboKey();
+  if (!comboKey) {
+    status.textContent = 'PSF data unavailable for this report build';
+    return;
+  }
+  if (!PSF_STATE.sa) {
+    status.textContent = 'no subarray with curve data';
+    return;
+  }
+  status.textContent = 'loading PSF data ...';
+  const saName = PSF_STATE.sa;
+  const key = PSF_STATE.key;
+  loadPsfData(comboKey, saName, data => {
+    if (token !== PSF_RENDER_TOKEN || psfComboKey() !== comboKey) return;
+    clearNode(status);
+    clearNode(params);
+    clearNode(chart);
+    if (!data) {
+      status.textContent = 'no PSF data exported for this campaign — run ' +
+        'curvegen/export_psf_data.py (revF/track: pending the P2 anchor backfill)';
+      return;
+    }
+    const entry = data[key];
+    if (!entry) {
+      status.textContent = 'no captured PSF for this lattice point (pre-v11 ' +
+        'sweep or not yet backfilled)';
+      return;
+    }
+    const point = parsePsfKey(key);
+    const sample = matchingPsfSample(saName, point);
+    renderPsfParams(saName, point, entry, sample);
+    if (!psfHasCuts(entry))
+      status.textContent = 'axis cuts pending backfill (PLAN: PSF inspector P1/P2)';
+    renderPsfChart(chart, saName, entry, sample);
+  });
+}
+
+(function wirePsfSelector() {         // listener once; options rebuilt per render
+  const select = document.getElementById('psf-sa');
+  if (!select) return;
+  select.addEventListener('change', () => {
+    PSF_STATE.sa = select.value;
+    PSF_STATE.key = 'natural_2.00_0.000';
+    renderPsfPanel();
+  });
+})();
 
 // PSF radial profile -----------------------------------------------------------
 function renderProfile() {
@@ -1361,6 +1767,7 @@ function renderAll() {
   renderPsChart();
   renderMultiples();
   renderHeatmaps();
+  renderPsfPanel();
   renderProfile();
   renderQaTable();
   renderDataTable();

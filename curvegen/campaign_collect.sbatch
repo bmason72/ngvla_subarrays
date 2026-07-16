@@ -34,6 +34,8 @@ REPORT="$CG/reports/${NGVLA_REV}-${NGVLA_SIM_MODE}-curves.html"
     || { echo "REPORT FAILED"; exit 1; }
 echo "collect + report done -> $REPORT"
 
+"$PY" "$CG/export_psf_data.py" || echo "PSF EXPORT FAILED (non-blocking)"
+
 # the flagship all-campaigns report (campaign dropdown): rebuild it from every
 # registered combo's committed curve CSVs so it always reflects the newest data
 "$PY" "$CG/make_report.py" --combined "$CG/reports/ngvla-curves.html" \

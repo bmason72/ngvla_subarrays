@@ -648,7 +648,19 @@ independent beam sanity checks.
 report for the selected subarrays.*  DESIGNED same day — see the dedicated
 section below ("PSF inspector plan").
 
-### PSF inspector plan (15 Jul 2026 — designed, NOT yet built)
+### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul)
+
+**Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage
+wiring + `tests/test_export_psf.py`) and P4 (the report's "PSF inspector"
+card) are BUILT — implemented by codex (gpt-5.6-sol, build mode — its TACC
+sandbox works again; probe before relying on it) to Claude's specs, then
+Claude-reviewed line-by-line + subagent-QA'd + esprima-gated.  31 payload
+files (~5.3 MB) exported for the three combos with profiles; revF/track
+correctly skips until its profiles exist (polish refine points + P2
+backfill).  Entry points wired: subarray dropdown, heatmap-cell click,
+small-multiple-mark click, calculator per-row "PSF" button
+(nearest-measured-key resolution).  P1 (axis-cut capture) and P2 (anchor
+backfill, AFTER polish) remain.
 
 bmason's decisions (AskUserQuestion, 15 Jul): **(1)** azimuthal profiles AND
 major/minor-axis cuts (cuts need a capture extension; they expose the
