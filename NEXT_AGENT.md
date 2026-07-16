@@ -37,8 +37,16 @@ eta jumps happen and how polish samples — accurate and worth reading.
 
 ## Immediate queue (in order)
 
+0. **NEW WORKSTREAM (16 Jul, planned): broadband MFS continuum campaigns**
+   — per-band (1-6) ptsrc curves, revF homogeneous+main, both modes, under
+   a 1-queue-slot multi-node PyLauncher wave.  Full plan + scope decisions
+   + codex-sol adjudication: PLAN.md "MFS broadband continuum campaigns".
+   Build order: retrospective lattice validation → band-axis machinery →
+   pilots (nchan convergence + noise A/B + cost/packing; bmason checkpoint)
+   → wave runner → waves.
 1. **bmason launches the LAST polish campaign** — revF/track (queue is
-   empty): see RUN_CAMPAIGNS.md "Remaining launch".  Optionally resubmit
+   empty; it uses ~8 slots by itself, so launch BEFORE the MFS pilots need
+   slots): see RUN_CAMPAIGNS.md "Remaining launch".  Optionally resubmit
    revD/track at the same time (only `long` continues; everything else
    no-ops).  NB the queue limit: verify all three job ids print per
    campaign; a lost collect can be run locally (gotcha in PLAN §13).
