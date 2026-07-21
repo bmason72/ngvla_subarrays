@@ -30,10 +30,10 @@ sections) → `RUN_CAMPAIGNS.md` ("21 Jul wave" launch sheet) →
   tolerance-scaled hierarchical-residual loss, cliff localization
   semantics; skirt tolerance 0.02 ABSOLUTE; spec drafted =
   `MFS2_ADAPTIVE_SAMPLER_SPEC.md` (supersedes MFS scope decision 4).
-  A codex review of the spec was launched at session end and may not have
-  completed — if `tmp/codex/tasks/` has no fresh review output, re-run:
-  `CODEX_MODEL=gpt-5.6-sol codex-bridge/codex_bridge.sh consult` with the
-  spec + "review this spec" prompt, and adjudicate findings into the spec.
+  The codex spec review COMPLETED before hand-off: 5 blockers + 8 high,
+  all "semantics not yet executable" class, architecture endorsed —
+  findings + Fable's quick adjudications (none rejected) are APPENDED to
+  the spec.  First MFS task = revise the spec to v2 absorbing them.
 
 ## Immediate queue (in order)
 
@@ -64,9 +64,11 @@ sections) → `RUN_CAMPAIGNS.md` ("21 Jul wave" launch sheet) →
    under-converged, they become the retrofit-mode pilot for the adaptive
    sampler (spec §"Retrofit mode"), which doubles as the bet's data-driven
    answer.  Then: milestone commit of the wave's data + doc deltas.
-4. **MFS workstream:** MFS-1 replay ∥ MFS-2a (band axis) per
-   `MFS2_ADAPTIVE_SAMPLER_SPEC.md` task table — 2b sampler core next; the
-   V1 replay gate (2d) is a bmason checkpoint.  MFS-3 pilots need queue
+4. **MFS workstream:** FIRST revise `MFS2_ADAPTIVE_SAMPLER_SPEC.md` to v2
+   (absorb the appended codex findings; bmason input useful on budget
+   arithmetic #2 and the V1 oracle policy #3).  Then MFS-1 replay ∥
+   MFS-2a (band axis) — 2b sampler core next; the V1 replay gate (2d) is
+   a bmason checkpoint and gates DEPLOYMENT, not implementation.  MFS-3 pilots need queue
    slots — wait for the wave to drain.
 5. Standing: memo update for the new machinery (escalation ladder +
    smoothing + caps clarification are NOT yet described in the memo beyond
