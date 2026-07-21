@@ -185,14 +185,26 @@ edge, but the resulting holes blocked bilinear-cell interpolation and
 truncated the high-$\eta$ regime, so those prunes were removed.  The one
 surviving early stop is the heterogeneous beam cap described next.
 
-Heterogeneous subarrays require an additional guard.  For a composite
-subarray, beams coarser than the natural beam of its coarsest component (or
-of the largest offered subarray it contains) are usually a false economy:
-the composite array has tapered away the long spacings and is acting like the
-coarser subarray at lower apparent cost.  Each such subarray therefore
-carries a beam cap equal to that reference subarray's measured natural
-geometric-mean beam, recorded in the subarray-metadata CSV; for the default
-Rev F track case the caps are the measured values quoted in
+Heterogeneous subarrays require an additional guard.  To be explicit about
+direction: the cap limits only the \emph{coarse} end of the offered curve
+(the fine end is uncapped, set by what Briggs robust $-2$ delivers), and the
+cap reference is the \emph{coarsest} constituent, never the longest-baseline
+one.  For a composite subarray, beams coarser than the natural beam of its
+coarsest component (or of the largest offered subarray it contains) are
+usually a false economy: the composite array has tapered away the long
+spacings and is acting like the coarser subarray at lower apparent cost.
+Each such subarray therefore carries a beam cap equal to that reference
+subarray's measured natural geometric-mean beam (mid+long $\to$ mid;
+spiral+mid+long $\to$ spiral+mid; main+long $\to$ main; the core-outer
+mixtures $\to$ core-outer; main and core+mid $\to$ core), recorded in the
+subarray-metadata CSV.  The offered ranges therefore relay from one subarray
+to the next with roughly a factor-two overlap at every seam, because the
+reference subarray's own curve starts near half its natural beam: at 30 GHz
+(Rev F, track) mid+long spans 0.51--2.82 mas and hands off to mid
+(2.03--54.6 mas); spiral+mid+long spans 0.50--11.0 mas, handing off to
+spiral+mid (2.36--869 mas); main+long spans 0.50--21.2 mas, handing off to
+main (2.62--709 mas, itself capped at core's 710 mas natural beam).  For the
+default Rev F track case the caps are the measured values quoted in
 Table~\ref{tab:subarrays}'s sources, and for any other campaign combination
 they are re-measured from that campaign's own natural seeds (snapshot beams
 are elliptical and sparse, and Rev D geometry differs), with a fail-closed
