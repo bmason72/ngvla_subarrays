@@ -710,7 +710,73 @@ section below ("PSF inspector plan").
    (continues its budget-limited `long` imaging refine, 1.21; all else
    no-ops) — part of bmason's standing survivors decision (a/b/c above).
 
-### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul)
+**SESSION DELTA (21 Jul 2026, part 2, Fable — curve-quality upgrade:
+escalated refine + display smoothing + P1 + P2).**
+1. *bmason review of the polished curves: not good enough.*  Flagged: huge
+   ptsrc jumps (revF/snap main+long & main; revD/snap main+long 1.58 &
+   main); disconnected points (revF/track long low-res point; revD/snap
+   long); revD/track main+long imaging jumps + spiral+mid sawtooth; wiggly
+   connecting lines (revF/track core & core+spiral imaging; revD/snap main
+   imaging).  Decision: FIX, not accept.
+2. *Data diagnosis (subagent over all 4 campaigns' displayed curves):*
+   the snapshot ptsrc jumps are TAPER-ONSET CLIFFS at the natural-res
+   boundary (untapered branch ends at robust +1.4..+1.8, eta~1.0; next
+   winner is tapered at eta 1.4-2.6); the sawtooth is the coarse taper
+   lattice (x1.52 columns); the disconnected points are interior taper
+   transitions on homogeneous LONG (gap-chasing was heterogeneous-only);
+   wiggles are 0.01-0.09 envelope zigzags whose worst cases are true BUMPS
+   (a winner above its neighbours' chord = branch alternation).
+3. *refine.py escalation ladder built* (codex gpt-5.6-sol xhigh design
+   consult, adjudicated; opus implementation; Fable review + patches):
+   E1 secant resolution targeting (one shot per interval, log-space, same-
+   weighting evidence only; cliffs skip to E2) -> E2 staged progressive
+   log-midpoint taper scans (SAME rounded taper vector at BOTH endpoint
+   robusts — E0 verified singleton probes are INVISIBLE to the envelope,
+   so probes must complete segments/cells; classify from measured rows:
+   confirmed discontinuity / high-penalty / under-sampled) -> E3 gap
+   chasing for ALL subarrays (homogeneous via E2; untapered-robust
+   defects fall back to the fixed menu) -> E4 bump regions (eta-scaled
+   trigger, top-2/curve, <=25% budget).  Shared sample_from_row now
+   enforces the refine==report filter contract structurally.  New flags:
+   --scan-points/--bump-min (+ NGVLA_REFINE_SCAN_POINTS passthrough);
+   refine_parallel --budget forwarding bug fixed.  Dry-run on real
+   revD/snapshot data: cliff scans at both bracket robusts with sub-0.15
+   mas tapers, disconnected-LONG scans — exactly the intended probes.
+4. *Display-only curve smoothing* (bmason: "more reliably smooth
+   connecting interpolations"): make_report smooth_curve — segment at
+   drawn gaps (1.055) and real steps (>0.20), RDP knots + forced material
+   extrema (>0.05), pure-numpy PCHIP, iterative knot insertion to
+   max|smooth-raw|<=0.03 and optimistic<=0.02, raw fallback; payload
+   ships parallel imaging_smooth/pointsource_smooth arrays; the JS draws
+   them for the LINE only (markers/tooltips/gap-breaks stay raw).  Raw
+   curves untouched for refine and sa_select.  Real-build deviations:
+   worst 0.028/0.020 over ~70 curves.
+5. *P1 axis-cut capture BUILT* (measure.psf_axis_cuts + capture_profile
+   beam/cuts fields, CASA-free tests) and *P2 anchor backfill BUILT*
+   (backfill_psf.py + sbatch: re-images displayed-curve anchors lacking
+   cut-bearing profile lines with the EXACT recorded convention via the
+   new single-source sweep.tclean_kwargs; results CSVs byte-identical by
+   construction + AST test; resumable).  Scale note: revF/track alone has
+   ~949 anchors to image (predates profile capture) — node-days, 47 h
+   walltime + resubmits.
+6. *Codex guard review (xhigh, full diff): 5 blockers, 4 should-fix, 1
+   nit.*  Accepted and fixed: axis-cut SIGN bug (negative RA increment
+   reflects the cut line — real geometry error), _classify_scan bypassing
+   sample_from_row, backfill success-on-fallback + stale-product reuse,
+   E2 pair atomicity at budget edges, point_key -0.00 canonicalization,
+   smoother hard-bound final guard, unused hysteresis claim removed, zero
+   validation.  REJECTED with rationale: "backfill must cover all skirt
+   setpoints" — the s0=0.10+ptsrc+natural scope is bmason's approved P2
+   spec AND make_report strips env_keys for non-default setpoints, so the
+   report cannot reference them (coupling comment added).
+7. *Wave plan* (RUN_CAMPAIGNS.md "21 Jul wave"): revD/track CANARY
+   (budget 240, rounds 12) + chained backfill --array=2; inspect
+   escalation logs; then revF/snapshot, revD/snapshot, revF/track (200,
+   12) serialized vs queue headroom, each + its backfill; final combined
+   report rebuild.  Genuine snapshot cliffs will come back CLASSIFIED
+   (physics), not smoothed away — expectation to set with bmason.
+
+### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)
 
 **Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage
 wiring + `tests/test_export_psf.py`) and P4 (the report's "PSF inspector"
@@ -722,7 +788,8 @@ correctly skips until its profiles exist (polish refine points + P2
 backfill).  Entry points wired: subarray dropdown, heatmap-cell click,
 small-multiple-mark click, calculator per-row "PSF" button
 (nearest-measured-key resolution).  P1 (axis-cut capture) and P2 (anchor
-backfill, AFTER polish) remain.
+backfill) were BUILT 21 Jul — see the 21 Jul part-2 delta; backfill runs
+ride the 21 Jul campaign wave (RUN_CAMPAIGNS.md).
 
 bmason's decisions (AskUserQuestion, 15 Jul): **(1)** azimuthal profiles AND
 major/minor-axis cuts (cuts need a capture extension; they expose the

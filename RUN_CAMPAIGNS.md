@@ -92,7 +92,46 @@ follow-up launch on offer is the optional revD/track resubmit (§1 below,
 continues its budget-limited `long` imaging refine; all else no-ops) —
 part of bmason's survivors decision.
 
-## 1. POLISH campaigns — the follow-up refine passes (launch these)
+## 21 Jul wave — escalated refine + PSF anchor backfill (launch sheet)
+
+The 21 Jul code upgrade (PLAN.md 21-Jul part-2 delta) gives refine.py an
+escalation ladder (E1 secant / E2 staged taper scans / E3 homogeneous gaps /
+E4 bumps) that targets every defect bmason flagged on 21 Jul, plus P1 axis-cut
+capture (new refine points carry PSF cuts natively) and the P2 anchor-backfill
+job.  Wave order (queue limit: verify all three ids per campaign):
+
+```
+# 1. CANARY first, alone (most defects; biggest budget):
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh revD track --time 47:00:00 --refine-budget 240 --refine-rounds 12
+#    ... then chain its backfill (combo index 2) on the collect job id:
+sbatch --array=2 --dependency=afterok:<revD_track_COLLECT_id> /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch
+
+# 2. INSPECT the canary sweep logs before the rest:
+grep -E "refined|budget|worst|escalation|E2 " /work2/10240/bmason72/stampede3/sweep_<ID>_*.log
+#    sane = E2 plans with small-taper scans at both bracket robusts, terminal
+#    "sampled resolution discontinuity"/"high-penalty" classifications, no
+#    runaway budget.  THEN, serialized as queue headroom allows:
+bash .../submit_campaign.sh revF snapshot --time 24:00:00 --refine-budget 200 --refine-rounds 12   # backfill --array=1
+bash .../submit_campaign.sh revD snapshot --time 24:00:00 --refine-budget 200 --refine-rounds 12   # backfill --array=3
+bash .../submit_campaign.sh revF track    --time 47:00:00 --refine-budget 200 --refine-rounds 12   # backfill --array=0
+
+# 3. after ALL backfills: rebuild the combined report once
+cd /home1/10240/bmason72/Code/ngvla_subarrays/curvegen && \
+/work2/10240/bmason72/stampede3/casaenv/bin/casapy make_report.py --combined reports/ngvla-curves.html
+```
+
+Notes: backfill combo indices follow config_registry order (0=revF/track,
+1=revF/snapshot, 2=revD/track, 3=revD/snapshot); each backfill task re-images
+the curve ANCHORS lacking cut-bearing profiles (revF/track: ~949, node-days —
+resumable, resubmit if the 47 h ceiling hits) and then re-exports that combo's
+PSF payloads.  Campaign collects rebuild per-combo + combined reports as
+always — the new display-smoothing (bounded, display-only) rides along
+automatically.  Expected outcomes: fillable defects (sawtooth, coarse
+columns, most gaps) get filled; genuine snapshot taper-onset cliffs get
+CLASSIFIED ("sampled resolution discontinuity" in the logs) — those are
+physics, and the honest rendering (a sharp step, never splined over) stays.
+
+## 1. POLISH campaigns — the follow-up refine passes (SUPERSEDED by the 21 Jul wave above)
 
 Base grids are complete, so prep + sweep_parallel + fill_grid are fast no-ops;
 each array task effectively runs only the upgraded `refine.py` (both curves,

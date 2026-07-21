@@ -20,19 +20,25 @@ if [ -z "$REV" ] || [ -z "$MODE" ]; then
     exit 2
 fi
 shift 2
-WALL="48:00:00"; PREP_ONLY=0; RBUDGET=60; RROUNDS=3
+WALL="48:00:00"; PREP_ONLY=0; RBUDGET=60; RROUNDS=3; RSCAN=8
 while [ $# -gt 0 ]; do
     case "$1" in
         --time) WALL=${2:?}; shift 2 ;;
         --prep-only) PREP_ONLY=1; shift ;;
         --refine-budget) RBUDGET=${2:?}; shift 2 ;;   # polish pass: e.g. 200
         --refine-rounds) RROUNDS=${2:?}; shift 2 ;;   # polish pass: e.g. 8
+        --refine-scan-points) RSCAN=${2:?}; shift 2 ;;  # E2 taper levels: e.g. 12
         *) echo "unknown arg: $1" >&2; exit 2 ;;
     esac
 done
-case "$RBUDGET$RROUNDS" in *[!0-9]*)
-    echo "--refine-budget/--refine-rounds must be positive integers" >&2; exit 2 ;;
+case "$RBUDGET$RROUNDS$RSCAN" in *[!0-9]*)
+    echo "--refine-budget/--refine-rounds/--refine-scan-points must be positive integers" >&2; exit 2 ;;
 esac
+# the digit-only regex still admits 0; require strictly positive (a 0 budget
+# does nothing, and scan-points 0 would make E2 classify without measuring)
+if [ "$RBUDGET" -le 0 ] || [ "$RROUNDS" -le 0 ] || [ "$RSCAN" -le 0 ]; then
+    echo "--refine-budget/--refine-rounds/--refine-scan-points must be > 0" >&2; exit 2
+fi
 
 CG=$HOME/Code/ngvla_subarrays/curvegen
 PY=/work2/10240/bmason72/stampede3/casaenv/bin/casapy
@@ -42,10 +48,10 @@ export NGVLA_SCRATCH="${NGVLA_SCRATCH:-$SCRATCH/ngvla_curvegen}"
 # MSes persist on $WORK (SCRATCH is purged; 15 Jul 2026); tclean work dirs
 # stay on scratch (disposable TempLattice churn)
 export NGVLA_MS_BASE="${NGVLA_MS_BASE:-$WORK/ngvla_curvegen}"
-# refine knobs are ALWAYS exported explicitly (defaults 60/3): with
+# refine knobs are ALWAYS exported explicitly (defaults 60/3/8): with
 # --export=ALL a stale NGVLA_REFINE_* in the submitting shell would otherwise
 # silently turn a default campaign into a polish pass (codex review)
-EXP="ALL,NGVLA_REV=$REV,NGVLA_SIM_MODE=$MODE,NGVLA_SCRATCH=$NGVLA_SCRATCH,NGVLA_MS_BASE=$NGVLA_MS_BASE,NGVLA_REFINE_BUDGET=$RBUDGET,NGVLA_REFINE_ROUNDS=$RROUNDS"
+EXP="ALL,NGVLA_REV=$REV,NGVLA_SIM_MODE=$MODE,NGVLA_SCRATCH=$NGVLA_SCRATCH,NGVLA_MS_BASE=$NGVLA_MS_BASE,NGVLA_REFINE_BUDGET=$RBUDGET,NGVLA_REFINE_ROUNDS=$RROUNDS,NGVLA_REFINE_SCAN_POINTS=$RSCAN"
 
 # guard: the combo must be registered and its metadata CSV must exist
 "$PY" "$CG/campaign_tasks.py" narray >/dev/null || {

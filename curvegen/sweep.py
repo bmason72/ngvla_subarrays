@@ -20,11 +20,15 @@ How a sweep runs (v2 -- see config.py for the grid rationale):
 
 PSF radial profiles: when config.CAPTURE_PROFILES is on, every successfully
 imaged point also appends one JSON line ({"key": ..., "res_geo_arcsec": ...,
-"r_arcsec": [...], "psf": [...]}) to PROFILE_DIR/<subarray file stem>.jsonl
-before the image products are deleted.  Appends are keyed by the lattice
-point: a re-measured point may append a second line, so consumers must take
-the LAST line per key.  A profile-capture failure never fails or skips the
-sweep point (one-line warning only).
+"r_arcsec": [...], "psf": [...], plus the fitted beam and major/minor-axis
+cuts: "bmaj_arcsec", "bmin_arcsec", "bpa_deg", "cut_r_arcsec", "cut_maj",
+"cut_min"}) to PROFILE_DIR/<subarray file stem>.jsonl before the image
+products are deleted.  Appends are keyed by the lattice point: a re-measured
+point may append a second line, so consumers must take the LAST line per
+key.  A profile-capture failure never fails or skips the sweep point
+(one-line warning only); a cuts-only failure degrades to an azimuthal-only
+line (older lines, from before the cuts existed, are azimuthal-only too and
+stay valid).
 
 Run (from the curvegen/ directory, CASA's python3):
   .../python3 sweep.py core             # simulate if needed, then sweep
@@ -50,7 +54,8 @@ from config import (SUBARRAYS, IMSIZE, OVERSAMPLE, WORK_DIR, RESULTS_DIR,
                     SEEDS, BEAM_CAP_ARCSEC, MIN_UVRANGE_M, grid_rows,
                     CAPTURE_PROFILES, PROFILE_DIR)
 from simulate import make_ms
-from measure import beam_arcsec, image_rms, psf_skirt, psf_radial_profile
+from measure import (beam_arcsec, image_rms, psf_skirt, psf_radial_profile,
+                    psf_axis_cuts_from_psf)
 
 FIELDS = ["subarray", "weighting", "robust", "taper_mas", "imsize",
           "cell_arcsec", "bmaj_arcsec", "bmin_arcsec", "bpa_deg",
@@ -62,7 +67,19 @@ TCLEAN_EXTS = [".psf", ".image", ".residual", ".pb", ".sumwt", ".model",
 
 
 def point_key(weighting, robust, taper_mas):
-    return "%s_%.2f_%.3f" % (weighting, float(robust), float(taper_mas))
+    # "%.2f" % -0.0 -> "-0.00", which would spawn a DUPLICATE lattice row for
+    # the same coordinate (this is the class of gotcha export_psf_data.
+    # normalize_key patches after the fact).  Coerce any value that ROUNDS to
+    # zero to +0.0 before formatting: byte-identical to the old spelling for
+    # every non-zero value, and folds a -0.00 robust/taper into 0.00 here at
+    # the source.  Keys are derived at load time, not stored, so existing data
+    # is unaffected (and a grep found no -0.00 keys in the current results).
+    robust, taper_mas = float(robust), float(taper_mas)
+    if round(robust, 2) == 0.0:
+        robust = 0.0
+    if round(taper_mas, 3) == 0.0:
+        taper_mas = 0.0
+    return "%s_%.2f_%.3f" % (weighting, robust, taper_mas)
 
 
 def _sig5(v):
@@ -193,6 +210,39 @@ def cell_string(cell_arcsec):
     return "{0:.{prec}f}arcsec".format(cell_arcsec, prec=prec)
 
 
+def tclean_kwargs(vis, imagename, weighting, robust, taper_mas, imsize,
+                  cell_arcsec, min_uvrange_m):
+    """The SINGLE, canonical tclean keyword set for a curve dirty image
+    (niter=0 -> dirty image + PSF).  Both `Sweep.run_point` and
+    `backfill_psf.py` build the call here so the two can never silently drift
+    apart (backfill re-images a curve anchor to capture its PSF profile, and it
+    must use exactly the convention the anchor was measured with).
+
+    `cell_arcsec` is the already-decided cell -- run_point's adaptive `cell_pt`
+    when sweeping, or a recorded results-CSV row's `cell_arcsec` when
+    backfilling; it is NEVER recomputed here.  `min_uvrange_m` is the
+    subarray's spurious-short-baseline cut: filtering LONG's ~3-antenna
+    clusters (uvrange ">Nm") so beam/rms/skirt come from the real long-baseline
+    uv coverage, applied uniformly (incl. the natural seed) so eta stays
+    self-consistent.  taper_mas == 0 means no uv taper.
+    """
+    uvtaper = [] if taper_mas == 0 else \
+        ["%gmarcsec" % taper_mas, "%gmarcsec" % taper_mas, "0deg"]
+    uvrange = "" if min_uvrange_m is None else ">%gm" % min_uvrange_m
+    return dict(vis=vis, imagename=imagename, cell=cell_string(cell_arcsec),
+                imsize=imsize, datacolumn="data", weighting=weighting,
+                robust=robust, uvtaper=uvtaper, uvrange=uvrange, niter=0,
+                savemodel="none", pblimit=-0.02)
+
+
+def run_tclean(**kwargs):
+    """Execute one dirty-image tclean call built by `tclean_kwargs`.  Keeping
+    the sole `tclean(...)` invocation here means the kwargs-parity between the
+    sweep and the backfill can be tested by monkeypatching this module's
+    `tclean`."""
+    tclean(**kwargs)
+
+
 class Sweep:
     def __init__(self, subarray, limit=None, record_path=None,
                  include_shards=False):
@@ -255,19 +305,15 @@ class Sweep:
         # resolved without a huge image (cf. --cs_adapt in the old pipeline)
         cell_pt = max(self.cell, taper_mas / OVERSAMPLE / 1e3)
         name = os.path.join(self.workdir, "pt_" + key)
-        uvtaper = [] if taper_mas == 0 else \
-            ["%gmarcsec" % taper_mas, "%gmarcsec" % taper_mas, "0deg"]
-        # filter spurious short baselines (LONG's ~3-antenna clusters) so the
-        # beam/rms/skirt come from the real long-baseline uv coverage; applied
-        # uniformly (incl. the natural seed) so eta stays self-consistent
-        uvrange = "" if self.min_uvrange_m is None \
-            else ">%gm" % self.min_uvrange_m
         t0 = time.time()
         try:
-            tclean(vis=self.vis, imagename=name, cell=cell_string(cell_pt),
-                   imsize=self.imsize, datacolumn="data", weighting=weighting,
-                   robust=robust, uvtaper=uvtaper, uvrange=uvrange, niter=0,
-                   savemodel="none", pblimit=-0.02)
+            # tclean_kwargs is the SINGLE place the dirty-image call is built
+            # (see the module-level helper); backfill_psf.py re-images anchors
+            # through the same helper with a byte-identical convention -- cell
+            # here is the adaptive cell_pt, backfill passes the recorded cell.
+            run_tclean(**tclean_kwargs(self.vis, name, weighting, robust,
+                                       taper_mas, self.imsize, cell_pt,
+                                       self.min_uvrange_m))
             bmaj, bmin, bpa = beam_arcsec(name + ".image")
             res_geo = float(np.sqrt(bmaj * bmin))
             sigma = image_rms(name + ".image")
@@ -312,7 +358,8 @@ class Sweep:
             # or skip the point itself
             if CAPTURE_PROFILES:
                 try:
-                    self.capture_profile(key, name + ".psf", res_geo)
+                    self.capture_profile(key, name + ".psf", res_geo,
+                                         beam=(bmaj, bmin, bpa))
                 except Exception as pe:
                     print("warning: profile capture failed for %s: %s"
                           % (key, pe), file=sys.stderr)
@@ -330,17 +377,47 @@ class Sweep:
         self.record(row)
         return row
 
-    def capture_profile(self, key, psf_path, res_geo_arcsec):
-        """Append one radial-profile JSON line for a measured point.
+    def capture_profile(self, key, psf_path, res_geo_arcsec, beam=None):
+        """Append one profile JSON line for a measured point.
 
-        Consumers take the LAST line per key (re-measured points append)."""
+        Always writes the azimuthal radial profile.  When `beam` is given
+        (bmaj_arcsec, bmin_arcsec, bpa_deg -- the already-fitted restoring
+        beam, so this costs no extra tclean work) this also tries to add
+        the beam and the major/minor-axis cuts; a cuts failure degrades to
+        an azimuthal-only line rather than losing the whole point (the
+        profile is a diagnostic capture, the sweep point is not).
+        Consumers take the LAST line per key (re-measured points append).
+
+        Returns True iff the major/minor-axis cut fields were written; False
+        for an azimuthal-only line (no beam given, or the cut capture failed).
+        run_point ignores this; backfill_psf REQUIRES cuts, so it uses the
+        flag to tell a real cut-bearing capture from a swallowed fallback."""
         r, p = psf_radial_profile(psf_path, res_geo_arcsec)
+        line_data = dict(key=key,
+                         res_geo_arcsec=_sig5(res_geo_arcsec),
+                         r_arcsec=[_sig5(v) for v in r],
+                         psf=[_sig5(v) for v in p])
+        cuts_ok = False
+        if beam is not None:
+            bmaj, bmin, bpa = beam
+            try:
+                cut_r, cut_maj, cut_min = psf_axis_cuts_from_psf(
+                    psf_path, res_geo_arcsec, bpa)
+                line_data.update(
+                    bmaj_arcsec=_sig5(bmaj), bmin_arcsec=_sig5(bmin),
+                    bpa_deg=_sig5(bpa),
+                    cut_r_arcsec=[_sig5(v) for v in cut_r],
+                    cut_maj=[None if v is None else _sig5(v)
+                             for v in cut_maj],
+                    cut_min=[None if v is None else _sig5(v)
+                             for v in cut_min])
+                cuts_ok = True
+            except Exception as e:
+                print("warning: axis-cut capture failed for %s: %s"
+                      % (key, e), file=sys.stderr)
         os.makedirs(PROFILE_DIR, exist_ok=True)
         stem = self.subarray.replace("+", "_").replace("-", "_")
-        line = json.dumps(dict(key=key,
-                               res_geo_arcsec=_sig5(res_geo_arcsec),
-                               r_arcsec=[_sig5(v) for v in r],
-                               psf=[_sig5(v) for v in p])) + "\n"
+        line = json.dumps(line_data) + "\n"
         # one os.write on an O_APPEND descriptor: the best atomicity
         # available when parallel shard jobs (sweep_parallel.py /
         # fill_grid.py) append to the same file; interleaving is still
@@ -352,6 +429,7 @@ class Sweep:
             os.write(fd, line.encode())
         finally:
             os.close(fd)
+        return cuts_ok
 
     def skip_point(self, weighting, robust, taper_mas, why):
         key = point_key(weighting, robust, taper_mas)

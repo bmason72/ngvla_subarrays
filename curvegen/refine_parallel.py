@@ -48,6 +48,9 @@ def main():
     ap.add_argument("--omp", type=int, default=8)
     ap.add_argument("--rounds", type=int, default=3)
     ap.add_argument("--max-step", type=float, default=0.25)
+    ap.add_argument("--budget", type=int, default=60)
+    ap.add_argument("--scan-points", type=int, default=8)
+    ap.add_argument("--bump-min", type=float, default=0.05)
     args = ap.parse_args()
     sas = offered() if args.all_offered else args.subarrays
     if not sas:
@@ -63,9 +66,14 @@ def main():
             sa = queue.pop(0)
             cwd = scratch_cwd(sa)
             log = open(os.path.join(cwd, "refine.log"), "w")
+            # forward ALL refine knobs: --budget was previously dropped, so a
+            # polish pass silently ran the 60-point default (bug fixed 21 Jul
+            # 2026); --scan-points/--bump-min are the escalation knobs
             p = subprocess.Popen(
                 [sys.executable, refine, sa, "--rounds", str(args.rounds),
-                 "--max-step", str(args.max_step)],
+                 "--max-step", str(args.max_step), "--budget", str(args.budget),
+                 "--scan-points", str(args.scan_points),
+                 "--bump-min", str(args.bump_min)],
                 cwd=cwd, env=env, stdout=log, stderr=subprocess.STDOUT)
             running[p] = sa
             logs[p] = log

@@ -23,6 +23,8 @@ import json
 import os
 import sys
 
+import numpy as np
+
 from config import REPO, RESULTS_DIR, ROBUST_LIST, grid_rows, REV, SIM_MODE
 
 sys.path.insert(0, REPO)                    # for the shared curve engine
@@ -112,6 +114,272 @@ def build_curve(samples, skirt_max=None, max_res=None):
         ))
         prev_key = key
     return curve
+
+
+def sample_from_row(res_mas, eta, skirt, weighting, robust, taper_mas, capped):
+    """The shared display-trim + interpolation-anchor contract, applied to one
+    already-parsed lattice measurement.  Returns a sample dict (with a `capped`
+    flag) or None when the display trim rejects the row.
+
+    ONE implementation for BOTH the report (build_payload) and the refiner
+    (curvegen/refine.samples_from): a 15 Jul 2026 incident traced a wasted
+    refinement budget to those two filters drifting apart, so they now share
+    this code.  The trim: the eta > ETA_CAP regime (>~25x natural observing
+    time) is never plotted, and a NaN eta (a degenerate measurement) is
+    dropped.  capped rows are interpolation ANCHORS -- they feed the envelope
+    (extending row coverage up to the beam cap) but are never DISPLAYED as
+    dots, so callers building a display set check the returned `capped` flag.
+    """
+    if eta is None or not (eta <= ETA_CAP):        # trims eta > cap AND NaN eta
+        return None
+    return dict(res=res_mas, eta=eta, skirt=skirt, weighting=weighting,
+                robust=robust, taper=taper_mas, capped=bool(capped))
+
+
+# ---------------------------------------------------------------------------
+# Display-only curve smoothing (astronomer request, 21 Jul 2026).
+#
+# The report draws each curve through a DENSE 0.01-dex grid straight from the
+# envelope engine (build_curve above), and the connecting line shows small
+# (0.01-0.09 in eta) non-monotonic wiggle -- grid-scale numerical noise in the
+# underlying PSF measurements, not real structure.  Real defects (bigger
+# steps, genuine coverage gaps) are being fixed in the DATA by a separate
+# refinement upgrade; this section must never do that job instead -- it only
+# produces a parallel "smooth" eta array, aligned 1:1 with a curve's raw
+# points, that report_template.html draws for the CONNECTING LINE only.
+# Markers/tooltips/dots and the gap-break rule keep reading the raw points
+# untouched (see curveChart in the template).
+#
+# The smoother is bounded so it can polish sub-threshold wiggle but can never
+# mask real structure: it never bridges a genuine gap or step, it always
+# keeps material local extrema, and it is iteratively tightened (inserting
+# more knots) until it tracks the raw curve within SMOOTH_MAX_ABS everywhere,
+# and within the tighter SMOOTH_MAX_OPTIMISTIC wherever it would UNDERSTATE
+# the true cost (eta) -- reporting a rosier sensitivity than reality is the
+# worse failure mode for an observing-time estimate, so that direction gets
+# the tighter leash.  No scipy (project constraint): a small pure-numpy
+# monotone (Fritsch-Carlson / PCHIP) cubic does the fitting.
+# ---------------------------------------------------------------------------
+
+SMOOTH_GAP_RATIO = 1.055            # matches report_template.html's drawn-gap rule
+SMOOTH_STEP_ETA = 0.20              # a real step/cliff -- never bridged by a spline
+SMOOTH_RDP_EPS = 0.03                # initial knot-selection vertical-error tolerance
+SMOOTH_EXTREMUM_PROMINENCE = 0.05    # local extrema this material are always kept
+SMOOTH_MAX_ABS = 0.03                # final bound: max|smooth - raw|, either direction
+SMOOTH_MAX_OPTIMISTIC = 0.02         # tighter bound where smooth UNDERSTATES raw (eta too low)
+SMOOTH_WARN_ABS = 0.06               # build-time warning threshold (should be unreachable)
+SMOOTH_MIN_SEGMENT = 4               # shorter segments are passed through raw, untouched
+
+
+def _segment_breaks(res, eta):
+    """Index boundaries splitting one curve into segments the smoother may
+    fit independently: a break at (a) a resolution gap the template already
+    draws as a break (ratio > SMOOTH_GAP_RATIO) or (b) a genuine step
+    (|adjacent eta jump| > SMOOTH_STEP_ETA) -- a real cliff must stay a sharp
+    corner, never a soft curve, even where the template still draws a
+    connecting line across it (that only breaks on rule (a)).  Returns a list
+    of (start, end) inclusive index pairs covering the whole curve."""
+    n = len(res)
+    segments, start = [], 0
+    for i in range(1, n):
+        gap = res[i] > res[i - 1] * SMOOTH_GAP_RATIO
+        step = abs(eta[i] - eta[i - 1]) > SMOOTH_STEP_ETA
+        if gap or step:
+            segments.append((start, i - 1))
+            start = i
+    segments.append((start, n - 1))
+    return segments
+
+
+def _pchip_slopes(x, y):
+    """Fritsch-Carlson derivative estimate at each knot (x strictly
+    increasing) -- the classic shape-preserving PCHIP recipe (MATLAB's
+    `pchip`, scipy's PchipInterpolator): zero derivative at a knot that is a
+    local extremum of the DATA (so the cubic cannot overshoot it), else a
+    weighted harmonic mean of the two neighboring secant slopes, with a
+    shape-corrected one-sided estimate at each end.  Guarantees a monotone
+    interpolant on monotone data and no overshoot between any two knots."""
+    m = len(x)
+    if m == 2:
+        return np.full(2, (y[1] - y[0]) / (x[1] - x[0]))
+    h = np.diff(x)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        delta = np.diff(y) / h                    # secant slopes, length m-1
+    d = np.zeros(m)
+    sign_change = (delta[:-1] * delta[1:]) <= 0
+    w1 = 2 * h[1:] + h[:-1]
+    w2 = h[1:] + 2 * h[:-1]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        harmonic = (w1 + w2) / (w1 / delta[:-1] + w2 / delta[1:])
+    d[1:-1] = np.where(sign_change, 0.0, harmonic)
+
+    def edge(h0, h1, d0, d1):
+        slope = ((2 * h0 + h1) * d0 - h0 * d1) / (h0 + h1)
+        if slope * d0 < 0:
+            slope = 0.0
+        elif (d0 * d1 < 0) and (abs(slope) > 3 * abs(d0)):
+            slope = 3 * d0
+        return slope
+
+    d[0] = edge(h[0], h[1], delta[0], delta[1])
+    d[-1] = edge(h[-1], h[-2], delta[-1], delta[-2])
+    return d
+
+
+def _pchip_eval(xk, yk, dk, x):
+    """Evaluate the cubic Hermite spline through knots (xk, yk, dk) at every
+    point in x (each must lie in [xk[0], xk[-1]]); vectorized over x via
+    np.searchsorted to bucket each point into its knot interval.  Exact at
+    the knots themselves (t=0 or 1 reduces the Hermite basis to yk)."""
+    idx = np.clip(np.searchsorted(xk, x, side="right") - 1, 0, len(xk) - 2)
+    x0, x1 = xk[idx], xk[idx + 1]
+    y0, y1 = yk[idx], yk[idx + 1]
+    d0, d1 = dk[idx], dk[idx + 1]
+    h = x1 - x0
+    t = (x - x0) / h
+    t2, t3 = t * t, t * t * t
+    h00, h10 = 2 * t3 - 3 * t2 + 1, t3 - 2 * t2 + t
+    h01, h11 = -2 * t3 + 3 * t2, t3 - t2
+    return h00 * y0 + h10 * h * d0 + h01 * y1 + h11 * h * d1
+
+
+def _initial_knots(x, y):
+    """Boolean keep-mask over one segment's points: RDP simplification with a
+    VERTICAL error metric (the natural one for a single-valued curve y(x),
+    rather than RDP's usual perpendicular distance) down to SMOOTH_RDP_EPS,
+    plus -- regardless of what that simplification kept -- any local
+    extremum whose prominence against the segment's own chord exceeds
+    SMOOTH_EXTREMUM_PROMINENCE.  That second rule is not just a looser
+    version of the first: a real bump can sit close to a *coarse* fit by
+    curvature accident without being anchored to its measured (x, y) at all,
+    which would blur or shift it; forcing it in as a knot keeps it exact and
+    exactly where it was measured (real structure is refine's job to remove
+    from the data, never the display smoother's)."""
+    n = len(x)
+    keep = np.zeros(n, dtype=bool)
+    keep[0] = keep[-1] = True
+
+    def rdp(lo, hi):
+        if hi <= lo + 1:
+            return
+        chord = y[lo] + (y[hi] - y[lo]) * (x[lo:hi + 1] - x[lo]) / (x[hi] - x[lo])
+        dist = np.abs(y[lo:hi + 1] - chord)
+        dist[0] = dist[-1] = -1.0            # endpoints already kept
+        j_local = int(np.argmax(dist))
+        if dist[j_local] > SMOOTH_RDP_EPS:
+            j = lo + j_local
+            keep[j] = True
+            rdp(lo, j)
+            rdp(j, hi)
+
+    rdp(0, n - 1)
+
+    if x[-1] > x[0]:
+        chord_full = y[0] + (y[-1] - y[0]) * (x - x[0]) / (x[-1] - x[0])
+        is_extremum = np.zeros(n, dtype=bool)
+        is_extremum[1:-1] = ((y[1:-1] - y[:-2]) * (y[2:] - y[1:-1])) <= 0
+        prominent = is_extremum & (np.abs(y - chord_full) >
+                                    SMOOTH_EXTREMUM_PROMINENCE)
+        keep |= prominent
+    return keep
+
+
+def _fit_segment(x, y):
+    """PCHIP-fit one segment (x=log10(res), y=eta already sliced to the
+    segment), inserting knots at the worst-offending raw point until
+    max|smooth-raw| <= SMOOTH_MAX_ABS and the OPTIMISTIC deviation (smooth
+    reporting a lower eta than truth) <= SMOOTH_MAX_OPTIMISTIC.  Returns
+    (smooth, ok).  ok=False means the bound could not be met -- the caller
+    then falls back to the raw polyline for this segment; in practice this is
+    unreachable, since inserting every raw point as a knot makes the fit
+    exact (PCHIP passes through every knot), so the loop always converges."""
+    n = len(x)
+    knots = set(np.flatnonzero(_initial_knots(x, y)).tolist())
+    for _ in range(n + 1):          # generous cap; exact once all points are knots
+        idx = np.array(sorted(knots))
+        d = _pchip_slopes(x[idx], y[idx])
+        smooth = _pchip_eval(x[idx], y[idx], d, x)
+        diff = smooth - y                              # + = smooth ABOVE raw
+        worst_abs = int(np.argmax(np.abs(diff)))
+        optimistic = np.maximum(0.0, -diff)             # smooth BELOW raw
+        worst_opt = int(np.argmax(optimistic))
+        over = abs(diff[worst_abs]) - SMOOTH_MAX_ABS
+        opt_over = optimistic[worst_opt] - SMOOTH_MAX_OPTIMISTIC
+        if over <= 0 and opt_over <= 0:
+            return smooth, True
+        insert = worst_abs if over >= opt_over else worst_opt
+        if insert in knots:
+            return y.copy(), False        # can't improve further -- degenerate
+        knots.add(insert)
+    return y.copy(), False
+
+
+def smooth_curve(points, label=""):
+    """The display-smoothed eta array for one already-built curve (a list of
+    point dicts from build_curve, in resolution order): returns
+    (smooth_etas, stats), where smooth_etas is a plain list of floats aligned
+    1:1 with `points` (meant to be drawn INSTEAD of the raw eta for the
+    connecting line -- see report_template.html) and stats holds the
+    build-time deviation report {"max_abs", "max_optimistic"} for the whole
+    curve.  Never touches `points` itself.
+
+    Guaranteed: the returned smooth_etas either satisfies BOTH
+    max|smooth-raw| <= SMOOTH_MAX_ABS and max_optimistic <= SMOOTH_MAX_OPTIMISTIC
+    (up to float tolerance) with every value finite, or -- if that hard
+    contract is somehow violated (it shouldn't be; _fit_segment enforces it
+    segment-by-segment) -- is the untouched raw eta.  A curve is never shipped
+    half-fixed."""
+    n = len(points)
+    if n == 0:
+        return [], dict(max_abs=0.0, max_optimistic=0.0)
+    res = np.array([p["res"] for p in points], dtype=float)
+    eta = np.array([p["eta"] for p in points], dtype=float)
+    x = np.log10(res)
+    smooth = eta.copy()
+    for lo, hi in _segment_breaks(res, eta):
+        if hi - lo + 1 < SMOOTH_MIN_SEGMENT:
+            continue                        # short segment: raw passthrough
+        seg_smooth, ok = _fit_segment(x[lo:hi + 1], eta[lo:hi + 1])
+        if ok:
+            smooth[lo:hi + 1] = seg_smooth
+        # else: leave the raw passthrough already sitting in `smooth`
+
+    diff = smooth - eta
+    finite = bool(np.all(np.isfinite(smooth)))
+    max_abs = float(np.max(np.abs(diff))) if finite else float("inf")
+    max_optimistic = (float(np.max(np.maximum(0.0, -diff))) if finite
+                      else float("inf"))
+
+    # The HARD gate (the per-segment fitter already enforces these bounds
+    # segment-by-segment via _fit_segment, so this should be unreachable on
+    # real curves): any non-finite value, or a deviation past the advertised
+    # SMOOTH_MAX_ABS/SMOOTH_MAX_OPTIMISTIC contract (a tight float tolerance
+    # aside), and the WHOLE curve falls back to raw -- no exceptions.  This is
+    # the enforcement line; SMOOTH_WARN_ABS below is only a louder forensic
+    # signal layered on top of it, not a separate/looser gate.
+    tol = 1e-9
+    within_bounds = (finite and max_abs <= SMOOTH_MAX_ABS + tol
+                     and max_optimistic <= SMOOTH_MAX_OPTIMISTIC + tol)
+    if not within_bounds:
+        if not finite or max_abs > SMOOTH_WARN_ABS:
+            print("make_report: WARNING smoothing violated its bound on %r "
+                  "(max|smooth-raw|=%s%s) -- using raw for this curve"
+                  % (label, ("%.3f" % max_abs) if finite else "non-finite",
+                     "" if finite else ", non-finite values present"),
+                  file=sys.stderr)
+        return [float(v) for v in eta], dict(max_abs=0.0, max_optimistic=0.0)
+    return [float(v) for v in smooth], dict(max_abs=max_abs,
+                                             max_optimistic=max_optimistic)
+
+
+def _print_smooth_report(entries):
+    """One grep-able line per curve ('smooth: ...'): build-time visibility
+    into how far the display smoother moved the connecting line off the raw
+    grid (see smooth_curve).  entries is [((kind, s0_or_None, name), stats), ...]."""
+    for (kind, s0, name), stats in entries:
+        where = ("imaging[%s]" % s0) if kind == "imaging" else kind
+        print("smooth: %s %s: max|smooth-raw|=%.3f max_optimistic=%.3f"
+              % (where, name, stats["max_abs"], stats["max_optimistic"]))
 
 
 STATUS_PRIORITY = {"skipped": 0, "failed": 1, "capped": 2, "ok": 3}
@@ -289,27 +557,27 @@ def build_payload():
                 continue
             capped = ((r.get("sample_status") or "ok").strip()
                       == "capped_anchor")
-            s = dict(
-                res=float(r["resolution_arcsec_30ghz"]) * 1e3,   # mas
+            # DISPLAY trim (shared with refine via sample_from_row): the eta >
+            # ~5 regime (>25x natural time) is not of interest for the plots --
+            # the engine/selector itself does NOT censor by ETA_CAP
+            # (envelope.build_points), so at those extreme resolutions the
+            # Python tool still reports a solution where this report shows none.
+            # Capped anchors obey the same trim (a beyond-cap anchor with eta >
+            # 5 could only support curve points the trim excludes anyway); they
+            # feed the envelope but not the dots.
+            s = sample_from_row(
+                res_mas=float(r["resolution_arcsec_30ghz"]) * 1e3,   # mas
                 eta=float(r["eta"]),
                 skirt=float(r["skirt"]) if r["skirt"] else None,
                 weighting=r["weighting"],
                 robust=float(r["robust"]) if r["robust"] else None,
-                taper=float(r["taper_arcsec_30ghz"]) * 1e3
-                      if r["taper_arcsec_30ghz"] else 0.0,
-                capped=capped,
-            )
-            # DISPLAY trim: the eta > ~5 regime (>25x natural time) is not of
-            # interest for the plots -- the engine/selector itself does NOT
-            # censor by ETA_CAP (envelope.build_points), so at those extreme
-            # resolutions the Python tool still reports a solution where this
-            # report shows none.  Capped anchors obey the same trim (a beyond-
-            # cap anchor with eta > 5 could only support curve points that the
-            # trim excludes anyway); they feed the envelope but not the dots.
-            if s["eta"] > ETA_CAP:
+                taper_mas=(float(r["taper_arcsec_30ghz"]) * 1e3
+                           if r["taper_arcsec_30ghz"] else 0.0),
+                capped=capped)
+            if s is None:
                 continue
             samples_by[name].append(s)
-            if not capped:
+            if not s["capped"]:
                 display_by[name].append(s)
 
     las = {}
@@ -367,11 +635,35 @@ def build_payload():
     for curve in pointsource.values():
         for p in curve:
             p.pop("env_keys", None)
+
+    # Display-only smoothing (see smooth_curve above): a PARALLEL eta array
+    # per curve, keyed identically to `imaging`/`pointsource` so neither of
+    # those (nor their point dicts, nor any downstream consumer -- notably
+    # backfill_psf.build_curve callers and the PSF-inspector's env_keys
+    # lookups) is touched.  Every skirt setpoint gets one, not just the
+    # default, since the template's s0 selector can switch to any of them.
+    imaging_smooth, smooth_report = {}, []
+    for key, curves in imaging.items():
+        imaging_smooth[key] = {}
+        for name, curve in curves.items():
+            smooth, stats = smooth_curve(curve, label="imaging[%s] %s"
+                                          % (key, name))
+            imaging_smooth[key][name] = smooth
+            smooth_report.append((("imaging", key, name), stats))
+    pointsource_smooth = {}
+    for name, curve in pointsource.items():
+        smooth, stats = smooth_curve(curve, label="pointsource %s" % name)
+        pointsource_smooth[name] = smooth
+        smooth_report.append((("pointsource", None, name), stats))
+    _print_smooth_report(smooth_report)
+
     data = dict(order=ACTIVE_ORDER, las=las, caps=caps, samples=display_by,
                 skirt_setpoints=skirt_setpoints,
                 s0_default=SKIRT_DEFAULT_KEY,
                 imaging=imaging,
+                imaging_smooth=imaging_smooth,
                 pointsource=pointsource,
+                pointsource_smooth=pointsource_smooth,
                 counts={n: len(display_by[n]) for n in ACTIVE_ORDER},
                 heatmaps=heatmaps)
 

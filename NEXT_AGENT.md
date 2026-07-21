@@ -49,21 +49,21 @@ eta jumps happen and how polish samples — accurate and worth reading.
    Build order: retrospective lattice validation → band-axis machinery →
    pilots (nchan convergence + noise A/B + cost/packing; bmason checkpoint)
    → wave runner → waves.
-1. ~~bmason launches the LAST polish campaign~~ **DONE 16 Jul 16:39**
-   (revF/track completed end-to-end; see PLAN.md 21-Jul delta).
-2. **bmason decision — surviving jumps**: (a) dense 1-D taper scans
-   through the surviving intervals (diagnostic: artifact vs physics vs
-   beam-fit branch), (b) bisection-style direct resolution targeting in
-   refine.py (codex advisory, sketched in PLAN part-2 "Logged-for-later"),
-   (c) accept + document, and/or the cheap lever: resubmit revD/track
-   polish (continues only its budget-limited `long` imaging refine;
-   everything else no-ops — command in RUN_CAMPAIGNS.md §1).  The snapshot
-   ptsrc cliffs right above the natural beam are the flagship case.
-3. **PSF inspector P1** (axis-cut capture in measure.py/sweep.py — spec in
-   PLAN "PSF inspector plan"): can land any time; ideally before P2.
-4. **PSF inspector P2** (anchor backfill) — **now UNBLOCKED** (revF/track
-   polish landed; refinement no longer moves the anchors it targets).
-   Gives revF/track its profiles and every campaign its anchor cuts.
+1. ~~bmason launches the LAST polish campaign~~ **DONE 16 Jul 16:39**.
+2. ~~bmason decision — surviving jumps~~ **DECIDED 21 Jul: FIX.**  bmason
+   flagged the surviving jumps/disconnected points/wiggles; the refine
+   escalation ladder (E1 secant / E2 staged taper scans / E3 homogeneous
+   gaps / E4 bumps), display-only curve smoothing, and PSF inspector
+   P1+P2 were all BUILT the same day (PLAN.md 21-Jul part-2 delta; 154+
+   tests; codex-guard-reviewed, blockers fixed).
+3. **The 21 Jul WAVE** (RUN_CAMPAIGNS.md "21 Jul wave" launch sheet):
+   revD/track canary (budget 240, rounds 12) + chained PSF backfill,
+   inspect escalation log lines, then the other three campaigns (200,
+   12) serialized vs the queue limit, each + its backfill --array task;
+   finish with one combined-report rebuild.  Genuine snapshot taper-onset
+   cliffs will return CLASSIFIED as "sampled resolution discontinuity"
+   (physics) rather than smoothed away — set that expectation with
+   bmason.
 5. Standing items: bmason eyeball of the combined report + snapshot
    convention sign-off + LONG-snapshot offering (ASK list, PLAN part 2);
    memo read; cross-revision comparison report (spec first).

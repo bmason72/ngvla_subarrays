@@ -37,6 +37,8 @@ mkdir -p "$RUN_CWD"; cd "$RUN_CWD"
 # fast no-ops) raises these via submit_campaign.sh --refine-budget/-rounds
 REFINE_BUDGET="${NGVLA_REFINE_BUDGET:-60}"
 REFINE_ROUNDS="${NGVLA_REFINE_ROUNDS:-3}"
+# E2 escalation knob (taper levels per interval); default 8 matches refine.py
+REFINE_SCAN_POINTS="${NGVLA_REFINE_SCAN_POINTS:-8}"
 
 # preflight: fail closed if the caps this combo needs are not in the metadata
 # CSV, so a full grid never runs uncapped (no-op for revF/track)
@@ -71,6 +73,7 @@ for SA in $TASK; do
         || echo "FILL FAILED (non-blocking): $SA"
     echo "=== refine $SA ==="
     "$PY" "$CG/refine.py" "$SA" --budget "$REFINE_BUDGET" --rounds "$REFINE_ROUNDS" \
+        --scan-points "$REFINE_SCAN_POINTS" \
         || echo "REFINE FAILED (non-blocking): $SA"
 done
 echo "sweep task $SLURM_ARRAY_TASK_ID done (rc=$rc)"

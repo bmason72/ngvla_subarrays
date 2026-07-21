@@ -587,6 +587,14 @@ function currentImagingCurves() {
   return {};
 }
 
+// display-only smoothed eta arrays (make_report.smooth_curve), aligned 1:1
+// with currentImagingCurves()[name]/DATA.pointsource[name]; curveChart draws
+// these for the connecting line only, falling back to the raw p.eta.
+function currentImagingSmooth() {
+  const sm = DATA.imaging_smooth || {};
+  return sm[currentS0] || null;
+}
+
 function inReceiverBand(freq) {
   return CALC_RECEIVER_BANDS.some(([lo, hi]) => freq >= lo && freq <= hi);
 }
@@ -951,14 +959,19 @@ function curveChart(el, curves, opts) {
   // interpolation engine; the line breaks where consecutive grid points are
   // more than ~2 grid steps apart: a genuine coverage gap, not interpolated
   const endLabels = [];
+  const smoothCurves = opts.smooth || {};
   for (const name of ACTIVE) {
     const pts = curves[name]; if (!pts || !pts.length) continue;
+    const sm = Array.isArray(smoothCurves[name]) ? smoothCurves[name] : null;
     const g = svgEl('g', {'class': 'series-g', 'data-series': name});
     let path = '';
     pts.forEach((p, i) => {
       const gap = i && p.res / pts[i - 1].res > 1.055;
+      // the connecting line draws the smoothed eta when available; markers,
+      // tooltips, dots, and this gap-break test all keep reading raw p below
+      const yEta = sm && Number.isFinite(sm[i]) ? sm[i] : p.eta;
       path += (i && !gap ? 'L' : 'M') + X(p.res).toFixed(1) + ' ' +
-              Y(p.eta).toFixed(1);
+              Y(yEta).toFixed(1);
     });
     g.append(svgEl('path', {d: path, fill: 'none', stroke: css(name),
                             'stroke-width': 2, 'stroke-linejoin': 'round'}));
@@ -1072,7 +1085,7 @@ function renderImagingChart() {
   clearNode(leg);
   hideTT();
   legend(leg, curveChart(chart, currentImagingCurves(),
-    {...optsCommon, marker: 'triangle',
+    {...optsCommon, marker: 'triangle', smooth: currentImagingSmooth(),
      label: 'Imaging curves: eta vs resolution, PSF skirt <= ' + fmtS0(currentS0)}));
 }
 
@@ -1103,7 +1116,8 @@ function renderPsChart() {
   clearNode(chart);
   clearNode(leg);
   legend(leg, curveChart(chart, DATA.pointsource,
-    {...optsCommon, label: 'Point-source curves: eta vs resolution, skirt unconstrained'}));
+    {...optsCommon, smooth: DATA.pointsource_smooth,
+     label: 'Point-source curves: eta vs resolution, skirt unconstrained'}));
 }
 
 // stat tiles ------------------------------------------------------------------
