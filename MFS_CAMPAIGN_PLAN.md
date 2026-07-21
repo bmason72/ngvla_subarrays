@@ -31,6 +31,11 @@ combos.
    robust {−2,−1.2,−0.4,0.4,1.2,2} × (taper 0 + every 2nd canonical log
    taper), PLUS the full natural+taper row and all 11 robusts at taper 0.
    Resumable — interior fills in later if/when imaging curves are wanted.
+   **SUPERSEDED 21 Jul 2026:** the fixed reduced lattice becomes the SEED
+   of a goal-oriented adaptive (quadtree/AMR) sampler — bmason-approved
+   design in `MFS2_ADAPTIVE_SAMPLER_SPEC.md` (tolerances, loss, cliff
+   localization, V1 replay gate).  MFS-2 in the task table below is
+   replaced by that spec's MFS-2a..2e breakdown.
 
 ## Key assumptions (and how each is protected)
 

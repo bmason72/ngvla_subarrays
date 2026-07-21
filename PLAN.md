@@ -776,6 +776,42 @@ escalated refine + display smoothing + P1 + P2).**
    report rebuild.  Genuine snapshot cliffs will come back CLASSIFIED
    (physics), not smoothed away — expectation to set with bmason.
 
+**SESSION DELTA (21 Jul 2026, part 3, Fable — wave launched; cap question
+resolved; adaptive-sampler direction approved + spec).**
+1. *Wave launched (canary stage).*  revD/track: prep 3333952 → sweep
+   3333953[0-3] → collect 3333954 → backfill 3333958[2], all PENDING at
+   hand-off.  Remaining three campaigns + backfills launch after canary
+   inspection — NEXT_AGENT.md item 1-2, RUN_CAMPAIGNS.md "21 Jul wave".
+   The 09d6d7e milestone commit carries the whole code upgrade (177 green).
+2. *Beam-cap question (bmason): resolved as a memo misreading.*  The cap
+   binds only the COARSE end; reference = coarsest component (mid+long →
+   mid 2.96 mas; spiral+mid+long → spiral+mid 11.1; main+long → main 21.2;
+   *+core-outer → 491; main → core 710); measured ranges relay with ~2x
+   seam overlap (mid+long 0.51–2.82 mas hands to mid 2.03–54.6, etc.).
+   bmason's proposals were both stricter than or equal to what exists;
+   memo wording made unambiguous + recompiled (commit 07a144e).  Logged
+   nuance: a min-integration-time ranking could in principle want
+   beyond-cap mixture offerings (marginal sensitivity edge over the
+   standalone subarray); a one-mixture 2x-cap-extension diagnostic
+   (mid+long) is the cheap v2 experiment if ever wanted.
+3. *Adaptive sampling (bmason proposal → codex xhigh consult → approved):*
+   replace regular-lattice+polish with a goal-oriented quadtree/AMR
+   sampler — tolerance-scaled hierarchical-residual loss (tau = ln1.05
+   res / 0.1 eta / 0.02 skirt ABSOLUTE per bmason), 2-sigma noise
+   deadband, exploration floor, envelope/skirt-band goal weighting,
+   feature state machine {smooth, step, ridge, noise} with steps scored
+   by INPUT-LOCATION bracket (localize cliffs, cut annotations, never
+   interpolate across).  Rails demoted to seed-boundary (interior seeds
+   mandatory — imaging winners are interior); triangular/scattered mesh
+   REJECTED as architecture unless a replay shows ≥30% additional saving
+   at p90 (Delaunay simplices across cliffs manufacture nonexistent
+   resolutions).  Full spec: `MFS2_ADAPTIVE_SAMPLER_SPEC.md` (supersedes
+   MFS scope decision 4; seed ≈56 pts, budget plan 80/map, V1 replay
+   gate).  Codex spec-review launched at session end — may need re-run
+   (NEXT_AGENT).  bmason's standing bet: the in-flight wave (new
+   escalation, not old polishing) may still not fill the holes — if maps
+   remain under-converged they become the sampler's retrofit-mode pilot.
+
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)
 
 **Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage
