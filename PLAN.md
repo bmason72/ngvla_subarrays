@@ -681,6 +681,35 @@ section below ("PSF inspector plan").
    `POLISH_AND_STORAGE.md` (how polish samples; the $WORK/$SCRATCH
    layout).
 
+**SESSION DELTA (21 Jul 2026, Fable — state audit: revF/track polish LANDED
+→ POLISH 4 of 4 DONE).**
+1. *revF/track polish ran 16 Jul 16:19–16:39* — bmason launched it minutes
+   after commit c643dca, so the committed docs still said "still to
+   launch".  Full chain COMPLETED (prep 3318072 → sweep 3318073_0–5 →
+   collect 3318074; first revF/track end-to-end through
+   submit_campaign.sh).  Outcome (sweep logs): only
+   long+mid+spiral+core-outer took new points (+5; ptsrc worst in-band
+   step 0.49→0.42; ended round 3 "1 jumps, 0 new points" = CANDIDATES
+   EXHAUSTED); main+long ptsrc stays 0.38 (+0, candidates exhausted); ALL
+   imaging curves ≤0.19; everything else ≤0.25 on both curves.  **POLISH
+   IS COMPLETE (4 of 4).**  Queue empty since 16 Jul 16:39.
+2. *Reports are CURRENT — no regen needed*: the 16:39 collect rebuilt
+   revF-track-curves.html + the combined ngvla-curves.html + PSF payloads
+   (`reports/psf/revF_track`) with HEAD code (c643dca touched only
+   planning docs).  revF/track's PSF panel still shows "pending backfill"
+   by design until P2.  Survivors table in RUN_CAMPAIGNS.md gained the
+   revF/track row.
+3. *Milestone commit (this one)*: routed `revf_curves.csv` (4038 samples)
+   + `results/long_mid_spiral_core_outer.csv` (+5 refine points) + these
+   doc updates (PLAN/NEXT_AGENT/RUN_CAMPAIGNS).
+4. Housekeeping: `revDsnapshotIssue.txt` (13 Jul, untracked) predates the
+   successful 16 Jul relaunch — resolved/stale.  P2 anchor backfill is now
+   UNBLOCKED (polish landed); order stays P1 → P2.  MFS-1/-2 (CASA-free)
+   can start any time; MFS-3 pilots still gated on the bmason checkpoint.
+   The only re-launch candidate is the optional revD/track polish resubmit
+   (continues its budget-limited `long` imaging refine, 1.21; all else
+   no-ops) — part of bmason's standing survivors decision (a/b/c above).
+
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul)
 
 **Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage

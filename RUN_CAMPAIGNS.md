@@ -69,6 +69,7 @@ revD/track mid+long spike and main ptsrc: FIXED):
 | revF snapshot | main+long ptsrc 0.48, l+m+s+c-o ptsrc 0.50, main ptsrc 0.45 | candidates exhausted (not budget) |
 | revD snapshot | main+long ptsrc 1.58, long 0.72 both curves, main ptsrc 0.41 | candidates exhausted; long +0 points |
 | revD track | long imaging 1.21 (**budget hit** — a resubmit continues), main+long imaging 1.09, spiral+mid imaging 0.36, main+long ptsrc 0.33 | long: budget; others: candidates exhausted |
+| revF track (16 Jul pm) | main+long ptsrc 0.38 (+0 pts), l+m+s+c-o ptsrc 0.49→0.42 (+5 pts) | candidates exhausted; ALL imaging ≤0.19 |
 
 "Candidates exhausted" = refine measured every bracketing probe its
 generator can propose and the jump stayed — per the polish assumption
@@ -79,11 +80,17 @@ only), (b) the logged codex advisories — dense 1-D taper scans through the
 surviving intervals and/or bisection-style direct resolution targeting in
 refine, (c) accept + document.
 
-### Remaining launch: revF/track polish (queue is empty — good time)
+### 16 Jul evening: revF/track polish — DONE (POLISH complete, 4 of 4)
 
-```
-bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh revF track --time 47:00:00 --refine-budget 200 --refine-rounds 8
-```
+bmason launched it 16 Jul 16:19 (right after commit c643dca, so the
+committed docs briefly said "still to launch").  Full chain completed
+16:39 — prep 3318072 → sweep 3318073_0–5 → collect 3318074 — the first
+revF/track chain to run end-to-end through `submit_campaign.sh`.  Collect
+rebuilt the per-combo + combined reports and PSF payloads the same minute,
+so reports are CURRENT; survivors added to the table above.  The only
+follow-up launch on offer is the optional revD/track resubmit (§1 below,
+continues its budget-limited `long` imaging refine; all else no-ops) —
+part of bmason's survivors decision.
 
 ## 1. POLISH campaigns — the follow-up refine passes (launch these)
 

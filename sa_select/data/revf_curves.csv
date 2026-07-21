@@ -1488,6 +1488,11 @@ long+mid+spiral+core-outer,0.116868,1.6662,0.269,briggs,2,0.018372,30.0,revf-sim
 long+mid+spiral+core-outer,0.129614,1.7253,0.2803,briggs,2,0.02589,30.0,revf-sim:long+mid+spiral+core-outer:briggs_r2.0_t25.89,,ok
 long+mid+spiral+core-outer,0.146206,1.7907,0.2712,briggs,2,0.036486,30.0,revf-sim:long+mid+spiral+core-outer:briggs_r2.0_t36.486,,ok
 long+mid+spiral+core-outer,0.170644,1.8618,0.253,briggs,2,0.051417,30.0,revf-sim:long+mid+spiral+core-outer:briggs_r2.0_t51.417,,ok
+long+mid+spiral+core-outer,0.000502341,2.4871,0.2418,briggs,-1.8,,30.0,revf-sim:long+mid+spiral+core-outer:briggs_r-1.8_t0.0,,ok
+long+mid+spiral+core-outer,0.000502666,2.3883,0.2429,briggs,-1.61,,30.0,revf-sim:long+mid+spiral+core-outer:briggs_r-1.61_t0.0,,ok
+long+mid+spiral+core-outer,0.000505401,2.2415,0.2479,briggs,-1.41,,30.0,revf-sim:long+mid+spiral+core-outer:briggs_r-1.41_t0.0,,ok
+long+mid+spiral+core-outer,0.000533079,1.8654,0.2807,briggs,-1.01,,30.0,revf-sim:long+mid+spiral+core-outer:briggs_r-1.01_t0.0,,ok
+long+mid+spiral+core-outer,0.000503802,2.3200,0.2445,briggs,-1.51,,30.0,revf-sim:long+mid+spiral+core-outer:briggs_r-1.51_t0.0,,ok
 main,0.0212162,1.0000,0.5703,natural,,,30.0,revf-sim:main:natural_r2.0_t0.0,,ok
 main,0.00262284,2.4989,0.1924,briggs,-2,,30.0,revf-sim:main:briggs_r-2.0_t0.0,,ok
 main,0.0218288,1.0020,0.5746,natural,,0.000787,30.0,revf-sim:main:natural_r2.0_t0.787,,ok

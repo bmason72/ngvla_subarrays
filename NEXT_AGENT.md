@@ -1,4 +1,4 @@
-# NEXT_AGENT — start here (updated 16 Jul 2026, evening)
+# NEXT_AGENT — start here (updated 21 Jul 2026)
 
 Hand-off sheet for whoever (human or agent) picks this up.  Read order:
 `CLAUDE.md` (task + raw-materials map; its freshness banner points here) →
@@ -9,22 +9,27 @@ table) → `casaLocation.md` (TACC environment).  bmason's own reference
 notes `ETA_JUMPS.md` and `POLISH_AND_STORAGE.md` (untracked) explain why
 eta jumps happen and how polish samples — accurate and worth reading.
 
-## Where things stand (through commit be0003e + the 16 Jul data)
+## Where things stand (21 Jul audit; PLAN.md 21-Jul delta has details)
 
-- **POLISH campaigns: 3 of 4 DONE** (16 Jul; revF/snapshot, revD/snapshot,
-  revD/track).  All curve CSVs, per-combo reports, PSF payloads, and the
-  combined report are CURRENT.  Headline: budget exhaustion eliminated
-  (one exception below); most of bmason's flagged defects fixed
-  (revF/snapshot main+long imaging 1.42→0.24; revD/track mid+long spike
-  gone; nearly everything ≤0.25 on both curves).
+- **POLISH campaigns: 4 of 4 DONE.**  bmason launched the last one
+  (revF/track) 16 Jul 16:19, minutes after the 16-Jul docs were committed
+  saying "still to launch"; its full chain completed 16:39 and the queue
+  has been empty since.  All curve CSVs, per-combo reports, PSF payloads,
+  and the combined report are CURRENT (the 16:39 collect rebuilt them with
+  HEAD code) — regenerating reports now is a no-op.  Headline: budget
+  exhaustion eliminated (one exception below); most of bmason's flagged
+  defects fixed (revF/snapshot main+long imaging 1.42→0.24; revD/track
+  mid+long spike gone; ALL revF/track imaging curves ≤0.19; nearly
+  everything ≤0.25 on both curves).
 - **Survivors** (RUN_CAMPAIGNS.md table): they stopped on **candidates
   exhausted**, not budget — dense local sampling did not move them, which
   is now real evidence of physics/branch transitions rather than
   under-sampling.  Biggest: revD/snapshot main+long ptsrc 1.58 (the
   snapshot natural-end eta cliff), revD/track main+long imaging 1.09,
-  revD/snapshot long 0.72 (sparse snapshot LONG), revD/track spiral+mid
-  imaging 0.36.  Exception: revD/track `long` imaging 1.21 hit the
-  200-point budget — a plain resubmit continues it.
+  revD/snapshot long 0.72 (sparse snapshot LONG), revF/track main+long
+  ptsrc 0.38 and long+mid+spiral+core-outer ptsrc 0.42, revD/track
+  spiral+mid imaging 0.36.  Exception: revD/track `long` imaging 1.21 hit
+  the 200-point budget — a plain resubmit continues it.
 - **PSF inspector (P3+P4) is LIVE** in every report: subarray dropdown,
   heatmap-cell / sample-mark click-through, per-row "PSF" button in the
   calculator; lazy payloads under `curvegen/reports/psf/` (must travel
@@ -44,23 +49,21 @@ eta jumps happen and how polish samples — accurate and worth reading.
    Build order: retrospective lattice validation → band-axis machinery →
    pilots (nchan convergence + noise A/B + cost/packing; bmason checkpoint)
    → wave runner → waves.
-1. **bmason launches the LAST polish campaign** — revF/track (queue is
-   empty; it uses ~8 slots by itself, so launch BEFORE the MFS pilots need
-   slots): see RUN_CAMPAIGNS.md "Remaining launch".  Optionally resubmit
-   revD/track at the same time (only `long` continues; everything else
-   no-ops).  NB the queue limit: verify all three job ids print per
-   campaign; a lost collect can be run locally (gotcha in PLAN §13).
+1. ~~bmason launches the LAST polish campaign~~ **DONE 16 Jul 16:39**
+   (revF/track completed end-to-end; see PLAN.md 21-Jul delta).
 2. **bmason decision — surviving jumps**: (a) dense 1-D taper scans
    through the surviving intervals (diagnostic: artifact vs physics vs
    beam-fit branch), (b) bisection-style direct resolution targeting in
    refine.py (codex advisory, sketched in PLAN part-2 "Logged-for-later"),
-   or (c) accept + document.  The snapshot ptsrc cliffs right above the
-   natural beam are the flagship case.
+   (c) accept + document, and/or the cheap lever: resubmit revD/track
+   polish (continues only its budget-limited `long` imaging refine;
+   everything else no-ops — command in RUN_CAMPAIGNS.md §1).  The snapshot
+   ptsrc cliffs right above the natural beam are the flagship case.
 3. **PSF inspector P1** (axis-cut capture in measure.py/sweep.py — spec in
    PLAN "PSF inspector plan"): can land any time; ideally before P2.
-4. **PSF inspector P2** (anchor backfill) — **only after revF/track polish
-   lands** (refinement moves the anchors it targets).  Gives revF/track
-   its profiles and every campaign its anchor cuts.
+4. **PSF inspector P2** (anchor backfill) — **now UNBLOCKED** (revF/track
+   polish landed; refinement no longer moves the anchors it targets).
+   Gives revF/track its profiles and every campaign its anchor cuts.
 5. Standing items: bmason eyeball of the combined report + snapshot
    convention sign-off + LONG-snapshot offering (ASK list, PLAN part 2);
    memo read; cross-revision comparison report (spec first).
