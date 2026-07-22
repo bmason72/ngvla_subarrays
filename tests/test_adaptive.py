@@ -118,6 +118,78 @@ def sampler(model, subarray="core", mode=None, **kw):
     return A.Sampler(subarray, table=table, mode=mode)
 
 
+# analytic models for the measuring driver (task 2e) ---------------------- #
+
+def model_fillable_bump(w, r, t):
+    """A genuine "fillable" defect for the driver's wave loop: model_gap's
+    smooth taper law (no discontinuity -- refinable, never a step) plus a
+    resolution-localized eta bump big enough to activate MORE seed leaves
+    than one wave's batch (B_MAX=16) admits (~66 new evals total, comfortably
+    under the retrofit audit cap of 80), so a retrofit warm start genuinely
+    needs 2 measuring waves before the 3rd (check-only) wave finds nothing
+    left -- the defect's SHAPE is what takes multiple waves here, not the
+    budget (contrast model_bilinear_seed below)."""
+    rr = 2.0 if w == "natural" else r
+    res = (1.0 + (rr + 2.0) / 4.0 * 0.3) * (1.0 + t) ** 0.85
+    bump = 0.45 * math.exp(-((res - 2.0) / 0.4) ** 2)
+    return res, 1.0 + 0.12 * t + bump, 0.05
+
+
+def model_bilinear_seed(w, r, t):
+    """Exactly affine-bilinear in (u, ln t) -- since v (the taper coordinate)
+    is itself affine in ln(t) for ANY t_min/t_max, this is then exactly
+    bilinear in the sampler's normalized (u, v) too, so every seed leaf's
+    residual E_T is ~0 (up to point_key rounding) and its children certify
+    on the FIRST stencil round.  Used for a FRESH (empty-table) run: the
+    30-leaf domain's combined stencils comfortably exceed one wave's
+    plan/batch room, so the driver's own audit-cap tracking (not the
+    defect's shape) is what has to shrink the wave and eventually halt."""
+    u = 0.5 if w == "natural" else (r + 2.0) / 4.0
+    lt = math.log(t) if t > 0 else math.log(1e-3)
+    lnres = 0.5 + 0.1 * u + 0.15 * lt + 0.02 * u * lt
+    eta = 1.0 + 0.05 * u + 0.03 * lt + 0.01 * u * lt
+    return math.exp(lnres), max(eta, 1.0 + 1e-6), 0.05
+
+
+class FakeSweep:
+    """A drop-in stand-in for sweep.Sweep (same pattern as
+    tests/test_refine.py's FakeSweep): run_point evaluates an analytic model
+    instead of tclean, and rows use the real sweep schema keyed by
+    point_key, so PointTable/Sampler/run_wave_loop treat it like the real
+    thing.  `rows` seeds an existing table (a retrofit warm start); omit it
+    for a fresh (empty) run.  `fail_keys` makes specific (already-canonical)
+    point_key strings measure as status="failed" -- exactly once, since a
+    present key is never re-run (matching sweep.Sweep.run_point)."""
+
+    def __init__(self, subarray, model, rows=None, fail_keys=None):
+        self.subarray = subarray
+        self.model = model
+        self.rows = {}
+        self.calls = 0
+        self.fail_keys = set(fail_keys or ())
+        for row in (rows or []):
+            key = point_key(row["weighting"], row["robust"], row["taper_mas"])
+            self.rows[key] = row
+
+    def run_point(self, weighting, robust, taper_mas):
+        key = point_key(weighting, robust, taper_mas)
+        if key in self.rows:
+            return self.rows[key]
+        self.calls += 1
+        if key in self.fail_keys:
+            row = dict(subarray=self.subarray, weighting=weighting,
+                       robust=robust, taper_mas=taper_mas, res_geo_arcsec="",
+                       sigma_dirty="", skirt="", status="failed")
+        else:
+            res_mas, eta, skirt = self.model(weighting, robust, taper_mas)
+            row = dict(subarray=self.subarray, weighting=weighting,
+                       robust=robust, taper_mas=taper_mas,
+                       res_geo_arcsec=res_mas / 1e3, sigma_dirty=eta,
+                       skirt=skirt, status="ok")
+        self.rows[key] = row
+        return row
+
+
 # --------------------------------------------------------------------------- #
 # 1. coordinates and the seam
 
@@ -570,16 +642,34 @@ class TestBalanceClosure(unittest.TestCase):
 
 class TestCLI(unittest.TestCase):
 
-    def test_non_plan_only_exits_2(self):
-        err = io.StringIO()
-        old = sys.stderr
-        sys.stderr = err
+    def test_measuring_mode_runs_via_wave_loop(self):
+        # main() without --plan-only now runs the REAL measuring driver (task
+        # 2e) -- the old "not built yet" exit-2 placeholder is gone.  Patch
+        # A.Sweep so the CLI wiring is exercised with NO real CASA/tclean
+        # work: run_wave_loop's default (sweep=None) branch does
+        # `sweep = Sweep(subarray)`, looking up the MODULE-level name at call
+        # time, so patching A.Sweep here is enough -- this must NEVER call
+        # main() in measuring mode without this patch (it would try to image
+        # for real).
+        rows = synth_rows(model_gap, "core")
+
+        class _StubSweep(FakeSweep):
+            def __init__(self, subarray):
+                super().__init__(subarray, model_gap, list(rows))
+
+        old_sweep, old_stdout = A.Sweep, sys.stdout
+        A.Sweep = _StubSweep
+        buf = io.StringIO()
+        sys.stdout = buf
         try:
-            rc = A.main(["core"])
+            rc = A.main(["core", "--budget", "60"])
         finally:
-            sys.stderr = old
-        self.assertEqual(rc, 2)
-        self.assertIn("measuring driver not built yet", err.getvalue())
+            sys.stdout = old_stdout
+            A.Sweep = old_sweep
+        self.assertEqual(rc, 0)
+        text = buf.getvalue()
+        self.assertIn("adaptive: +", text)
+        self.assertIn("stopped:", text)
 
     def test_plan_only_report_runs(self):
         # drive the report on a synthetic sampler (no real CSV / CASA needed)
@@ -595,6 +685,127 @@ class TestCLI(unittest.TestCase):
     def test_manifest_hash_is_stable(self):
         self.assertEqual(A.manifest_hash(), A.manifest_hash())
         self.assertEqual(len(A.manifest_hash()), 12)
+
+
+# --------------------------------------------------------------------------- #
+# 14. the measuring driver (task 2e): wave loop, budget stop, resumability,
+# failed-point handling.  Every case below injects a FakeSweep explicitly --
+# run_wave_loop's default (sweep=None) opens a REAL sweep.Sweep and measures
+# for real, so it must never be exercised here without one.
+
+class TestMeasuringDriver(unittest.TestCase):
+
+    def test_multiwave_convergence_stops_no_proposals(self):
+        # a genuinely "fillable" defect (model_gap's smooth taper law, no
+        # discontinuity, plus a resolution-localized bump too big for one
+        # wave's batch) needs more than one measuring wave, but settles
+        # within the spec's "<=3 waves" budget-arithmetic guidance and stops
+        # because there is nothing left to propose -- not because budget ran
+        # out.
+        base = synth_rows(model_fillable_bump, "core")
+        sweep = FakeSweep("core", model_fillable_bump, list(base))
+        buf = io.StringIO()
+        result = A.run_wave_loop("core", sweep=sweep, mode="retrofit", out=buf)
+
+        self.assertEqual(result["stopped"], "no proposals (converged/classified)")
+        self.assertGreater(result["n_waves"], 1, "not exercising multiple waves")
+        self.assertLessEqual(result["n_waves"], 3)
+        self.assertEqual(result["n_failed"], 0)
+        self.assertEqual(result["n_new"], sweep.calls)
+        # every measured point is a real new row beyond the warm-start base
+        self.assertEqual(len(sweep.rows), len(base) + result["n_new"])
+        text = buf.getvalue()
+        self.assertIn("wave 1:", text)
+        self.assertIn("wave 2:", text)
+        self.assertNotIn("wave %d:" % (result["n_waves"] + 1), text)
+        self.assertIn("adaptive: +%d points total, stopped: no proposals "
+                      "(converged/classified)" % result["n_new"], text)
+        # the tail reuses plan_only_report's own format on the final table
+        self.assertIn("adaptive sampler -- plan-only", text)
+        self.assertIn("next wave (refine): 0 units, 0 new evals", text)
+
+    def test_audit_cap_reached_shrinks_wave_then_halts(self):
+        # a FRESH (empty-table) run whose defect is exactly bilinear, so every
+        # activated leaf certifies on its first stencil -- the 30-leaf domain
+        # simply needs more evals than the fresh audit cap (140) allows, so
+        # the driver's own tracked room (not the defect) is what shrinks a
+        # wave and then halts, WITHOUT ever exceeding the cap.
+        sweep = FakeSweep("core", model_bilinear_seed)
+        buf = io.StringIO()
+        result = A.run_wave_loop("core", sweep=sweep, mode="fresh", out=buf)
+
+        self.assertEqual(result["stopped"], "audit cap reached")
+        self.assertLessEqual(result["n_new"], A.AUDIT_FRESH)       # never crossed
+        self.assertGreaterEqual(result["n_new"], A.AUDIT_FRESH - A.B_MAX * 5)
+        self.assertGreaterEqual(result["n_waves"], 3, "cap reached too abruptly "
+                                "to show a real shrink-then-halt sequence")
+        counts = result["sampler"].state_counts()
+        self.assertGreater(counts[A.ACTIVE], 0, "real work should remain -- "
+                           "this must NOT look converged")
+        self.assertIn("adaptive: +%d points total, stopped: audit cap reached"
+                      % result["n_new"], buf.getvalue())
+
+    def test_restart_matches_continuous_run(self):
+        # kill the process after exactly one measured wave, then resume from
+        # only what a fresh process would see (the rows so far) -- the
+        # SECOND run must reach the identical final table a single
+        # uninterrupted run would have, proposing exactly what the
+        # continuous run's later wave(s) proposed (spec finding #11:
+        # "same table -> same next wave").
+        base = synth_rows(model_fillable_bump, "core")
+
+        sweep_cont = FakeSweep("core", model_fillable_bump, list(base))
+        A.run_wave_loop("core", sweep=sweep_cont, mode="retrofit",
+                        out=io.StringIO())
+        cont_rows = {k: dict(v) for k, v in sweep_cont.rows.items()}
+
+        sweep_a = FakeSweep("core", model_fillable_bump, list(base))
+        result_a = A.run_wave_loop("core", sweep=sweep_a, mode="retrofit",
+                                   waves=1, out=io.StringIO())
+        self.assertEqual(result_a["n_waves"], 1)
+        self.assertLess(len(sweep_a.rows), len(cont_rows),
+                        "killed after wave 1 should be short of the final table")
+
+        # "restart": a fresh process/FakeSweep pre-loaded with exactly the
+        # rows the killed run had written (no other state survives).
+        resumed_rows = [dict(v) for v in sweep_a.rows.values()]
+        sweep_b = FakeSweep("core", model_fillable_bump, resumed_rows)
+        A.run_wave_loop("core", sweep=sweep_b, mode="retrofit",
+                        out=io.StringIO())
+
+        self.assertEqual(set(sweep_b.rows), set(cont_rows))
+        for key, row in cont_rows.items():
+            self.assertEqual(sweep_b.rows[key], row)
+
+    def test_failed_point_counted_not_retried_no_crash(self):
+        # target a point the very first wave will genuinely propose (so the
+        # failure lands inside real, exercised work, not an untouched
+        # corner), force it to fail, and confirm: it is tallied, it is never
+        # re-attempted (present() excludes it from every later _stencil_new),
+        # and the ONE leaf it strands does not stop the rest of the map
+        # (model_gap otherwise dominance/certifies quickly) from converging.
+        base = synth_rows(model_gap, "core")
+        dry_sweep = FakeSweep("core", model_gap, list(base))
+        dry_sampler = A._rebuild_sampler("core", dry_sweep, "retrofit", None, None)
+        dry_plan = dry_sampler.plan_wave()
+        self.assertGreater(dry_plan.n_new, 0)
+        poison = dry_plan.proposals[0]
+        poison_key = point_key(*poison)
+
+        sweep = FakeSweep("core", model_gap, list(base), fail_keys={poison_key})
+        buf = io.StringIO()
+        result = A.run_wave_loop("core", sweep=sweep, mode="retrofit", out=buf)
+
+        self.assertGreaterEqual(result["n_failed"], 1)
+        self.assertEqual(sweep.rows[poison_key]["status"], "failed")
+        self.assertEqual(result["stopped"], "no proposals (converged/classified)")
+
+        # a second, independent pass over the SAME sweep must not re-attempt
+        # the failed point (or anything else -- the map already converged)
+        calls_before = sweep.calls
+        A.run_wave_loop("core", sweep=sweep, mode="retrofit", out=io.StringIO())
+        self.assertEqual(sweep.calls, calls_before)
+        self.assertEqual(sweep.rows[poison_key]["status"], "failed")
 
 
 if __name__ == "__main__":

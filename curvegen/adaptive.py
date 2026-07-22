@@ -48,13 +48,19 @@ Every rule and constant is pinned by MFS2_ADAPTIVE_SAMPLER_SPEC.md (the build
 contract); read it for the derivations.  This file is meant to be read by an
 astronomer: units and contracts are in the docstrings.
 
-CLI (phase 1: --plan-only is the ONLY execution path):
+CLI (phase 2 (task 2e) adds the measuring driver; --plan-only stays
+read-only):
 
     casapy adaptive.py <subarray> [--plan-only] [--budget N] [--waves N]
                        [--warm-start | --fresh]
 
 Combo routing follows NGVLA_REV / NGVLA_SIM_MODE (via config) exactly as the
-rest of curvegen; the map is read READ-ONLY.
+rest of curvegen.  With --plan-only the map is read READ-ONLY; otherwise this
+is the measuring driver (task 2e): wave loop = plan_wave() -> measure each
+proposal via sweep.Sweep.run_point (the SAME resumable keyed path refine.py
+drives) -> rebuild the Sampler from the updated table -> repeat, until no
+proposals remain, the run's own audit-cap room is exhausted, or --waves waves
+have been measured.  See run_wave_loop() below for the full contract.
 """
 
 import argparse
@@ -70,7 +76,7 @@ if REPO not in sys.path:
 
 from config import (ROBUST_LIST, TAPER_LO_X, TAPER_HI_X, BEAM_CAP_ARCSEC,
                     RESULTS_DIR, REV, SIM_MODE, SUBARRAYS, grid_rows)
-from sweep import point_key
+from sweep import point_key, Sweep
 from make_report import build_curve, sample_from_row
 from sa_select.envelope import ETA_CAP
 # reused verbatim from the refinement escalation ladder (shared semantics; see
@@ -1333,19 +1339,223 @@ def plan_only_report(sampler, waves=1, out=sys.stdout):
     return plan
 
 
+# --------------------------------------------------------------------------- #
+# The measuring driver (task 2e).  CASA-free: it never imports casatools
+# itself; `sweep.Sweep.run_point` is the only thing that touches tclean, and
+# tests inject a FakeSweep (the same pattern tests/test_refine.py uses for
+# refine.refine()) so this whole file loads and the wave loop below runs
+# without CASA present.
+
+UNLIMITED_CAP = 1 << 30       # "no cap" probe -- see _has_more_work
+
+
+def _rebuild_sampler(subarray, sweep, mode, budget, beam_cap_mas):
+    """Sampler + fresh PointTable straight from the sweep's CURRENT rows (no
+    CSV round-trip needed: sweep.run_point already keeps sweep.rows up to
+    date, whether `sweep` is the real resumable Sweep or an injected
+    FakeSweep).  `mode` must be the PINNED run mode (see run_wave_loop), never
+    None here -- see the mode-pinning note below."""
+    table = PointTable(list(sweep.rows.values()), subarray=subarray,
+                       beam_cap_mas=beam_cap_mas)
+    return Sampler(subarray, table=table, mode=mode, audit_budget=budget,
+                  beam_cap_mas=beam_cap_mas)
+
+
+def _has_more_work(subarray, sweep, run_mode, beam_cap_mas):
+    """Cheap unconstrained probe: would plan_wave() admit ANY unit given
+    effectively unlimited room?  Used only when a wave has just proposed
+    nothing, to tell "the run's own tracked budget is the reason" (audit cap
+    reached) apart from "genuinely nothing left" (converged) -- state counts
+    alone are not reliable here (e.g. a permanently FAILED stencil probe
+    strands its leaf ACTIVE forever with an empty stencil: hit() never sees
+    that key, but present() means it is never re-proposed either), so this
+    reuses plan_wave's own admission logic rather than re-deriving it.
+
+    A fresh-mode Sampler self-decrements its OWN audit_room from
+    table.n_effective (see run_wave_loop's budget-arithmetic note), so it
+    reaches 0 at EXACTLY the point the driver's own tracked cap does; passing
+    a bigger `cap` to plan_wave() on the ALREADY-built sampler is therefore
+    not enough to make this a genuinely unconstrained probe for fresh runs --
+    a throwaway Sampler with its OWN audit_cap overridden sky-high is
+    rebuilt here so `ceiling = min(cap, audit_room)` cannot silently clamp
+    back down to the exhausted real cap."""
+    probe = _rebuild_sampler(subarray, sweep, run_mode, UNLIMITED_CAP,
+                             beam_cap_mas)
+    return probe.plan_wave(batch=B_MAX, cap=UNLIMITED_CAP).n_new > 0
+
+
+def _feature_counts(sampler):
+    fc = {STEP: 0, RIDGE: 0, UNRESOLVED: 0}
+    for cell in sampler.feature_cells():
+        fc[cell.feature] = fc.get(cell.feature, 0) + 1
+    return fc
+
+
+def _cell_sig(cell):
+    return (round(cell.r0, 6), round(cell.r1, 6), round(cell.t0, 6),
+            round(cell.t1, 6))
+
+
+def _log_new_classifications(sampler, logged, p):
+    """A refine-style escalation/classification line (ported wording from
+    refine._record_classification), printed ONCE per cell per run: the first
+    time a refined cell classifies STEP or RIDGE, and again -- separately --
+    the moment a STEP cell's cut FREEZES (bracket localized within tolerance,
+    spec finding #9).  `logged` is the run's dedup set (cell signature,
+    label); returns the count of new lines emitted."""
+    n = 0
+    for cell in sampler.tree.all_leaves():
+        if not cell.refined:
+            continue
+        sig = _cell_sig(cell)
+        if cell.feature == STEP:
+            key = (sig, "step")
+            if key not in logged:
+                logged.add(key)
+                cm = sampler._corner_mvecs(cell)
+                rng = sampler._leaf_res_range(cell, cm)
+                if rng is not None:
+                    p("  classified step: res %.4g -> %.4g mas (sampled "
+                      "resolution discontinuity, no display-eligible "
+                      "interior)" % rng)
+                    n += 1
+            if cell.cut is not None and cell.cut.frozen:
+                fkey = (sig, "frozen")
+                if fkey not in logged:
+                    logged.add(fkey)
+                    c = cell.cut
+                    p("  cut frozen: res %.4g mas  %s [%.4g, %.4g]  delta %.3g"
+                      % (c.mid_res_mas(), c.axis, c.lo, c.hi, c.delta))
+                    n += 1
+        elif cell.feature == RIDGE:
+            key = (sig, "ridge")
+            if key not in logged:
+                logged.add(key)
+                cm = sampler._corner_mvecs(cell)
+                rng = sampler._leaf_res_range(cell, cm)
+                if rng is not None:
+                    p("  classified ridge: res %.4g -> %.4g mas (locally "
+                      "supported high-penalty interval)" % rng)
+                    n += 1
+    return n
+
+
+def run_wave_loop(subarray, sweep=None, mode=None, budget=None, waves=None,
+                  beam_cap_mas=None, out=sys.stdout):
+    """The measuring driver (task 2e): plan the next wave, measure it point by
+    point through `sweep.Sweep.run_point` (constructing ONE Sweep for
+    `subarray` and reusing it for every wave -- the SAME resumable keyed
+    measurement path refine.py drives), rebuild the Sampler's
+    topology/certification from the updated table, and repeat.  Stops when:
+
+      (a) a wave proposes nothing and there is genuinely no more admissible
+          work (checked via `_has_more_work`, not state counts alone) --
+          "no proposals (converged/classified)";
+      (b) the run's OWN tracked audit-cap room is exhausted while real work
+          remains -- "audit cap reached" (whole-stencil admission shrinks the
+          wave as room tightens; the cap itself is never crossed);
+      (c) `waves` waves have been MEASURED -- "waves exhausted" (waves=None,
+          the default, means no cap here -- run to (a) or (b)).
+
+    Failures of individual points never kill the run: sweep.run_point already
+    returns a status="failed" row for a bad point (never raises), so it is
+    simply counted and the wave continues; the point_key stays "attempted"
+    (PointTable.present), so it is never re-proposed within this run.
+
+    Mode pinning (important): Sampler/QuadTree auto-detects "fresh" only for
+    a table with ZERO effective rows; the very first measured point in a
+    fresh run already makes the table non-empty, so re-detecting the mode on
+    every rebuild would silently flip fresh -> retrofit after wave 1 and land
+    on retrofit's (very different) seed grid mid-run.  So the mode is
+    resolved ONCE, from the table as it stood at the start of this call (or
+    the `mode` override), and held fixed for every subsequent rebuild.
+
+    Budget arithmetic (spec finding #2): the room tracked across waves is
+    always relative to the HARD audit cap (`Sampler.audit_cap`, honouring
+    `budget`/--budget), not the softer "plan" figure -- plan_wave()'s own
+    default ceiling (used when `cap=None`) is the plan room, so calling it
+    unadorned wave after wave would stop the run early at the plan target
+    with real audit headroom left.  The driver instead tracks its own
+    cumulative new-eval count and passes an explicit, shrinking `cap` to
+    plan_wave() every wave, so a run legitimately spends its whole audit cap
+    before it EVER reports "audit cap reached".
+
+    Per-wave logging is one parseable line: "wave K: N evals (M active
+    leaves, features: step S, ridge R, unresolved U)", plus a refine-style
+    classification/freeze line the first time each cell earns one.  The final
+    summary reuses plan_only_report's own format (so the tail reads exactly
+    like a fresh --plan-only on the resulting table) followed by "adaptive:
+    +N points total, stopped: <reason>".
+
+    Returns dict(n_new, n_waves, n_failed, stopped, sampler) -- `sampler` is
+    the final rebuilt Sampler."""
+    p = lambda *a: print(*a, file=out)
+    if sweep is None:
+        sweep = Sweep(subarray)
+    cap_mas = beam_cap_mas
+    if cap_mas is None and subarray in BEAM_CAP_ARCSEC:
+        cap_mas = BEAM_CAP_ARCSEC[subarray] * 1e3
+
+    sampler = _rebuild_sampler(subarray, sweep, mode, budget, cap_mas)
+    run_mode = sampler.mode                      # pinned for the whole run
+    base_cap = sampler.audit_cap                 # the hard cap this run targets
+    total_new = n_failed = wave_no = 0
+    logged = set()
+    stop_reason = None
+
+    while True:
+        if waves is not None and wave_no >= waves:
+            stop_reason = "waves exhausted"
+            break
+        room = max(0, base_cap - total_new)
+        plan = sampler.plan_wave(cap=room)
+        if plan.n_new == 0:
+            more = _has_more_work(subarray, sweep, run_mode, cap_mas)
+            stop_reason = ("audit cap reached" if more
+                           else "no proposals (converged/classified)")
+            break
+        wave_no += 1
+        wave_failed = 0
+        for (weighting, robust, taper) in plan.proposals:
+            row = sweep.run_point(weighting, robust, taper)
+            if row is not None and (row.get("status") or "") == "failed":
+                wave_failed += 1
+        total_new += len(plan.proposals)
+        n_failed += wave_failed
+        sampler = _rebuild_sampler(subarray, sweep, run_mode, budget, cap_mas)
+        fc = _feature_counts(sampler)
+        p("wave %d: %d evals (%d active leaves, features: step %d, ridge %d, "
+          "unresolved %d)" % (wave_no, len(plan.proposals),
+                              sampler.state_counts()[ACTIVE],
+                              fc[STEP], fc[RIDGE], fc[UNRESOLVED]))
+        if wave_failed:
+            p("  %d/%d points failed this wave (recorded, not retried)"
+              % (wave_failed, len(plan.proposals)))
+        _log_new_classifications(sampler, logged, p)
+
+    plan_only_report(sampler, waves=1, out=out)
+    p("adaptive: +%d points total, stopped: %s" % (total_new, stop_reason))
+    return dict(n_new=total_new, n_waves=wave_no, n_failed=n_failed,
+               stopped=stop_reason, sampler=sampler)
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="MFS-2 adaptive sampler (2b, "
-                                 "phase 1: planning only).")
+    ap = argparse.ArgumentParser(description="MFS-2 adaptive sampler (2b "
+                                 "planning core + 2e measuring driver).")
     ap.add_argument("subarray", choices=sorted(SUBARRAYS))
     ap.add_argument("--plan-only", action="store_true",
-                    help="emit the next wave without measuring (the ONLY "
-                         "execution path in phase 1)")
+                    help="emit the next wave without measuring; omit to run "
+                         "the measuring driver (task 2e)")
     ap.add_argument("--budget", type=int, default=None,
                     help="override the hard audit cap (evals; total for fresh, "
                          "new-only for retrofit)")
-    ap.add_argument("--waves", type=int, default=1,
-                    help="waves the driver would run (plan-only shows only the "
-                         "next one)")
+    ap.add_argument("--waves", type=int, default=None,
+                    help="cap the number of waves.  --plan-only: only "
+                         "changes its informational note (it always shows "
+                         "just the next wave); default 1.  Measuring driver: "
+                         "the number of waves to MEASURE before stopping "
+                         "regardless of convergence; default unlimited (run "
+                         "to convergence or the audit cap)")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--warm-start", dest="mode", action="store_const",
                    const="retrofit", help="force certification-first warm start")
@@ -1353,13 +1563,18 @@ def main(argv=None):
                    help="force a fresh seed")
     args = ap.parse_args(argv)
 
-    if not args.plan_only:
-        print("measuring driver not built yet (task 2e)", file=sys.stderr)
-        return 2
+    if args.plan_only:
+        sampler = Sampler(args.subarray, mode=args.mode, audit_budget=args.budget)
+        plan_only_report(sampler, waves=(1 if args.waves is None else args.waves),
+                         out=sys.stdout)
+        return 0
 
-    sampler = Sampler(args.subarray, mode=args.mode, audit_budget=args.budget)
-    plan_only_report(sampler, waves=args.waves)
-    return 0
+    run_wave_loop(args.subarray, mode=args.mode, budget=args.budget,
+                 waves=args.waves, out=sys.stdout)
+    return 0             # every stop reason ("converged", "audit cap
+                          # reached", "waves exhausted") is a normal, planned
+                          # halt -- individual point failures are tallied
+                          # inside the run and never abort it
 
 
 if __name__ == "__main__":
