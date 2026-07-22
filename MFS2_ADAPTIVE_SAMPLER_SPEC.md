@@ -1,339 +1,398 @@
-# MFS-2 (revised): goal-oriented adaptive sampler — design spec
+# MFS-2 adaptive sampler — design spec v2 (build contract)
 
-**Status: SPEC v1 + codex review (21 Jul 2026) — bmason approved the
-direction; REVISE TO v2 absorbing the appended codex findings (5 blockers,
-all "make the semantics executable" class) before building MFS-2b.  The V1
-replay gates campaign DEPLOYMENT, not implementation (finding #13).**  Supersedes MFS scope decision 4 (the fixed reduced
-lattice), which becomes this design's SEED.  Provenance: bmason's
-rails/tolerance proposal (21 Jul), two codex gpt-5.6-sol xhigh consults
-(sampling-strategy critique; the loss/architecture recommendations below are
-adjudicated from the second), and the 21 Jul escalation-ladder work whose
-mechanics this generalizes.  Companion: `MFS_CAMPAIGN_PLAN.md` (everything
-there not about the lattice is unchanged: bands, nchan pilots, noise A/B,
-manifest, PyLauncher wave, storage).
+**Status: v2, executable (21 Jul 2026).**  Build contract for three
+implementation agents — **sampler core** (2b), **envelope enumerator** (2c),
+**band axis** (2a).  Every rule is meant to be coded from without guessing;
+numbers are pinned (see "Constants").  Supersedes v1 + its two appendices (codex
+review + bmason addendum folded into the body; a finding→resolution changelog
+closes the file).  Companion: `MFS_CAMPAIGN_PLAN.md` (bands, nchan pilots, noise
+A/B, PyLauncher wave, storage — unchanged except where cited).
 
-## Problem
+**Operational rule (live-code hazard).**  Campaign jobs `import` the repo at
+execution time, so **do not edit `sweep.py`, `config.py`, `simulate.py`, or
+`envelope.py` while any campaign job is queued or running.**  The sampler ships
+as a NEW module (`curvegen/adaptive.py`) plus additive-only, replay-guarded
+changes to `envelope.py`; retrofit deployment waits for the in-flight revD/track
+canary (see Tasks).
 
-The regular (robust, taper) lattice spends most of its 165–209 points on
-plateaus while under-sampling exactly where the (res, eta, skirt) outputs
-move fastest; defect-driven polishing then back-fills.  For MFS the band
-axis multiplies every sample by 6 (~55–70k tcleans done naively).  We want
-samples distributed against OUTPUT-space tolerances, with genuine
-discontinuities (snapshot taper-onset cliffs) localized and preserved rather
-than chased or splined over.
+## Scope (bmason, 21 Jul — supersedes conflicts)
 
-**Tolerances (bmason, 21 Jul):** eta 0.1 absolute; resolution 5%
-(ln 1.05) on smooth pieces; skirt 0.02 ABSOLUTE.  Across a classified step
-no pointwise tolerance applies — the deliverable there is the step's
-input-space location bracketed tightly enough that moving it anywhere within
-the bracket changes the derived envelopes by less than the output tolerances
-("envelope-stable bracket").
+1. **No grid-style MFS.**  The adaptive sampler IS the MFS engine from day one.
+2. **MFS = Ka band only** initially: the calculator's 27 GHz band (band 4),
+   **27 ± 6.75 GHz = 20.25–33.75 GHz**, fractional bandwidth **0.50**
+   (`MFS_CAMPAIGN_PLAN.md` scope decision 2, `receiver_data.pkl`).  revF,
+   homogeneous + main set (7 subarrays: core-inner, core, spiral, mid,
+   core+spiral, spiral+mid, main), **point-source goal first**.  Skirt is
+   still always measured and recorded on every point; imaging curves derive
+   later from the same table (no re-measurement).
+3. **`nchan` is REQUIRED and bmason-set** — a registry/manifest field + env
+   (`NGVLA_NCHAN` / registry `nchan` column).  The machinery **fails fast with
+   a clear message** if `nchan` is unset for an MFS combo; it is never derived
+   or defaulted silently.  Analytic floor, as GUIDANCE only:
+   `nchan ≥ 38.5·f_bw → 19.25 → 32` for Ka (pow2-rounded).
+4. **Retrofit ("backfill") is ORDERED on all four mono campaigns**
+   (revF/track, revF/snapshot, revD/track, revD/snapshot) as a
+   certification-first warm start — but only AFTER the in-flight revD/track
+   canary campaign completes.
+
+## Surrogate framing (the mental model)
+
+bmason: build surrogates for `θ(t,r)`, `s(t,r)`, `η(t,r)` — bearing in mind
+multiple branches — and sample where they change quickly, not just at branch
+points.  Concretely: the **piecewise-bilinear cell model IS the local
+surrogate** (per leaf, `(ln res, η, skirt)` are bilinear in the normalized cell
+coordinates — the validated `Cell` in `envelope.py`); the **tolerance-scaled
+hierarchical residual is its measured error** (below); **refinement triggers
+wherever that error exceeds tolerance** — fast-variation regions generally, not
+only branch points — with goal weighting concentrating effort near the
+deliverable loci.  **Branch multiplicity is handled globally**: the deliverable
+per resolution contour is the minimum over ALL leaves covering that resolution
+— never assume a single branch.  `f` is **piecewise smooth**: the snapshot
+taper-onset cliffs (θ jumping 3.00→3.07 mas with no interior at 8-level scan
+density, revD/snapshot main+long) are measured facts, so the step/cut machinery
+is not optional.  Predictor-corrector *contour continuation* was considered as
+the pure form of this reframing and **rejected** (brittle at branch switches
+and cliffs, poor resumability, misses disconnected branches); AMR + goal-weight
++ an exploration floor is its robustified equivalent.
+
+**Deliverable loci (goal region), stated geometrically.**  1-D loci in the 2-D
+input space: (a) the point-source minimizer `argmin η | θ`; (b) the
+constrained-locus FAMILY where the skirt constraint binds across the WHOLE
+offered `s₀` range **[0.05, 0.20]** (not only 0.10 — the report ships four
+setpoints 0.05/0.10/0.15/0.20 via `make_report.SKIRT_SETPOINTS`); (c) the
+discontinuity fronts.  Tolerance semantics: `dη` on the envelope VALUE along
+the loci; `dθ` as contour localization; `ds` only near the binding band
+`s ∈ [0.05, 0.20] ± noise` — elsewhere skirt needs only feasible/infeasible
+classification, which licenses relaxing global skirt accuracy (the noisiest
+output) for a real budget saving.
 
 ## Architecture (3 layers)
 
-1. **Point table = source of truth.**  The existing per-subarray results
-   CSVs (plus the band axis of original MFS-2 scope: key gains band via the
-   `-<rev>_<mode>_<band>` combo routing; schema/registry/manifest per
-   `MFS_CAMPAIGN_PLAN.md`).  Every measured (weighting, robust, taper) →
-   (res, eta, skirt, status) row, keyed by `point_key`, append-only,
-   resumable.  NOTE: any existing campaign's table is a valid warm start —
-   see "Retrofit mode".
-2. **Topology = derived view.**  A nested, 2:1-balanced quadtree over
-   (robust, log10 taper) whose vertices are dyadic subdivisions of the seed
-   grid; leaf cells are axis-aligned rectangles with 4 measured corners.
-   Reconstructed deterministically from the point table on every restart —
-   NO pickled sampler state.  Hanging nodes are measured (one tclean beats
-   interpolation bookkeeping).  The untapered column and natural row remain
-   special 1-D families glued to the quadtree edge (taper=0 cannot live on
-   a log axis).
-3. **Features = recomputed annotations.**  The classifier (ported from
-   refine.py's E2 rim classification, ONE shared implementation) labels
-   cells {smooth | step | ridge | noise} from the point table at build
-   time; classified steps become CUT annotations the envelope consumer must
-   not interpolate across.  Nothing stored; recompute-from-rows keeps the
-   resumability contract.
+1. **Point table = source of truth.**  The per-(subarray, combo) results CSV
+   (`sweep.FIELDS` schema, keyed by `sweep.point_key`), append-only, resumable.
+   Combo routing = `-<rev>_<mode>_<band>` per `MFS_CAMPAIGN_PLAN.md`.  Every
+   existing table is a valid warm start.
+2. **Topology = derived view**, reconstructed deterministically from the table
+   on every restart — **no pickled sampler state**.  A 2:1-balanced quadtree
+   over normalized `(u, v)` (below) whose vertices are dyadic bisections of the
+   seed cells; leaves are rectangles with 4 measured corners.  The taper=0
+   column and natural row are 1-D families glued to the edge, never quadtree
+   coordinates.
+3. **Features = recomputed annotations** (never stored): the classifier — the
+   ONE shared implementation ported from `refine.py`'s E2 rim classification —
+   labels leaves and cut edges from the rows at build time.
 
-## Seed design
+### Coordinates and the taper=0 / natural seam (finding #6)
 
-Coarse tensor product: robust {−2, −1.2, −0.4, +0.4, +1.2, +2} (6) ×
-taper {0 + 6 log-spaced levels spanning 0.3×fine-seed-beam to 20×natural}
-(7) = 42 points, PLUS the full natural+taper row (the eta reference and the
-ptsrc backbone right of natural) ≈ 56 points/map.  This CONTAINS bmason's
-four rails as the boundary rows/columns; interior seeds are mandatory
-(imaging winners and sparse-snapshot ptsrc winners are frequently interior
-— rails alone under-determine both).  Seeds are also the QA gate (beam
-caps, natural reference) exactly as campaign prep is today.
+- **Normalized inputs:** `u = (robust + 2)/4 ∈ [0,1]`;
+  `v = log10(t/t_min)/log10(t_max/t_min) ∈ [0,1]`.  `t_min` = smallest positive
+  seed taper = `TAPER_LO_X·res_fine` (0.3× the robust=−2 beam); `t_max =
+  TAPER_HI_X·res_nat` (20× natural).  "Dyadic" = repeated bisection of a SEED
+  cell in `(u,v)` (seed nodes need not be globally dyadic).  Area `A_T` in `(u,v)`.
+- **The quadtree domain starts at `t_min`.**  The **taper=0 column** and
+  **natural row** stay 1-D families handled by the EXISTING
+  `envelope.build_segments` machinery; they never join the quadtree.  The strip
+  **`(0, t_min)`** is covered by the existing column-segment interpolation
+  between the taper=0 and `t_min` points at each matching robust (via
+  `ZERO_TAPER_RES_STEP`).  The **natural row** participates via the existing
+  natural-as-robust-2.0 convention for PROPOSALS only (matching
+  `refine.candidates_between`), never as a quadtree coordinate.
 
-## Loss and scheduling
+### Seed design and budget arithmetic (finding #2)
 
-Per leaf cell T, tolerance-scaled **hierarchical residual** (interpolation
-error, not raw gradient): when a new probe y lands in T,
+**Budget = TOTAL evaluations per map, including seed.**  Fresh-map seed
+(exactly **56**, includes the two canonical `SEEDS`):
 
-    E_T = max_k ( |y_k − ŷ_T,k| − κ·σ_k )+ / τ_k        (L∞ across outputs)
+| block | count |
+|---|---|
+| briggs quadtree grid: 6 robusts {−2,−1.2,−0.4,+0.4,+1.2,+2} × 7 positive taper levels | 42 |
+| untapered seam column: 6 briggs robusts at taper 0 | 6 |
+| natural row: taper 0 + 7 positive levels | 8 |
+| **seed total** | **56** |
 
-with ŷ_T the parent cell's bilinear prediction, τ = (ln1.05, 0.1, 0.02),
-κ≈2 against the measured noise floors (eta jitter 0.01–0.03; skirt
-repeatability TO BE MEASURED in the MFS-3 pilot — if σ_skirt ≳ 0.01 the
-0.02 tolerance needs a bmason revisit).  Priority:
+The 6×7 briggs grid = a **5×6 = 30-leaf** seed quadtree.  A refinement of one
+leaf emits a **5-point stencil** (center + 4 edge midpoints); shared edges are
+deduped within a wave.  Arithmetic (honest, worst case = no sharing):
+
+- Fresh: **plan = 110, hard audit = 140.**  Refinement headroom under plan
+  = 110 − 56 = **54** evals ≈ 10–11 isolated stencils; under audit
+  = 140 − 56 = **84** ≈ 16 stencils.  First minimum wave B=8 → 56+8·5 = **96**
+  (< plan ✓); B=16 → 56+16·5 = **136** (< audit ✓).
+- **Whole-cell, balance-aware admission:** a refinement is admitted only if
+  ALL its stencil points **plus any 2:1-balance closures** (below) fit under
+  the **hard audit cap**.  Never buy half a stencil.  `B` shrinks from 16→8→…
+  as the running total approaches the cap.
+- Retrofit maps: **seed cost = 0** (existing rows); plan/audit count **NEW
+  evals only**: **plan 40, audit 80 per map**, subject to the per-map
+  certification estimate reported before any Slurm submission.
+
+Expected fresh yield ≈ 110/(165–209 full lattice) = **53–67%**, goal-concentrated.
+
+## Cell lifecycle & residual ownership (finding #1)
+
+A leaf moves through states; the residual is owned unambiguously by the PARENT:
+
+1. **untested leaf** → **stencil emitted** → **measured**: a 4-corner leaf
+   queues its 5-point stencil (center + 4 edge midpoints) at its dyadic `(u,v)`
+   coordinates, then all five are measured.
+2. **residual computed on the PARENT** — for each of the parent's 5 new probes
+   `p`, compare the measured model vector `m(p)` to the parent's bilinear
+   prediction `m̂(p)` from its 4 corners; the parent's residual is
+
+       E_T = max over p in {center,4 midpoints} of
+             max_k ( |m_k(p) − m̂_k(p)| − κ·σ_k )_+ / τ_k      (L∞ over k)
+
+   with `m = (ln res, η, skirt)`.
+3. **children CERTIFIED or ACTIVATED** — if `E_T < 1` (and dominance does not
+   demand more, below) the 4 children are **CERTIFIED**: they inherit `E_T` and
+   are marked converged, with **no further tests**.  Otherwise they are
+   **ACTIVATED**: each becomes an untested leaf eligible for its own stencil.
+
+**Restart reconstruction.**  From the point table: rebuild the 30 seed leaves;
+for each leaf, test whether all 5 stencil probes are EXACT `point_key` hits at
+its dyadic coordinates.  All 5 present ⇒ the leaf was refined ⇒ compute `E_T`,
+materialise the 4 children, recurse.  Corners-only ⇒ untested leaf.  This is
+deterministic and needs no state file.
+
+## Loss, constants, retirement
+
+Per-leaf priority (input axes normalized, so `A_T`, `√A_T`, `λ`, thresholds and
+step widths are unit-free):
 
     L_T = w_goal(T) · min(E_T, E_max) · sqrt(A_T)  +  λ·A_T
 
-- `w_goal`: boosted when T's output box intersects the current
-  non-dominated (eta, res) envelope or the skirt = 0.10 ± 0.03 band;
-  strongly deprioritized (never zeroed before coverage is met) when clearly
-  dominated.
-- `λ·A_T`: input-space exploration floor so an undiscovered interior ridge
-  cannot hide forever.
-- `E_max` cap: a step's residual is bounded so it cannot monopolize the
-  queue (steps get their own scoring below).
+**Constants (manifest-pinned, finding #10):**
 
-Scheduling is wave-batched for Slurm/PyLauncher: take the top-B
-non-adjacent cells (B ≈ 8–16 = one node-packing unit), emit their
-subdivision points (center + edge midpoints, shared edges deduped,
-**always cell-complete** — the E0 rule: isolated points are invisible to
-the envelope), measure, re-derive topology, repeat.  Stop when every leaf
-has L_T below threshold or is terminally classified, or at budget.
-**Budget: plan 80 evaluations/map, hard audit at 110–120** (vs 165–209
-regular) — expected 35–60% of grid per the codex estimate.
+- model vector `m = (ln res, η, skirt)`; `τ = (ln 1.05, 0.1, 0.02)`; `κ = 2`;
+  `σ` = per-map jitter from repeat rows where available, else defaults
+  `σ_lnres = 0.005, σ_η = 0.02, σ_skirt = 0.005`.  Inputs `u,v` per Coordinates.
+- `λ = 0.05` (exploration floor: an undiscovered interior ridge or disconnected
+  contour branch cannot hide forever); `E_max = 4` (caps a step's residual so it
+  cannot monopolise the queue).
+- `w_goal = 3` for cells on/adjacent to a deliverable locus or the skirt binding
+  band `[0.05, 0.20]`; `1` default; `0.25` for dominated cells after coverage
+  (never zeroed before coverage).
+- wave batch `B = 8–16`, shrinking to fit the cap; tie-break = lexicographic
+  `point_key`.
 
-## Feature state machine
+**Two-way retirement (finding #8 half + dominance).**  A leaf retires when
+EITHER (a) **residual** `E_T < 1`; OR (b) **dominance** — its optimistic bound
+(corner values minus the empirical residual estimate) cannot improve any
+per-contour `η` minimum by more than `τ_η = 0.1`, i.e. dominance margin
+`(optimistic_η − envelope_η)/τ_η > 1` across the leaf's whole res range, with
+skirt feasibility not placing it on a binding locus.  Most of the domain retires
+by dominance, cheaply — "every leaf below threshold" (v1) was stronger than
+needed.
 
-unknown → {smooth, step, ridge, noise}, recomputed from rows:
+## Feature classes vs scheduling state (finding #8)
 
-- **smooth**: refined by E_T until below tolerance.
-- **noise**: residuals within the κσ deadband → stop (never chase jitter).
-- **step** (rim-only classification, as E2 does today): STOP scoring by
-  jump height; score by input-location uncertainty E_step = h⊥/δ_edge
-  (bracket width across the front, in input units).  Refine — using the
-  ported E1 secant / E2 progressive log-midpoint proposals along the
-  crossing axis — until the bracket is envelope-stable; then freeze, keep
-  both rims, annotate the cut.  The envelope consumer draws the step
-  sharply and the display smoother's segment-split rule already refuses to
-  bridge it.
-- **ridge** (interior, above-chord, confirmed by probes): mask once shown
-  dominated relative to the envelope, retaining a small exploration weight
-  (a ridge can become Pareto-relevant when the skirt setpoint changes).
+Keep three orthogonal axes, reclassifiable as evidence accumulates:
 
-## Envelope consumer changes
+- **Feature class** {smooth, step, ridge, unresolved} from the rows via the
+  shared classifier (ported `refine._classify_scan`): `smooth` = interior probes
+  fill within tolerance; `step` = "confirmed" (no display-eligible interior
+  resolution across the edge at this density); `ridge` = "high_penalty"
+  (interior probes above the rim chord); `unresolved` = insufficient evidence.
+- **Evidence/confidence** — repeat-row variance vs the `κσ` deadband; a cell is
+  called `smooth`/noise-consistent only with a repeatability estimate, never
+  from a single-probe deadband hit.
+- **Scheduling state** {untested, active, converged, frozen, dominated-retired,
+  budget-stopped}.  **Precedence for multi-feature cells: step > ridge > smooth.**
 
-`sa_select/envelope.py` gains a leaf-cell enumerator: the validated
-bilinear `Cell` interior solver is reused VERBATIM per quadtree leaf;
-row/column segments become leaf edges; cut annotations disable
-interpolation across steps.  Display trims (eta ≤ 5, ok+capped,
-cap-clipping via `sample_from_row`) unchanged.  The global-lattice
-enumerator stays for legacy tables (a regular lattice is the degenerate
-quadtree), so all existing campaigns keep working unmodified.
+## Steps and cuts (findings #4, #9)
 
-## Bands
+**Cuts live on cell EDGES.**  A cut annotation is the set of leaf edges the
+front crosses; each edge carries a **bracketed crossing interval** (in
+normalized `u` or `v`) plus **side labels** (which corners are fine-side, which
+coarse-side).  The crossed-edge axis IS the front orientation; `δ_edge` = the
+bracket width along that axis, in normalized units.
 
-Independent per-band maps (band is NOT a third continuous axis).  Warm
-start: taper levels and known feature locations (cliff positions, cap
-boundaries) scale ∝ λ from the completed 30 GHz campaigns; suspected
-features seed cells at 'unknown-but-suspected' priority.  All fixed-window
-MFS semantics (A4), nchan floors/pilots (A1/A2), noise policy (A5), cost
-model (A6), and the wave runner (A7/MFS-4) are unchanged from
-`MFS_CAMPAIGN_PLAN.md`.  fill_grid.py must NOT run on adaptive combos
-(manifest guard, as already planned for the reduced lattice).
+**Envelope consumer rule.**  A leaf with ANY cut edge contributes **NO interior
+bilinear interpolation.**  Instead it contributes its two rim sub-regions via
+**LIMITING envelopes**: the corners on each side, extended to the bracket
+boundary, give an upper and a lower envelope bound.  The report draws the step
+at the **bracket midpoint**, with the full bracket recorded in the payload.
 
-## Retrofit mode (bmason's "fill the v1 holes" bet)
+**Step stopping test (finding #9).**  Freeze a cut when the two limiting
+envelopes — cut placed at bracket-low vs bracket-high — differ by **less than
+tolerance on every affected resolution bin** (`dη ≤ 0.1`, `d ln res ≤ ln 1.05`,
+`ds ≤ 0.02`).  This is the global "envelope-stable bracket", not a bare
+bracket-width test.  Localization proposals reuse the ported E1 secant / E2
+progressive log-midpoint machinery along the crossed axis.
 
-Because the point table is the source of truth, running the sampler on an
-EXISTING campaign map is just a warm start where the seed is already
-super-complete: the sampler will (a) tighten cliff-location brackets that
-the 21 Jul escalation wave localizes only to its scan density, and (b) probe
-coverage-floor cells the defect-driven ladder never visits.  Whether this
-is worth node-hours is decided AFTER the 21 Jul wave lands + V1 replay:
-if the wave's escalated refine (NOT the old polishing — it already targets
-holes with output-conditioned probes) leaves specific under-converged maps,
-retrofit those maps first as the sampler's pilot deployment.
+## Hanging nodes — conforming closure (finding #7)
+
+Adopt **conforming closure**: when a leaf is refined, any neighbor sharing a
+hanging node must at least **register that node as a measured point on its
+edge** (it is one of the refined leaf's stencil midpoints, so this is the SAME
+measurement, deduped — no extra tclean).  The envelope consumer treats an edge
+carrying a measured interior point as **TWO segments**.  This is the smaller
+change vs re-teaching the bilinear solver.  **Documented fallback** if that
+proves heavy: full conforming refinement of the neighbor (costlier, simpler).
+
+## Point-table determinism (finding #11)
+
+- **Effective-row rule:** the LAST `ok`|`capped` row per canonical `point_key`
+  (matching the profiles convention).  `failed` rows count as "attempted" (no
+  re-propose within a run; re-proposable across runs).
+- **Censoring:** `capped` rows are res-censored — usable for η/skirt residuals,
+  but the **res residual is skipped beyond the cap** (a cap-clipped resolution
+  must not manufacture a residual or step).
+- **Manifest pins** (so "same table → same next wave" holds across software
+  changes): spec version, classifier/loss version, all constants above, seed
+  definition, band priors, `nchan`, tie-breaking (lexicographic `point_key`),
+  float canonicalization (`point_key` rounding).
+
+## Retrofit / warm-start mode (findings #5, #13; addendum)
+
+Warm start = **certification-first mode**, same code path, different entry state.
+With an existing map (~230–500 rows per (subarray, combo)):
+
+- **Non-dyadic legacy rows are auxiliary evidence ONLY** (finding #5): they
+  inform classification, residuals (extra probes inside their containing leaf),
+  and certification — but never become topology vertices.  New AMR vertices are
+  seed-grid dyadics exclusively.
+- **Retrofit seed = the coarsest dyadic grid whose vertices are all EXACT
+  `point_key` hits** in the table (every-other of `ROBUST_LIST`
+  {−2,−1.2,−0.4,0.4,1.2,2} plus matching canonical tapers — first-level dyadic
+  midpoints land on the step-0.4 lattice, so are usually warm too; deeper
+  refinement produces new evals).  Missing seed vertices are the first wave.
+- The seed STAGE is skipped; build topology, run the certification pass, and
+  only the unretired remainder — loci neighborhoods, cliff brackets, uncertified
+  pockets — generates new evals (plan 40 / audit 80 new evals/map).
+- **Gate status (finding #13):** V1 replay gates DEPLOYMENT of fresh-seed MFS
+  waves; **implementation is not gated** (2b/2c/2d built first).  Retrofit
+  deployment is **bmason-ordered** and supersedes the gate for retrofit — but
+  the certification assessment runs first and the expected new-eval counts are
+  reported before any Slurm job is submitted.
+
+**Priors (finding #14).**  Scaled cliff locations from the mono campaigns (∝ λ)
+and the skirt goal band `[0.05, 0.20]` are **immutable manifest INPUTS per
+run**, not reconstructible from the rows.  Bands are independent per-band maps
+(band is NOT a third continuous axis); Ka is the only band in scope now.
+
+## Envelope consumer changes (2c)
+
+`sa_select/envelope.py` gains a **leaf-cell enumerator**: the validated bilinear
+`Cell` solver is reused VERBATIM per leaf; row/column segments become leaf edges
+(segmented where a hanging node sits on them); cut edges emit limiting envelopes
+instead of interior interpolation.  Display trims (`eta ≤ ETA_CAP`, ok+capped,
+cap-clipping via `make_report.sample_from_row`) are unchanged.  The
+global-lattice enumerator STAYS for legacy tables (a regular lattice is the
+degenerate quadtree), so all existing campaigns keep working unmodified.  This
+touches the validated solver and is replay-guarded.
+
+## Invocation & cases
+
+**One entry point: `curvegen/adaptive.py`** (library + CLI).
+
+    casapy adaptive.py <subarray> [--plan-only] [--budget N] [--waves N]
+                       [--warm-start | --fresh]
+
+- Combo routing via `NGVLA_REV` / `NGVLA_SIM_MODE` / `NGVLA_BAND` + the
+  config registry (extended with `band, ref_freq_ghz, freq_lo/hi_ghz, nchan,
+  curve_types, noise_policy`).  MFS combos MUST have `nchan` set (else fail
+  fast).
+- **Mode auto-detect:** empty table → **fresh seed**; populated table →
+  **certification-first**.  Overrides: `--warm-start` / `--fresh`.
+- `--plan-only` emits the next wave (and, for retrofit, the certification
+  estimate + expected new-eval counts) without measuring.
+
+**Run matrix** (copy-paste commands mirrored to `RUN_CAMPAIGNS.md` at build):
+
+| combo(s) | mode | style | when |
+|---|---|---|---|
+| revF/track, revF/snapshot, revD/track, revD/snapshot (mono) | retrofit (warm) | campaign-sbatch | **after** the revD/track canary completes |
+| Ka MFS: 7 subarrays × {track, snapshot} (revF) | fresh seed | PyLauncher wave (MFS-4) | **blocked on bmason's `nchan`** |
+
+Examples — retrofit (post-canary): `bash curvegen/submit_campaign.sh revD
+snapshot --adaptive --budget 80`; Ka fresh (post-nchan, in the wave runner):
+`NGVLA_BAND=band4 NGVLA_NCHAN=32 casapy adaptive.py core --fresh --budget 140`.
 
 ## Validation gates
 
-- **V1 — retrospective replay (extends MFS-1, pure sa_select, no CASA):**
-  replay the four completed mono campaigns' full point tables through
-  (i) the reduced-lattice mask (original MFS-1), (ii) this sampler's policy
-  (simulated acquisition: the "measurement" is a lookup, with nearest-row
-  fallback and a flagged interpolation-error caveat where the policy asks
-  for unmeasured points).  8–12 representative maps including the worst
-  snapshot/cliff cases.  Metrics: envelope eta regret per resolution bin,
-  skirt-feasibility mistakes, genuine-hole preservation (no manufactured
-  interior resolutions), tolerance-scaled envelope distance, and p90 (not
-  median) sample count.  ACCEPT the sampler for MFS if p90 ≤ 60% of the
-  regular grid with defect metrics no worse than the lattice+escalation
-  baseline.  The scattered/Delaunay engine rewrite is REJECTED unless a
-  simplex policy beats the accepted AMR by a further ≥30% at p90 — and if
-  ever built, cuts must be first-class (no simplex interpolation across
-  cliffs) per the codex architecture note.
-- **V2 — analytic harness:** extend tests/test_refine.py's FakeSweep maps
-  (cliff, sawtooth, fillable gap, bump, plateau) to the sampler: correct
-  classification, budget respect, restart-determinism (same table → same
-  next wave), cell-completeness of every emitted batch.
+**V1 — retrospective replay** (extends MFS-1, pure `sa_select`, no CASA).
+Replay each map's full point table through the sampler policy as a simulated
+acquisition (each "measurement" = a lookup).
 
-## Task breakdown (replaces MFS-2 row; MFS-1/3/4/5/6 unchanged)
+- **Oracle (finding #3):** acceptance metrics are computed on **exact
+  `point_key` hits only.**  A policy request with no exact hit = an
+  **"unsupported request"**, counted and reported; fallback-to-nearest is
+  allowed ONLY to keep the simulation moving, always flagged, and **never
+  scored**.  **Budget exhaustion in replay = failure.**
+- **Fixed stratified 10-map suite (finding #12):** revD/snapshot {main+long,
+  long, main}; revF/snapshot {main+long, l+m+s+c-o}; revD/track {long,
+  main+long, spiral+mid}; revF/track {long, core+spiral}.
+- **Per-map metrics:** normalized sample fraction (against that map's own
+  full-lattice denominator, not raw counts); pass/fail on (envelope η regret
+  ≤ 0.1 per res bin; no false cuts; no missed cuts vs full-table truth; skirt
+  feasibility mistakes = 0 at the four setpoints within noise).
+- **Acceptance:** ALL maps pass AND p90 of the normalized sample fraction
+  ≤ 0.6.  Budget exhaustion = fail.
+
+**V2 — analytic harness** (extend `tests/test_refine.py`'s FakeSweep maps).
+Required tests (finding #15): non-dyadic retrofit rows; taper=0 / natural seam;
+hanging-node segmented-edge enumeration; capped / failed / retried points;
+balanced-refinement budget admission (cannot cross the audit cap); cut-cell
+limiting envelopes; exact-hit replay behaviour; classifier transitions
+(smooth↔step↔ridge as evidence grows); deterministic ties; restart-determinism
+(same table → same next wave); cell-completeness of every emitted batch.
+
+## Task breakdown (replaces the MFS-2 row; canary-hazard sequenced)
 
 | # | Task | Depends | Who/effort |
 |---|------|---------|-----------|
-| MFS-2a | Band axis + manifest + registry/schema (original MFS-2 scope) | — | codex build or Sonnet 5, high |
-| MFS-2b | Sampler core: quadtree/point-table view, loss, state machine, wave scheduler (CASA-free, FakeSweep-tested) | 2a | Fable 5 or Opus 4.8 / GPT-5.6, high — the loss+classifier semantics are the hard part |
-| MFS-2c | Envelope leaf-cell enumerator + cut annotations | 2b | Opus 4.8 / GPT-5.6, high — touches the validated solver, replay-guarded |
+| MFS-2a | Ka band axis + manifest + registry/schema (`nchan` required, fail-fast) | — | codex build or Sonnet 5, high |
+| MFS-2b | Sampler core: quadtree/point-table view, residual+lifecycle, loss, feature/state machine, wave scheduler (CASA-free, FakeSweep-tested) | 2a | Fable 5 or Opus 4.8 / GPT-5.6, high — loss+classifier semantics are the hard part |
+| MFS-2c | Envelope leaf-cell enumerator + cut/limiting-envelope + segmented edges | 2b | Opus 4.8 / GPT-5.6, high — touches the validated solver, replay-guarded |
 | MFS-2d | V1 replay harness + report (joint with MFS-1) | 2b,2c | Sonnet 5 / GPT-5, medium |
-| MFS-2e | Retrofit-mode driver (existing-map warm start) | 2b–2d + wave results | Sonnet 5, medium |
+| MFS-2e | Retrofit-mode driver (warm start, certification estimate, sbatch glue) | 2b–2d | Sonnet 5, medium |
 
-Order: MFS-1 ∥ MFS-2a → 2b → 2c → 2d (**bmason gate**) → MFS-3 pilots
-(unchanged) → MFS-4/5 → waves.  2e opportunistic after the 21 Jul wave.
-
-## Open risks
-
-- Skirt repeatability vs the 0.02 tolerance (measure in MFS-3; revisit κ).
-- Classifier false positives: a "confirmed" cut where denser sampling would
-  have filled — mitigated by the envelope-stable bracket criterion +
-  V1 replay's genuine-hole-preservation metric + report annotation of every
-  cut so a human can audit.
-- Quadtree depth explosion along curved fronts — E_max cap + per-feature
-  budgets + the step state machine (localize, don't tile).
-- The natural row / taper=0 column glue (log-axis boundary) is where
-  implementation fiddliness concentrates; keep it a special-cased 1-D
-  family exactly as the current engine treats rows.
+**Phase 1 (implementation, unblocked now):** MFS-2a → 2b → 2c → 2d.  These are
+NOT gated (finding #13) and are pure code / replay — no campaign jobs, so no
+live-code hazard.  **Phase 2 (deployment, canary-gated):** once the revD/track
+canary finishes AND no campaign jobs are queued, run 2e's certification pass on
+the four mono maps, report expected new-eval counts, then submit the retrofit
+sbatches.  Ka fresh waves deploy after V1 passes AND bmason sets `nchan`.
 
 ---
 
-# APPENDIX: codex review findings (gpt-5.6-sol high, 21 Jul 2026) — ADJUDICATION PENDING
+## v2 changelog (finding → resolution)
 
-Verdict: architecture endorsed; 5 blockers + 8 high + 2 medium, all
-'semantics not yet executable' class.  REVISE THIS SPEC TO v2 (absorbing
-or explicitly waiving each item below) BEFORE building MFS-2b.  Quick
-adjudications by Fable at hand-off: #13 accept (the V1 gate applies to
-campaign DEPLOYMENT, not implementation — 2b/2c/2d get built first);
-#10 accept (model (ln res, eta, skirt); normalize inputs; pin lambda,
-E_max, thresholds numerically); #3 accept (acceptance metrics from
-exact-hit oracle points only; fallback-derived outputs excluded);
-#2 accept (budget = TOTAL including seed; scheduler shrinks B near the
-audit line; whole-cell admission); #1/#4/#5/#6/#7/#9 accept in
-principle — each needs the concrete rule written; #8/#11/#12/#14/#15
-accept.  None rejected.  Full findings verbatim:
-
-Verdict: blockers are present, so **not “NO blockers.”** The architectural direction remains sound, but several semantics are not yet executable or would invalidate V1.
-
-I could not perform the literal repository cross-check because workspace reads failed before execution with an environment “No space left on device” namespace error. The standing-plan comments below therefore use the constraints quoted in this spec, not a fresh read of `MFS_CAMPAIGN_PLAN.md`.
-
-1. **BLOCKER — Hierarchical residual ownership is undefined.**  
-   `E_T` is defined only after a probe lands in `T`, but the initial leaves contain corners only, and after subdivision those probes become corners of the children. The spec never says whether the resulting residual belongs to the parent, all children, or some aggregation. Consequently neither “every leaf below threshold” nor restart reconstruction has a unique implementation. Define a cell lifecycle such as: untested leaf → emit fixed five-point stencil → compute the parent’s maximum hierarchical surplus → either certify its children or activate them for their own future tests.
-
-2. **BLOCKER — Seed, batching, and budget arithmetic are incompatible.**  
-   The nominal seed is approximately 56 evaluations. Eight non-adjacent refinements add up to five new points each, so the first minimum-size wave reaches roughly 96; sixteen reach roughly 136. That already exceeds the planned 80 and can exceed the 110–120 audit, before 2:1 balance closure or retries. “≈56” is also too imprecise for a hard budget. Specify:
-
-   - Exact natural-row levels and overlaps.
-   - Whether 80 means total or post-seed evaluations.
-   - Whether the scheduler may reduce `B`.
-   - A whole-cell, balance-aware admission rule that cannot cross the hard audit.
-
-3. **BLOCKER — V1’s nearest-row fallback cannot support an acceptance gate.**  
-   A nearest existing row is not the requested AMR measurement, especially near the very cliffs and holes being tested. Its interpolation error is unknowable without the missing true evaluation; merely flagging it does not remove bias. The sampler could appear efficient because the replay oracle silently snaps difficult requests onto favorable existing points. Gate metrics must use exact hits, a separately validated oracle with uncertainty bounds, or treat unsupported requests as replay failures requiring CASA measurements. Report exact-hit fraction and fallback distance, but do not use fallback-derived outputs for acceptance.
-
-4. **BLOCKER — CUT geometry is insufficiently specified for the envelope consumer.**  
-   A cut through a rectangular leaf cannot both “disable interpolation across the step” and reuse the existing bilinear `Cell` solver verbatim on that leaf. Four corners do not identify the front’s geometry or which side owns each interior region. The annotation needs at least bracketed edge crossings, side labels, and a rule for ambiguous cut bands. Then either polygonize the two sides, exclude the cut cell’s interior, or compute limiting envelopes. “Draw the step sharply” is not an implementable contract.
-
-5. **BLOCKER for retrofit mode — Arbitrary existing tables do not reconstruct a dyadic quadtree.**  
-   Fresh AMR points can be constrained to seed-grid dyadics; legacy regular-grid and escalation points generally cannot. “Super-complete warm start” therefore does not follow from point-table source-of-truth. Define whether non-dyadic rows are:
-
-   - Auxiliary observations used for classification/loss but not topology;
-   - Snapped under an explicit tolerance;
-   - Inserted through a different constrained mesh; or
-   - Ignored except at exact AMR vertices.
-
-   The retrofit budget must also count new evaluations separately from pre-existing rows.
-
-6. **HIGH — The natural/taper-zero glue has two unresolved topology problems.**  
-   Taper zero is included in the 42-point tensor product but cannot border the positive-taper quadtree in log coordinates without defining what covers `(0, taper_min)`. A disconnected 1-D column leaves that interval unsampled; interpolating across it needs a coordinate rule. Natural weighting is categorical, not automatically a robust-axis edge, unless an explicit equivalence is declared. Specify seam ownership, interpolation policy, and the natural/robust intersection deduplication.
-
-7. **HIGH — Hanging nodes contradict the four-corner solver contract.**  
-   A 2:1-balanced coarse leaf next to a refined leaf has a measured midpoint on its edge. Treating the coarse leaf as a four-corner cell ignores that datum; enumerating both the coarse edge and the two fine edges produces overlapping/inconsistent segments. Either require a conforming refinement closure, teach the consumer about segmented edges, or define that hanging-node measurements do not participate on the coarse side.
-
-8. **HIGH — Classification and convergence are conflated.**  
-   “Residuals within the deadband” establishes consistency with a smooth/noise-adjusted model; it does not classify a cell as noise. Noise requires repeatability evidence or another variance estimate. Likewise, a ridge is called terminally maskable but also retains exploration weight—those cannot both govern the stop rule. Separate:
-
-   - Feature class: smooth, step, ridge, unresolved.
-   - Evidence/confidence.
-   - Scheduling state: untested, active, converged, frozen, invalid.
-
-   Permit reclassification as evidence accumulates and define precedence for cells containing more than one feature.
-
-9. **HIGH — Step localization is not yet an executable stopping test.**  
-   `h⊥/δ_edge` needs normalized coordinates, a defined front orientation, and a concrete `δ_edge`. More importantly, “envelope-stable” is global and cannot be inferred from bracket width alone. Compute envelopes for both limiting cut positions and freeze only when their difference is within the output tolerances on a stated resolution-bin support. Preserve the entire ambiguous bracket rather than selecting an unjustified sharp location.
-
-10. **HIGH — The loss needs transformed outputs and uncertainty propagation specified.**  
-    Resolution tolerance `ln(1.05)` requires interpolation and residuals in `ln(res)`, not raw resolution. State the modeled vector explicitly as `(ln res, eta, skirt)`. The prediction uncertainty should combine probe noise with the bilinear corner uncertainties, rather than subtracting one generic `σ_k`. Normalize both input axes before using `A_T`; otherwise `sqrt(A_T)`, `λ`, thresholds, and step widths depend on robust/log-taper units. Values for the threshold, `λ`, `E_max`, and goal-weight multipliers are also required for deterministic replay.
-
-11. **HIGH — Point-table determinism omits failures, retries, censoring, and configuration.**  
-    “Measured corners” does not say what happens when a tclean fails or is capped. Cap-clipped resolution is censored data and can create a false residual or step. Append-only retries can give multiple rows for one `point_key`; the effective-row rule must be deterministic. Pin seed construction, classifier/loss versions, all hyperparameters, band priors, float canonicalization, and tie-breaking in the manifest. Otherwise “same table → same next wave” is false across software/configuration changes.
-
-12. **HIGH — V1 acceptance metrics are under-specified.**  
-    With only 8–12 maps, p90 is nearly a worst-map statistic and should use a fixed, stratified suite. Take p90 of each map’s normalized sample fraction, not raw counts against varying 165–209 denominators. Budget exhaustion must count as failure, not as a low sample count. “No worse” needs numerical margins for each defect metric. The replay arms also name reduced lattice and sampler, while acceptance references “lattice+escalation”; that baseline acquisition policy must be explicitly included. Add convergence rate, unresolved-cell mass, false/missed-cut rates, bracket width/stability, and exact-oracle coverage.
-
-13. **HIGH — Two claimed inherited-plan orderings conflict internally.**  
-    The status says the “build” is gated on V1, but tasks 2b and 2c must be built before 2d can run V1. The sensible interpretation is that **campaign deployment**, not implementation, is gated; say that. Also, skirt repeatability is learned in MFS-3 after the V1 gate, yet it affects the sampler loss and possibly the tolerance itself. Either move the repeatability measurement earlier or make V1 provisional with a required `σ_skirt` sensitivity sweep.
-
-14. **MEDIUM — Priors and goal semantics contradict “features only from rows.”**  
-    Scaled cliff/cap priors and “unknown-but-suspected” priorities are state outside the rows. That is fine, but they must be immutable manifest inputs, not described as reconstructible from the point table alone. Similarly, `skirt = 0.10 ± 0.03` must be a configured campaign goal; the ridge discussion explicitly anticipates changing the skirt setpoint.
-
-15. **MEDIUM — V2 is missing the tests most likely to catch integration failures.**  
-    Add tests for non-dyadic retrofit rows, natural/taper-zero seams, hanging-node enumeration, capped/failed/retried points, balanced-refinement budget admission, cut-cell limiting envelopes, exact-hit replay behavior, classifier transitions, and deterministic ties.
-
-Subject to the unavailable file-level check, the quoted standing constraints on independent bands, fixed-window/nchan semantics, noise A/B policy, the existing wave runner, and guarding `fill_grid.py` are not otherwise contradicted. The strongest parts worth retaining are the output-tolerance residual, cell-complete acquisition, explicit cuts, point-table resumability, and treating band as independent rather than a third AMR axis.
----
-
-# ADDENDUM (bmason reframing, 21 Jul 2026) — additional v2 inputs
-
-bmason's characterization: expensive black-box f: (t, r) -> (theta, s, eta);
-task 1 = tolerance-governed adaptive sampling (d-theta, d-s, d-eta); task 2 =
-constrained optimization FROM the samples (per theta_0: min eta s.t.
-theta = theta_0 [ptsrc]; + s < s_0 [imaging]); the image of f is a 2-D
-surface in output space, each fixed-theta problem is a 1-D search along the
-theta = theta_0 contour (possibly multi-branch), and the fixed-theta (s, eta)
-trade-off is a Pareto curve.  Adopted, with these consequences for v2:
-
-1. **Goal region, stated geometrically.**  The deliverables are 1-D loci in
-   the 2-D input space: (a) the unconstrained per-contour minimizer locus
-   argmin eta | theta (ptsrc), (b) the constrained-locus FAMILY where the
-   skirt constraint binds — for the WHOLE offered s_0 range [0.05, 0.20],
-   not only 0.10 (the report ships four setpoints; a sampler goal-weighted
-   to 0.10 alone degrades the others; fixes the v1 spec's 0.10±0.03 band),
-   and (c) the discontinuity fronts.  Tolerance semantics: d-eta on the
-   envelope VALUE along the loci; d-theta as contour localization; d-s only
-   near the binding band s in [0.05, 0.20] ± noise — elsewhere s needs only
-   feasible/infeasible classification.  This LICENSES relaxing global skirt
-   accuracy (the noisiest output) — a real budget saving to spec in v2.
-2. **Certification-based retirement** (also resolves half of codex #8): a
-   leaf retires EITHER by residual below tolerance OR by dominance — its
-   optimistic bound (corner values minus the empirical residual estimate)
-   cannot improve any per-contour minimum by > d-eta.  Most of the domain
-   retires by dominance, cheaply.  "Every leaf below threshold" in v1 was
-   stronger than needed; v2 should state the two-way retirement rule.
-3. **Warm start = certification-first mode.**  With existing maps
-   (~230-500 measured points per (subarray, combo) map; ~4k per campaign)
-   the seed stage is SKIPPED: build topology (legacy non-dyadic rows enter
-   as auxiliary evidence per codex #5 adjudication), run the certification
-   pass, and only the unretired remainder — loci neighborhoods, cliff
-   brackets, uncertified pockets — generates new evaluations.  This IS
-   retrofit mode; same code path, different entry state.
-4. **Premise amendment:** f is PIECEWISE smooth.  The snapshot taper-onset
-   cliffs (theta jumping 3.00 -> 3.07 mas with no interior at 8-level scan
-   density, revD/snapshot main+long) are measured facts, not
-   under-sampling; the step/cut machinery is not optional.  Contour
-   tracking / predictor-corrector continuation along the loci was
-   considered as the pure form of this reframing and SET ASIDE as the
-   architecture: brittle at branch switches and cliffs, poor resumability;
-   the AMR + goal-weight design is its robustified equivalent (the
-   exploration floor also catches disconnected contour branches, which
-   pure continuation misses).
-5. **REQUIRED NEW SECTION IN v2 — "Invocation & cases".**  Not yet
-   documented anywhere (bmason asked): one sampler entry point, combo-
-   routed like sweep/refine/backfill via NGVLA_REV / NGVLA_SIM_MODE /
-   NGVLA_BAND + config_registry, mode auto-detected from the point table
-   (fresh -> seed; populated -> certification-first) with an explicit
-   --warm-start override.  Run matrix v2 must spell out, with copy-paste
-   commands added to RUN_CAMPAIGNS.md at build time (extend MFS-6):
-   - 4 existing mono combos (revF/track, revF/snapshot, revD/track,
-     revD/snapshot): retrofit/hole-filling runs, campaign-sbatch style;
-   - MFS combos (7 subarrays x 6 bands x 2 modes, revF): fresh-seed runs
-     inside the PyLauncher wave (MFS-4).
+- **#1 residual ownership** → PARENT owns `E_T` (its 5 stencil probes vs its
+  bilinear corner prediction); children certified (inherit) or activated;
+  deterministic restart reconstruction from the table.
+- **#2 budget** → seed pinned **56** (shown); fresh plan 110 / audit 140;
+  retrofit plan 40 / audit 80 new-only; whole-cell balance-aware admission
+  under the hard cap; B shrinks 16→8.
+- **#3 V1 oracle** → exact-hit scoring only; unsupported requests counted;
+  fallback flagged, never scored; replay budget exhaustion = failure.
+- **#4 cut geometry** → cuts on EDGES (bracketed crossing + side labels); cut
+  leaves emit limiting envelopes, no interior interp; step at bracket midpoint.
+- **#5 non-dyadic rows** → auxiliary evidence only; new vertices are seed
+  dyadics; retrofit seed = coarsest all-hit dyadic grid.
+- **#6 seam** → quadtree starts at `t_min`; seam column + natural row stay 1-D
+  families; strip `(0,t_min)` via existing column segments; natural-as-2.0 for
+  proposals only.
+- **#7 hanging nodes** → conforming closure (node registered as a measured edge
+  point; consumer reads a two-segment edge); fallback = full neighbor refine.
+- **#8 class vs state** → separate feature class / evidence / scheduling state;
+  reclassifiable; precedence step > ridge > smooth; dominance retirement added.
+- **#9 step stopping** → freeze when the two limiting envelopes (bracket-low vs
+  -high) differ < tolerance on every res bin; `δ_edge` normalized, front =
+  crossed-edge axis.
+- **#10 constants** → `(ln res,η,skirt)`; `τ=(ln1.05,0.1,0.02)`, `κ=2`, `σ`
+  defaults, normalized `u,v`, `λ=0.05`, `E_max=4`, `w_goal∈{3,1,0.25}`,
+  `B=8–16`, retire at `E_T<1` or dominance margin >1 — all pinned.
+- **#11 determinism** → effective-row = last ok|capped; failed=attempted;
+  capped res-censored; manifest pins spec/classifier/loss/constants/seed/
+  priors/nchan/ties.
+- **#12 V1 metrics** → fixed 10-map suite; per-map normalized fraction; numeric
+  pass/fail; acceptance = all pass AND p90 ≤ 0.6; exhaustion = fail.
+- **#13 gate scope** → V1 gates fresh-wave DEPLOYMENT, not implementation;
+  retrofit bmason-ordered (certification-first, estimate before Slurm).
+- **#14 priors** → scaled cliff locations + skirt band [0.05,0.20] are
+  immutable manifest inputs per run.
+- **#15 V2 tests** → seam, hanging nodes, non-dyadic rows, capped/failed/
+  retried, budget admission, cut limiting envelopes, exact-hit replay,
+  classifier transitions, deterministic ties (listed above).
