@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.15)  13 JUL 2026 08:20
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.15)  21 JUL 2026 15:54
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -406,86 +406,86 @@ uper-ts1.enc}]
 <figs/taperability.pdf, id=105, 558.95703pt x 342.20848pt>
 File: figs/taperability.pdf Graphic file (type pdf)
 <use figs/taperability.pdf>
-Package pdftex.def Info: figs/taperability.pdf  used on input line 252.
+Package pdftex.def Info: figs/taperability.pdf  used on input line 264.
 (pdftex.def)             Requested size: 360.0pt x 220.40685pt.
 <figs/imaging.pdf, id=106, 558.95703pt x 356.15659pt>
 File: figs/imaging.pdf Graphic file (type pdf)
 <use figs/imaging.pdf>
-Package pdftex.def Info: figs/imaging.pdf  used on input line 266.
+Package pdftex.def Info: figs/imaging.pdf  used on input line 278.
 (pdftex.def)             Requested size: 360.0pt x 229.39044pt.
 
 
-[6 <./figs/taperability.pdf>]
+[6]
 
-[7 <./figs/imaging.pdf>]
-<figs/heatmap.pdf, id=282, 512.08685pt x 332.46594pt>
+[7 <./figs/taperability.pdf>]
+
+[8 <./figs/imaging.pdf>]
+<figs/heatmap.pdf, id=287, 512.08685pt x 332.46594pt>
 File: figs/heatmap.pdf Graphic file (type pdf)
 <use figs/heatmap.pdf>
-Package pdftex.def Info: figs/heatmap.pdf  used on input line 340.
+Package pdftex.def Info: figs/heatmap.pdf  used on input line 352.
 (pdftex.def)             Requested size: 341.9989pt x 222.04587pt.
 
-
-[8]
 
 [9 <./figs/heatmap.pdf>]
 
 [10]
-Underfull \hbox (badness 1400) in paragraph at lines 458--460
+Underfull \hbox (badness 1400) in paragraph at lines 470--472
 []\OT1/cmr/m/n/10 One row per mea-sured, skipped,
  []
 
 
-Underfull \hbox (badness 3635) in paragraph at lines 458--460
+Underfull \hbox (badness 3635) in paragraph at lines 470--472
 \OT1/cmr/m/n/10 default cam-paigns use \OT1/cmtt/m/n/10 results-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 460--460
+Underfull \hbox (badness 10000) in paragraph at lines 472--472
 []\OT1/cmtt/m/n/10 sa[]select/data/
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 461--461
+Underfull \hbox (badness 10000) in paragraph at lines 473--473
 []\OT1/cmr/m/n/10 Campaign
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 463--463
+Underfull \hbox (badness 10000) in paragraph at lines 475--475
 []\OT1/cmtt/m/n/10 sa[]select/data/
  []
 
 
-Underfull \hbox (badness 1852) in paragraph at lines 465--468
+Underfull \hbox (badness 1852) in paragraph at lines 477--480
 \OT1/cmr/m/n/10 paigns col-lect to their reg-is-tered
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 468--468
+Underfull \hbox (badness 10000) in paragraph at lines 480--480
 []\OT1/cmtt/m/n/10 sa[]select/data/
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 469--469
+Underfull \hbox (badness 10000) in paragraph at lines 481--481
 []\OT1/cmr/m/n/10 Subarray
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 470--472
+Underfull \hbox (badness 10000) in paragraph at lines 482--484
 []\OT1/cmr/m/n/10 Names, com-po-nents, an-tenna
  []
 
 
-Overfull \hbox (2.60631pt too wide) in paragraph at lines 489--489
+Overfull \hbox (2.60631pt too wide) in paragraph at lines 501--501
 []\OT1/cmtt/m/n/10 resolution[]arcsec[]30ghz| 
  []
 
 
-Underfull \hbox (badness 5592) in paragraph at lines 495--496
+Underfull \hbox (badness 5592) in paragraph at lines 507--508
 []\OT1/cmr/m/n/10 Simulation/reference fre-quency, cur-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 497--498
+Underfull \hbox (badness 10000) in paragraph at lines 509--510
 []\OT1/cmr/m/n/10 Free-form caveat, in-clud-ing
  []
 
@@ -535,7 +535,7 @@ ic/amsfonts/cm/cmti10.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts
 /type1/public/amsfonts/cm/cmtt10.pfb></scratch/projects/tacc/texlive/2025/texmf
 -dist/fonts/type1/public/cm-super/sfrm1000.pfb></scratch/projects/tacc/texlive/
 2025/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb>
-Output written on ngvla_sa_selection.pdf (13 pages, 349883 bytes).
+Output written on ngvla_sa_selection.pdf (13 pages, 350768 bytes).
 PDF statistics:
  487 PDF objects out of 1000 (max. 8388607)
  248 compressed objects within 3 object streams
