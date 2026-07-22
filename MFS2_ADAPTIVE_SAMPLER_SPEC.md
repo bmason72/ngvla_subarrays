@@ -280,3 +280,60 @@ I could not perform the literal repository cross-check because workspace reads f
     Add tests for non-dyadic retrofit rows, natural/taper-zero seams, hanging-node enumeration, capped/failed/retried points, balanced-refinement budget admission, cut-cell limiting envelopes, exact-hit replay behavior, classifier transitions, and deterministic ties.
 
 Subject to the unavailable file-level check, the quoted standing constraints on independent bands, fixed-window/nchan semantics, noise A/B policy, the existing wave runner, and guarding `fill_grid.py` are not otherwise contradicted. The strongest parts worth retaining are the output-tolerance residual, cell-complete acquisition, explicit cuts, point-table resumability, and treating band as independent rather than a third AMR axis.
+---
+
+# ADDENDUM (bmason reframing, 21 Jul 2026) — additional v2 inputs
+
+bmason's characterization: expensive black-box f: (t, r) -> (theta, s, eta);
+task 1 = tolerance-governed adaptive sampling (d-theta, d-s, d-eta); task 2 =
+constrained optimization FROM the samples (per theta_0: min eta s.t.
+theta = theta_0 [ptsrc]; + s < s_0 [imaging]); the image of f is a 2-D
+surface in output space, each fixed-theta problem is a 1-D search along the
+theta = theta_0 contour (possibly multi-branch), and the fixed-theta (s, eta)
+trade-off is a Pareto curve.  Adopted, with these consequences for v2:
+
+1. **Goal region, stated geometrically.**  The deliverables are 1-D loci in
+   the 2-D input space: (a) the unconstrained per-contour minimizer locus
+   argmin eta | theta (ptsrc), (b) the constrained-locus FAMILY where the
+   skirt constraint binds — for the WHOLE offered s_0 range [0.05, 0.20],
+   not only 0.10 (the report ships four setpoints; a sampler goal-weighted
+   to 0.10 alone degrades the others; fixes the v1 spec's 0.10±0.03 band),
+   and (c) the discontinuity fronts.  Tolerance semantics: d-eta on the
+   envelope VALUE along the loci; d-theta as contour localization; d-s only
+   near the binding band s in [0.05, 0.20] ± noise — elsewhere s needs only
+   feasible/infeasible classification.  This LICENSES relaxing global skirt
+   accuracy (the noisiest output) — a real budget saving to spec in v2.
+2. **Certification-based retirement** (also resolves half of codex #8): a
+   leaf retires EITHER by residual below tolerance OR by dominance — its
+   optimistic bound (corner values minus the empirical residual estimate)
+   cannot improve any per-contour minimum by > d-eta.  Most of the domain
+   retires by dominance, cheaply.  "Every leaf below threshold" in v1 was
+   stronger than needed; v2 should state the two-way retirement rule.
+3. **Warm start = certification-first mode.**  With existing maps
+   (~230-500 measured points per (subarray, combo) map; ~4k per campaign)
+   the seed stage is SKIPPED: build topology (legacy non-dyadic rows enter
+   as auxiliary evidence per codex #5 adjudication), run the certification
+   pass, and only the unretired remainder — loci neighborhoods, cliff
+   brackets, uncertified pockets — generates new evaluations.  This IS
+   retrofit mode; same code path, different entry state.
+4. **Premise amendment:** f is PIECEWISE smooth.  The snapshot taper-onset
+   cliffs (theta jumping 3.00 -> 3.07 mas with no interior at 8-level scan
+   density, revD/snapshot main+long) are measured facts, not
+   under-sampling; the step/cut machinery is not optional.  Contour
+   tracking / predictor-corrector continuation along the loci was
+   considered as the pure form of this reframing and SET ASIDE as the
+   architecture: brittle at branch switches and cliffs, poor resumability;
+   the AMR + goal-weight design is its robustified equivalent (the
+   exploration floor also catches disconnected contour branches, which
+   pure continuation misses).
+5. **REQUIRED NEW SECTION IN v2 — "Invocation & cases".**  Not yet
+   documented anywhere (bmason asked): one sampler entry point, combo-
+   routed like sweep/refine/backfill via NGVLA_REV / NGVLA_SIM_MODE /
+   NGVLA_BAND + config_registry, mode auto-detected from the point table
+   (fresh -> seed; populated -> certification-first) with an explicit
+   --warm-start override.  Run matrix v2 must spell out, with copy-paste
+   commands added to RUN_CAMPAIGNS.md at build time (extend MFS-6):
+   - 4 existing mono combos (revF/track, revF/snapshot, revD/track,
+     revD/snapshot): retrofit/hole-filling runs, campaign-sbatch style;
+   - MFS combos (7 subarrays x 6 bands x 2 modes, revF): fresh-seed runs
+     inside the PyLauncher wave (MFS-4).
