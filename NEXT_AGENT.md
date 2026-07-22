@@ -46,29 +46,30 @@ sections) → `RUN_CAMPAIGNS.md` ("21 Jul wave" launch sheet) →
    on convention violations by design — a failed collect means repair, not
    bypass.  If the sweep looks pathological: scancel downstream, diagnose,
    fix, resubmit (everything is resumable).
-2. **Launch the remaining three campaigns + their backfills** (serialized
-   vs the queue limit; exact commands in RUN_CAMPAIGNS.md "21 Jul wave"):
-   revF/snapshot, revD/snapshot, revF/track (budget 200, rounds 12), each
-   followed by `sbatch --array=<1|3|0> --dependency=afterok:<its collect>`
-   backfill.  Verify all three job ids print per campaign (queue-limit
-   gotcha).  Backfill task 0 (revF/track, ~949 anchors) will likely need a
-   resubmit at the 47 h ceiling — it is resumable and exits nonzero while
-   anchors remain.
-3. **After ALL backfills: rebuild the combined report** (command in
-   RUN_CAMPAIGNS §3) and eyeball the flagged curves: snapshot main+long /
-   main ptsrc cliffs (expect CLASSIFIED + honestly stepped, likely NOT
-   filled — physics), revD/track spiral+mid sawtooth (expect FILLED),
-   disconnected LONG points (expect filled or confirmed), wiggles (expect
-   visually smooth lines within 0.03).  **bmason's standing bet:** the
-   wave might not fully fix the holes — if specific maps remain
-   under-converged, they become the retrofit-mode pilot for the adaptive
-   sampler (spec §"Retrofit mode"), which doubles as the bet's data-driven
-   answer.  Then: milestone commit of the wave's data + doc deltas.
-4. **MFS workstream:** FIRST revise `MFS2_ADAPTIVE_SAMPLER_SPEC.md` to v2
-   (absorb the appended codex findings; bmason input useful on budget
-   arithmetic #2 and the V1 oracle policy #3).  Then MFS-1 replay ∥
-   MFS-2a (band axis) — 2b sampler core next; the V1 replay gate (2d) is
-   a bmason checkpoint and gates DEPLOYMENT, not implementation.  MFS-3 pilots need queue
+2. **Launch the ADAPTIVE RETROFIT chain** (supersedes the old plan of
+   three more escalation campaigns; bmason directive 21 Jul pm; exact
+   commands in RUN_CAMPAIGNS.md "Adaptive retrofit wave"): after canary
+   collect 3333954 → `scancel 3333958` (requeue that backfill behind the
+   retrofit) → `adaptive_retrofit.sbatch --array=0-3` → per-task
+   `backfill_psf.sbatch --array=K --dependency=afterok:<RID>_K` → final
+   combined report.  The sampler's certification pass sized wave 1 at
+   1508 evals over 46 maps (~2-3 shrinking waves total; audit cap 80 new
+   evals/map).  Watch: the NEW candidate defect (revD/snapshot long,
+   second step ~2.6 mas) should get classified; backfill task 0
+   (revF/track ~949 anchors) still needs its resubmits.
+3. **After the chain: eyeball the combined report** — snapshot cliffs
+   render as honest steps (input-space smooth, res step < 5% tolerance —
+   see PLAN part-4 item 3 for why the sampler certifies them), sawtooth
+   FIXED (canary already shows 1.16→0.18), disconnected LONG points
+   filled or cut-annotated, wiggles smooth within 0.03.  Then the data
+   milestone commit (incl. the canary's revD_track results CSVs, left
+   deliberately uncommitted while jobs write them).
+4. **MFS workstream (phase 3, AFTER the retrofit wave drains — live-code
+   hazard applies to running retrofit jobs too):** 2c envelope leaf-cell
+   enumerator + cut annotations (sa_select/envelope.py), 2a Ka band axis
+   (config/simulate/sweep; nchan REQUIRED — bmason supplies the value),
+   then the Ka MFS fresh-seed wave (7 subarrays × 2 modes, PyLauncher,
+   gated on the V1 replay acceptance in spec §Validation).  MFS-3 pilots need queue
    slots — wait for the wave to drain.
 5. Standing: memo update for the new machinery (escalation ladder +
    smoothing + caps clarification are NOT yet described in the memo beyond

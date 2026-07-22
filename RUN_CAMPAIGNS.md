@@ -110,12 +110,40 @@ sbatch --array=2 --dependency=afterok:<revD_track_COLLECT_id> /home1/10240/bmaso
 grep -E "refined|budget|worst|escalation|E2 " /work2/10240/bmason72/stampede3/sweep_<ID>_*.log
 #    sane = E2 plans with small-taper scans at both bracket robusts, terminal
 #    "sampled resolution discontinuity"/"high-penalty" classifications, no
-#    runaway budget.  THEN, serialized as queue headroom allows:
-bash .../submit_campaign.sh revF snapshot --time 24:00:00 --refine-budget 200 --refine-rounds 12   # backfill --array=1
-bash .../submit_campaign.sh revD snapshot --time 24:00:00 --refine-budget 200 --refine-rounds 12   # backfill --array=3
-bash .../submit_campaign.sh revF track    --time 47:00:00 --refine-budget 200 --refine-rounds 12   # backfill --array=0
+#    runaway budget.
+# 2'. SUPERSEDED (21 Jul evening, bmason): the remaining three escalation
+#     campaigns are replaced by the ADAPTIVE RETROFIT below.
+```
 
-# 3. after ALL backfills: rebuild the combined report once
+### Adaptive retrofit wave (REPLACES escalation campaigns 2-4; 21 Jul pm)
+
+The adaptive sampler (curvegen/adaptive.py, spec MFS2_ADAPTIVE_SAMPLER_SPEC.md)
+runs certification-first on every existing map and measures only what your
+tolerances still need.  Certification pass (21 Jul): first wave = 1508 evals
+across all 46 maps (revF/track 537, revF/snapshot 391, revD/track 342-stale,
+revD/snapshot 238); full retrofit ~2-3 shrinking waves, audit-capped at
+80 new evals/map.  After the CANARY COLLECT (3333954) completes:
+
+```
+scancel 3333958        # requeue revD/track PSF backfill BEHIND the retrofit
+RID=$(sbatch --parsable --array=0-3 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/adaptive_retrofit.sbatch | tail -1)
+# PSF backfills per combo, each after ITS retrofit task (retrofit moves anchors):
+for K in 0 1 2 3; do sbatch --array=$K --dependency=afterok:${RID}_$K /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch; done
+```
+
+Each retrofit task ends with its own collect + per-combo report + combined
+report + PSF export (non-blocking), so reports refresh automatically; the
+backfills then add anchor cuts.  QA per task:
+`grep -E "wave |adaptive:|step|ridge" /work2/10240/bmason72/stampede3/retrofit_*.log`
+(healthy = shrinking waves, "stopped: no proposals (converged/classified)").
+Known limitation: the per-map budget window resets across a kill+resubmit
+(measurements stay perfectly resumable; worst case a resumed task re-spends
+up to one audit cap).  NB a NEW candidate defect to watch: revD/snapshot
+`long` shows an undocumented second step at ~2.6 mas (certification pass) —
+the retrofit will probe it; check its classification in the logs.
+
+```
+# after ALL backfills: rebuild the combined report once more
 cd /home1/10240/bmason72/Code/ngvla_subarrays/curvegen && \
 /work2/10240/bmason72/stampede3/casaenv/bin/casapy make_report.py --combined reports/ngvla-curves.html
 ```

@@ -812,6 +812,46 @@ resolved; adaptive-sampler direction approved + spec).**
    escalation, not old polishing) may still not fill the holes — if maps
    remain under-converged they become the sampler's retrofit-mode pilot.
 
+**SESSION DELTA (21 Jul 2026, part 4, Fable — adaptive sampler BUILT +
+retrofit staged; grid MFS dropped).**
+1. *bmason directives:* no grid-style MFS (adaptive from day one); MFS
+   initially Ka band only (27±6.75 GHz), nchan an explicit parameter
+   bmason sets later; adaptive retrofit ORDERED on all four existing
+   campaigns; surrogate framing confirmed (the bilinear cell IS the local
+   surrogate; residual-driven refinement everywhere, not just at branch
+   points).  bmason's reframing (f: (t,r)->(theta,s,eta); per-theta 1-D
+   contour searches; Pareto per theta) adopted — spec v2 carries it.
+2. *Spec v2 (commit 250f85e):* executable build contract; all 15 codex
+   findings resolved; constants pinned; budget arithmetic honest (fresh
+   seed 56, plan 110/audit 140; retrofit plan 40/audit 80 NEW evals).
+3. *Sampler core BUILT (commit 8242d08):* curvegen/adaptive.py + 44 tests
+   (221 green) — quadtree over the point table, certification retirement,
+   feature classification with cut brackets, wave planner, --plan-only
+   CLI.  Key validation: revD/snap main+long "cliff" correctly certified
+   smooth IN INPUT SPACE (eta climbs continuously while res stalls; the
+   res step is 2.3% < the 5% tolerance) — the displayed jump is the
+   honest image of a smooth surface; nothing to sample.  Its 16-eval wave
+   targets the genuinely under-resolved 4.6-8.2 mas region instead.
+4. *Certification pass over all 46 maps:* first wave 1508 evals total
+   (F/track 537, F/snap 391, D/track 342-stale-canary, D/snap 238); all
+   retrofit-auto, no cap violations; features match every documented
+   defect; ONE NEW candidate: revD/snap long second step ~2.6 mas (E_T
+   up to 14) + unresolved 0.34-0.49 mas cluster — retrofit will probe.
+5. *Measuring driver BUILT (commit 0be5f8c):* wave loop (mode pinned
+   across rebuilds; per-process budget window — documented limitation) +
+   adaptive_retrofit.sbatch (array 0-3, collect+report+export tail).
+   225 tests green.  Dev incident: a placeholder test briefly ran real
+   tclean and appended 3 rows to results/core.csv — caught, reverted
+   byte-identical, scratch cleaned, test monkeypatched.
+6. *Sequencing:* escalation campaigns 2-4 SUPERSEDED by the retrofit
+   chain (RUN_CAMPAIGNS "Adaptive retrofit wave"): canary collect ->
+   scancel queued backfill 3333958 -> retrofit array 0-3 -> per-task
+   backfill chain -> combined report.  Canary early results: spiral+mid
+   sawtooth FIXED (1.16->0.18 imaging), mid+long 0.10/0.06 with honest
+   classifications.  PHASE 3 (after retrofit wave drains; live-code
+   hazard): 2c envelope leaf-cell enumerator + cuts, 2a Ka band axis
+   (then Ka MFS wave once bmason supplies nchan).
+
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)
 
 **Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage
