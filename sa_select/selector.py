@@ -164,9 +164,14 @@ def select_subarrays(request: ObservingRequest,
                                                 request.frequency)
                     c.sensitivity_jy = goal_jy
                     key = info.calc_name or info.name
+                    # n_ant_actual: rescale the calculator's (Rev-D-vintage
+                    # pkl) noise to THIS revision's antenna count.  For Rev F
+                    # and Rev D the counts match the pkl and the factor is
+                    # exactly 1; for Rev C (e.g. core 94 vs the pkl's 114)
+                    # the N(N-1) rescale is required.
                     c.integration_time_hr = sens.integration_time(
                         key, request.frequency, c.eta, goal_jy,
-                        delta_v=request.delta_v)
+                        delta_v=request.delta_v, n_ant_actual=info.n_ant)
                     c.antenna_hours = c.integration_time_hr * info.n_ant
                 except Exception as e:
                     c.reasons.append("sensitivity calculation failed: %s" % e)
