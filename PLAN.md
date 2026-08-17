@@ -852,6 +852,35 @@ retrofit staged; grid MFS dropped).**
    hazard): 2c envelope leaf-cell enumerator + cuts, 2a Ka band axis
    (then Ka MFS wave once bmason supplies nchan).
 
+**SESSION DELTA (17 Aug 2026, Fable — July wave harvested; NEW SCOPE =
+WRAPUP.md; live plan = RELEASE_PLAN.md).**
+1. *The 21-24 Jul chain COMPLETED unattended* (recovered from sacct + the
+   logs bmason archived to /work2/.../oldNgvlaLogs/ on 13 Aug): canary
+   sweep/collect (3333953/3333954), adaptive retrofit array 0-3 (3335064),
+   all four PSF backfills (3335065-68) — every job exit 0.  Each retrofit
+   task's collect tail auto-rebuilt the reports (23 Jul); the queued
+   backfill 3333958 was cancelled per plan.  No compute artifacts exist
+   after 24 Jul.
+2. *Retrofit QA (from logs):* all steps everywhere came back "classified:
+   sampled resolution discontinuity" (incl. the flagged revD/snapshot long
+   ~2.6 mas candidate — genuine physics).  Snapshot maps mostly CONVERGED
+   ("no proposals"); nearly every revF/track and revD/track map stopped at
+   the 80-eval AUDIT CAP = wave 1 of ~2-3.  bmason decision (17 Aug): one
+   more retrofit wave, tracks only (combos 0 and 2), then reassess.
+3. *Harvest (this commit):* 6590 pure row-insertions across 50 CSVs
+   (results-*/ + routed sa_select curve tables; headers unchanged), 225
+   tests green, combined report rebuilt post-backfill (the run-sheet's
+   final step, previously pending).  PSF axis-cut payloads exist for all
+   four campaigns (reports/psf/, 23-24 Jul).
+4. *NEW SCOPE (bmason, WRAPUP.md 17 Aug — supersedes this file where in
+   conflict):* release the calculator web + python prototypes for
+   revF/track (ptsrc+imaging), revD/track (ptsrc only), revC/track (ptsrc
+   only, NEW campaign).  Snapshots NOT released.  Plan of record:
+   `RELEASE_PLAN.md` (T0 harvest ✓ / T1 retrofit wave 2 / T2 revC campaign
+   / T3 release page / T4 calculator surface / T5 MStroh formats /
+   T6 docs+memo).  bmason launches all Slurm jobs himself now — agents
+   prepare command lines only.
+
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)
 
 **Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage
