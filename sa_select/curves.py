@@ -113,6 +113,18 @@ class CurveLibrary:
         self._envelopes: Dict[str, Envelope] = {}
 
     @classmethod
+    def from_tables(cls, subarrays: Dict[str, SubarrayInfo],
+                    samples: Dict[str, List[CurveSample]]) -> "CurveLibrary":
+        """Build a library directly from in-memory tables (no CSV files) --
+        e.g. from an external curve delivery (see sa_select/stroh.py)."""
+        lib = cls.__new__(cls)
+        lib.subarrays = dict(subarrays)
+        lib.samples = {k: sorted(v, key=lambda s: s.resolution)
+                       for k, v in samples.items()}
+        lib._envelopes = {}
+        return lib
+
+    @classmethod
     def for_config(cls, rev: str = "revF", sim_mode: str = "track",
                    registry_path: Optional[str] = None) -> "CurveLibrary":
         """Build a library for a registered (rev, sim_mode) combination.
@@ -266,6 +278,16 @@ class CurveLibrary:
                     if len(beams) >= 4 else "between measured beams")
             note = ("interpolated %s spanning %.4g-%.4g arcsec (30 GHz)"
                     % (kind, beams[0], beams[-1]))
+            # anchors' own caveats must survive interpolation (measured
+            # lattice samples carry none; external curves, e.g. stroh.py's
+            # placeholder-taper warning, do)
+            anchor_notes = []
+            for a in anchors:
+                n = getattr(a, "note", "")
+                if n and n not in anchor_notes:
+                    anchor_notes.append(n)
+            if anchor_notes:
+                note += "; " + "; ".join(anchor_notes)
             source = " <-> ".join(getattr(a, "source", "") or "?"
                                   for a in anchors)
         elif anchors and anchors[0] is not None:

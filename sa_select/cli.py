@@ -89,6 +89,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--sim-mode", default="track",
                    help="simulation mode the curves were measured in "
                         "(default: track)")
+    p.add_argument("--stroh", metavar="SUBARRAY_DATA_JSON", default=None,
+                   help="query M. Stroh's curve delivery instead of a "
+                        "registered campaign: path to his subarray_data.json "
+                        "(point-source curves only; overrides --rev/--sim-mode;"
+                        " see sa_select/stroh.py for the conventions applied)")
 
     p.add_argument("--batch", metavar="CASES_CSV", default=None,
                    help="evaluate one request per CSV row (see module "
@@ -191,12 +196,22 @@ def _run_batch(args, library) -> int:
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
 
-    try:
-        library = CurveLibrary.for_config(args.rev, args.sim_mode)
-    except (ValueError, OSError) as e:
-        print("error: cannot load curves for %s/%s: %s"
-              % (args.rev, args.sim_mode, e), file=sys.stderr)
-        return 2
+    if args.stroh is not None:
+        from . import stroh
+        try:
+            library = stroh.curve_library(args.stroh)
+        except (ValueError, OSError, KeyError) as e:
+            print("error: cannot load Stroh curves from %s: %s"
+                  % (args.stroh, e), file=sys.stderr)
+            return 2
+        args.rev, args.sim_mode = "stroh", "n/a"    # for the header line
+    else:
+        try:
+            library = CurveLibrary.for_config(args.rev, args.sim_mode)
+        except (ValueError, OSError) as e:
+            print("error: cannot load curves for %s/%s: %s"
+                  % (args.rev, args.sim_mode, e), file=sys.stderr)
+            return 2
 
     if args.batch is not None:
         return _run_batch(args, library)
