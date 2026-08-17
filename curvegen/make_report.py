@@ -50,6 +50,14 @@ SKIRT_DEFAULT_KEY = "%.2f" % SKIRT_DEFAULT
 
 DATA_DIR = os.path.join(REPO, "sa_select", "data")
 
+# Release build (--combined --release; RELEASE_PLAN.md T3, WRAPUP.md items
+# 2+3): the public page carries ONLY these campaigns, and the ones released
+# point-source only advertise it via imaging_omitted=True in their combo
+# metadata (the page then blanks the imaging-curves card and pins the
+# calculator to point-source for that campaign).
+RELEASE_COMBOS = ["revF_track", "revD_track", "revC_track"]
+RELEASE_PTSRC_ONLY = {"revD_track", "revC_track"}
+
 # Data routing.  These module globals default to (revF, track) so the plain
 # `make_report.py out.html` call is byte-identical to the original; __main__
 # re-points them for a different registered (rev, sim_mode).  ACTIVE_ORDER is
@@ -802,12 +810,34 @@ def combo_entry(rev, sim_mode):
                 note_html=_SNAPSHOT_NOTE_HTML if snap else "")
 
 
-def build_combined(out_path):
+def combined_combo_plan(reg_rows, release=False):
+    """Map config-registry rows to the combos a combined build should offer:
+    [(row, entry), ...] in registry order, entry being the combo_entry()
+    dropdown metadata.  Release mode keeps ONLY the RELEASE_COMBOS keys and
+    stamps entry["imaging_omitted"] = True on the RELEASE_PTSRC_ONLY ones
+    (the page reads that flag per active campaign).  Pure over the row dicts:
+    sample availability is checked separately by the caller, so a registered
+    combo with no samples yet is still skipped gracefully there."""
+    plan = []
+    for r in reg_rows:
+        entry = combo_entry(r["rev"].strip(), r["sim_mode"].strip())
+        if release:
+            if entry["key"] not in RELEASE_COMBOS:
+                continue
+            if entry["key"] in RELEASE_PTSRC_ONLY:
+                entry["imaging_omitted"] = True
+        plan.append((r, entry))
+    return plan
+
+
+def build_combined(out_path, release=False):
     """The all-campaigns report: one payload per registered (rev, sim_mode)
     with curve data, each built by a SUBPROCESS running this script with that
     combo's environment (config freezes RESULTS_DIR / grid state at import,
     so a single process cannot build them all), injected together with a
-    campaign dropdown the page uses to swap its contents."""
+    campaign dropdown the page uses to swap its contents.  release=True
+    builds the public page instead (combos restricted / flagged per
+    combined_combo_plan, plain "NGVLA subarray curves" title)."""
     import subprocess
     import tempfile
 
@@ -815,7 +845,7 @@ def build_combined(out_path):
     with open(reg, newline="") as f:
         reg_rows = list(csv.DictReader(f))
     combos, payloads = [], {}
-    for r in reg_rows:
+    for r, entry in combined_combo_plan(reg_rows, release=release):
         rev, mode = r["rev"].strip(), r["sim_mode"].strip()
         samples_csv = os.path.join(DATA_DIR, r["samples_csv"].strip())
         if not os.path.isfile(samples_csv) or os.path.getsize(samples_csv) < 100:
@@ -834,7 +864,6 @@ def build_combined(out_path):
                 payload = json.load(f)
         finally:
             os.unlink(tmp)
-        entry = combo_entry(rev, mode)
         combos.append(entry)
         payloads[entry["key"]] = payload
         print("combined: gathered %s/%s (%d subarrays)"
@@ -853,7 +882,8 @@ def build_combined(out_path):
         html = f.read()
     html = html.replace("__DATA__", json.dumps(data))
     html = html.replace("NGVLA Rev F subarray curves",
-                        "NGVLA subarray curves — all campaigns")
+                        "NGVLA subarray curves" if release
+                        else "NGVLA subarray curves — all campaigns")
     _atomic_write(out_path, html)
     print("wrote", out_path)
 
@@ -874,10 +904,19 @@ if __name__ == "__main__":
                     help="build the all-campaigns report (one payload per "
                          "registered combo with data, campaign dropdown); "
                          "ignores --rev/--sim-mode/the environment")
+    ap.add_argument("--release", action="store_true",
+                    help="with --combined only: build the public release page "
+                         "(RELEASE_COMBOS campaigns only, point-source-only "
+                         "campaigns flagged imaging_omitted)")
     args = ap.parse_args()
 
+    if args.release and not args.combined:
+        ap.error("--release is only valid together with --combined")
+
     if args.combined:
-        build_combined(args.out_path or "reports/ngvla-curves.html")
+        default_out = ("reports/ngvla-curves-release.html" if args.release
+                       else "reports/ngvla-curves.html")
+        build_combined(args.out_path or default_out, release=args.release)
         sys.exit(0)
 
     # RESULTS_DIR (the heatmap source) is derived from the environment at

@@ -226,6 +226,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
         <option value="imaging" selected>imaging</option>
         <option value="pointsource">point source</option>
       </select>
+      <span class="note" id="calc-obs-note" style="display:none">point-source only for this campaign</span>
     </label>
     <label class="calc-field"><span>Desired sensitivity [&micro;Jy/beam]</span>
       <input id="calc-sens" name="sens" type="number" min="0" step="0.1" value="10" inputmode="decimal">
@@ -252,7 +253,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 <div class="card">
   <div class="card-head">
     <h2>Imaging curves (cheapest beam meeting &le; s<sub>0</sub>, else best achievable)</h2>
-    <label class="s0-field"><span>skirt threshold s0:</span>
+    <label class="s0-field" id="s0-field"><span>skirt threshold s0:</span>
       <select id="s0-select" aria-label="skirt threshold s0">
         <option value="0.05">5%</option>
         <option value="0.10" selected>10%</option>
@@ -261,6 +262,11 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
       </select>
     </label>
   </div>
+  <!-- shown instead of the card body when the active campaign's combo
+       metadata carries imaging_omitted (release builds only) -->
+  <p class="note" id="imaging-omitted-note" style="display:none"><strong>Omitted / intentionally
+  blank</strong> &mdash; this campaign is released point-source only.</p>
+  <div id="imaging-card-body">
   <p class="note">At each target resolution the curve shows the minimum-&eta; beam whose PSF skirt
   &le;&thinsp;s<sub>0</sub>, computed by the shared interpolation engine
   (continuous in resolution). Angular resolution is the primary requirement: where <em>no</em> beam
@@ -272,6 +278,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   (the memo&thinsp;76 figure&thinsp;1 analog).</p>
   <div class="legend" id="legend-img"></div>
   <div id="chart-imaging"></div>
+  </div>
 </div>
 
 <div class="card">
@@ -340,9 +347,6 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 <div class="card">
   <h2>Caveats &amp; status</h2>
   <ul class="caveats">
-    <li><strong>core+mid is omitted from this report</strong> &mdash; its two-component beam needs sculpt
-        targets anchored to the higher-resolution component (the v1 sweep found false minima there).
-        The color slot is reserved; curves can drop in without re-mapping the others.</li>
     <li><strong>core-inner</strong> is memo 121&rsquo;s CoreInner (57 antennas), taken here as the
         innermost 57 core antennas by radius from the core centroid &mdash; an assumed membership
         rule, to be verified against Viviana&rsquo;s list.</li>
@@ -361,9 +365,11 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 <div class="tooltip" id="tt"></div>
 
 <script>
-// __DATA__ is either one combo's payload (per-campaign report) or, for the
-// combined all-campaigns report, {payloads: {key: payload}, combos: [...],
-// default: key}; the campaign dropdown then swaps DATA and re-renders.
+// The injected data is either one combo's payload (per-campaign report) or,
+// for the combined all-campaigns report, {payloads: {key: payload},
+// combos: [...], default: key}; the campaign dropdown then swaps DATA and
+// re-renders.  (Keep the literal placeholder name out of this comment:
+// make_report replaces EVERY occurrence, which once doubled the file size.)
 const INJECTED = __DATA__;
 const COMBINED = Boolean(INJECTED && INJECTED.payloads);
 let DATA = COMBINED ? INJECTED.payloads[INJECTED.default] : INJECTED;
@@ -593,6 +599,15 @@ function currentImagingCurves() {
 function currentImagingSmooth() {
   const sm = DATA.imaging_smooth || {};
   return sm[currentS0] || null;
+}
+
+// release builds stamp imaging_omitted on point-source-only campaigns' combo
+// metadata (make_report.combined_combo_plan); the imaging-curves card and the
+// calculator's imaging mode follow the ACTIVE campaign's flag.  Absent flag
+// (internal builds, standalone reports) => everything renders as before.
+function imagingOmitted() {
+  const combo = currentCombo();
+  return Boolean(combo && combo.imaging_omitted);
 }
 
 function inReceiverBand(freq) {
@@ -885,6 +900,20 @@ function calcHasResults() {
     || (summary && summary.textContent.trim()));
 }
 
+function syncCalcObs() {
+  // point-source-only release campaigns: the imaging project type is not on
+  // offer -- disable the option, pin the value, and show the small note.
+  // Campaigns without the flag get the option back untouched.
+  const sel = document.getElementById('calc-obs');
+  if (!sel) return;
+  const omitted = imagingOmitted();
+  const opt = sel.querySelector('option[value="imaging"]');
+  if (opt) opt.disabled = omitted;
+  if (omitted && sel.value === 'imaging') sel.value = 'pointsource';
+  const note = document.getElementById('calc-obs-note');
+  if (note) note.style.display = omitted ? '' : 'none';
+}
+
 (function wireSubarrayCalculator() {   // listeners once; renderAll re-runs it
   const form = document.getElementById('calc-form');
   if (!form) return;
@@ -1084,6 +1113,12 @@ function renderImagingChart() {
   clearNode(chart);
   clearNode(leg);
   hideTT();
+  // point-source-only release campaigns keep the heading but blank the card
+  const omitted = imagingOmitted();
+  document.getElementById('imaging-card-body').style.display = omitted ? 'none' : '';
+  document.getElementById('s0-field').style.display = omitted ? 'none' : '';
+  document.getElementById('imaging-omitted-note').style.display = omitted ? '' : 'none';
+  if (omitted) return;
   legend(leg, curveChart(chart, currentImagingCurves(),
     {...optsCommon, marker: 'triangle', smooth: currentImagingSmooth(),
      label: 'Imaging curves: eta vs resolution, PSF skirt <= ' + fmtS0(currentS0)}));
@@ -1505,7 +1540,9 @@ function renderPsfChart(chart, saName, entry, sample) {
   const fwhmLabel = svgEl('text', {x: fwhmX + 4, y: M.t + 12});
   fwhmLabel.textContent = '1 FWHM';
   svg.append(fwhmLabel);
-  const s0 = Number(currentS0);
+  // the s0 reference line is an imaging setpoint; skip it on campaigns whose
+  // imaging curves are omitted (the measured-skirt dot below stays: it's data)
+  const s0 = imagingOmitted() ? NaN : Number(currentS0);
   if (Number.isFinite(s0)) {
     svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: Y(s0), y2: Y(s0),
       stroke: 'var(--muted)', 'stroke-width': 1.2, 'stroke-dasharray': '3 3'}));
@@ -1776,6 +1813,7 @@ function renderAll() {
   hideTT();
   updateComboHeader();
   syncS0Selector();
+  syncCalcObs();
   renderTiles();
   renderImagingChart();
   renderPsChart();
