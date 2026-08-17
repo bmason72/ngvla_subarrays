@@ -1,5 +1,12 @@
 # RELEASE_PLAN — MVP release per WRAPUP.md (drafted 17 Aug 2026)
 
+> **Progress (17 Aug 2026, same day):** T0 DONE (commit 6332362).  T2 code
+> DONE (66a5e7c; campaign awaits bmason's launch).  T3 DONE (437d083;
+> release page builds, revC joins when its data lands).  T4 DONE (35ddd23).
+> T5 DONE (6a97b95).  T6 in progress (memo content updated; codex editorial
+> pass + final docs).  T1 + T2-compute: launch commands ready in
+> RUN_CAMPAIGNS.md "17 Aug release wave" — **bmason launches**.
+
 Scope authority: `WRAPUP.md` (17 Aug) supersedes PLAN.md / NEXT_AGENT.md where
 they conflict.  Release = calculator **web page** (the in-report client-side
 calculator + curves) and **python prototype** (`sa_select/`) for:

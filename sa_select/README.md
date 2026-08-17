@@ -1,11 +1,18 @@
 # `sa_select` — standalone NGVLA subarray selector
 
 Given an observing request (resolution, frequency, sensitivity, LAS, …) this
-returns a **ranked list of Rev F subarrays** with the `tclean` parameters
+returns a **ranked list of NGVLA subarrays** with the `tclean` parameters
 (Briggs `robust` + UV `taper`) to reach the beam, the sensitivity-loss factor
 `eta`, the PSF skirt, the LAS, and — when a sensitivity goal is given — the
 **integration time** and **antenna-hours**. It reads pre-tabulated curve data;
 **it does not need CASA** and runs anywhere with Python + numpy + scipy.
+
+**Campaigns** (routed via `data/config_registry.csv`; select with
+`--rev/--sim-mode` or `CurveLibrary.for_config`): Rev F track is the default;
+Rev D track and the snapshot tables exist; Rev C.01 track is registered and
+fills in when its campaign runs. Release scope (Aug 2026): Rev F track
+point-source+imaging; Rev D and Rev C.01 track point-source only — an
+imaging query against those prints a warning.
 
 ## Minimal checkout (run it on any machine)
 
@@ -35,7 +42,18 @@ python3 -m pip install numpy scipy        # the only dependencies; no CASA
 python3 -m sa_select --resolution 0.01 --frequency 30 --sensitivity 1e-5 \
                      --las 0.5 --imaging --optimize antenna_hours
 # --point-source for detection projects; --unit K for a brightness-temp goal;
-# --delta-v <m/s> for a spectral-line rms; --rows for CSV output; --help for all.
+# --delta-v <m/s> for a spectral-line rms; --rows for CSV output;
+# --rev/--sim-mode for another campaign's curves; --help for all.
+
+python3 -m sa_select --batch cases.csv --top 3   # EOP-style case list -> CSV
+# columns: case,resolution,frequency,sensitivity,sensitivity_unit,las,
+#          imaging,beam_margin,skirt_threshold,optimize,delta_v
+# (empty cells fall back to the command-line flags)
+
+python3 -m sa_select --stroh subarray_data.json --resolution 0.1 \
+                     --frequency 30 --point-source
+# query M. Stroh's curve delivery directly (sa_select/stroh.py: converts his
+# sqrt(2) beam convention; point-source only; taper values are placeholders)
 ```
 
 **Python:**

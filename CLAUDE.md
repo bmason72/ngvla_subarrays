@@ -2,12 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Freshness (15 Jul 2026):** the task statement, domain concepts, and raw-materials map
+> **Freshness (17 Aug 2026):** the task statement, domain concepts, and raw-materials map
 > below remain authoritative.  The *built* system now lives in `sa_select/` (selection
 > engine) + `curvegen/` (CASA curve generation + campaigns + HTML reports) — see
-> `README.md` for the current layout/commands, `PLAN.md` for status/decisions/gotchas,
+> `WRAPUP.md` for bmason's current release scope, `RELEASE_PLAN.md` for the live plan,
+> `README.md` for layout/commands, `PLAN.md` for status/decisions/gotchas,
 > `NEXT_AGENT.md` for the hand-off, and `RUN_CAMPAIGNS.md` for the Slurm run sheet.
 > Where this file and those disagree (environment especially), trust them.
+> bmason launches all Slurm jobs himself — agents prepare command lines only.
 
 ## Project goal (the task)
 
