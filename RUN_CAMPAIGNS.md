@@ -1,5 +1,36 @@
 # Campaign run sheet (copy-paste, one command per step)
 
+## 17 Aug release wave (CURRENT — bmason launches all jobs himself)
+
+State: the 21-24 Jul retrofit chain COMPLETED and was harvested (PLAN.md
+17-Aug delta).  Snapshot maps converged; revF/track + revD/track stopped at
+the 80-eval audit cap = wave 1 of ~2-3.  Release scope = WRAPUP.md;
+plan = RELEASE_PLAN.md.
+
+```
+# 1. Retrofit wave 2, TRACKS ONLY (combos 0=revF/track, 2=revD/track);
+#    resumable, each task ends with its own collect+report+PSF export:
+RID=$(sbatch --parsable --array=0,2 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/adaptive_retrofit.sbatch | tail -1)
+for K in 0 2; do sbatch --array=$K --dependency=afterok:${RID}_$K /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch; done
+
+# 2. NEW revC/track campaign (registered as combo index 4; ptsrc release
+#    scope — the standard chain measures both curves, only ptsrc is released):
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh revC track --time 47:00:00
+#    ... then its PSF anchor backfill after the collect id it prints:
+sbatch --array=4 --dependency=afterok:<revC_COLLECT_id> /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch
+
+# 3. After everything drains: rebuild the combined (internal) report
+cd /home1/10240/bmason72/Code/ngvla_subarrays/curvegen && \
+/work2/10240/bmason72/stampede3/casaenv/bin/casapy make_report.py --combined reports/ngvla-curves.html
+```
+
+QA: retrofit logs per RUN sheet below ("Adaptive retrofit wave"); revC sweep
+logs per "Watch / QA-gate".  Job logs now land in
+/work2/10240/bmason72/stampede3/ (the July wave's were archived to
+oldNgvlaLogs/).  Combo indices: 0=revF/track, 1=revF/snapshot, 2=revD/track,
+3=revD/snapshot, 4=revC/track (the sbatch COMBOS arrays; appended, never
+reordered).
+
 Run everything below **from a login node** (compute nodes cannot `sbatch`).
 All commands use absolute paths, so your current directory does not matter.
 `$USER` = bmason72; job logs land in `/work2/10240/bmason72/stampede3/`

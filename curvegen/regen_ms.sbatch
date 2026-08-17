@@ -23,7 +23,7 @@ set -u
 CG=$HOME/Code/ngvla_subarrays/curvegen
 PY=/work2/10240/bmason72/stampede3/casaenv/bin/casapy
 
-COMBOS=("revF track" "revF snapshot" "revD track" "revD snapshot")
+COMBOS=("revF track" "revF snapshot" "revD track" "revD snapshot" "revC track")
 read -r REV MODE <<< "${COMBOS[$SLURM_ARRAY_TASK_ID]}"
 export NGVLA_REV=$REV NGVLA_SIM_MODE=$MODE
 export NGVLA_SCRATCH="${NGVLA_SCRATCH:-$SCRATCH/ngvla_curvegen}"

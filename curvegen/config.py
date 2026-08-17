@@ -45,6 +45,7 @@ SIM_MODE = os.environ.get("NGVLA_SIM_MODE", "track")
 _COMPONENT_DIRS = {
     "revF": os.path.join(REPO, "ngvla-configurations", "Rev F", "CASA Files"),
     "revD": os.path.join(REPO, "ngvla-configurations", "Rev D", "CASA Files"),
+    "revC": os.path.join(REPO, "ngvla-configurations", "Rev C.01", "CASA Files"),
 }
 _COMPONENT_CFGS = {
     "revF": {
@@ -58,6 +59,18 @@ _COMPONENT_CFGS = {
         "spiral": "ngvla-revD.spiral.cfg",
         "mid": "ngvla-revD.mid.cfg",
         "long": "ngvla-revD.lba.cfg",
+    },
+    # Rev C.01 (WRAPUP.md release scope, 17 Aug 2026): components mirror Rev D
+    # (core 94 / spiral 74 / mid 46 / lba 30 antennas; the provided monolithic
+    # main.cfg equals core+spiral+mid antenna-for-antenna, 214).  Its lba
+    # short-baseline pathology DIFFERS from D/F: ~10 VLBA-style sites of 2-4
+    # antennas whose internal baselines run 47-1115 m, then a gap to the first
+    # inter-site baseline at 53.4 km -- see _MIN_UVRANGE below.
+    "revC": {
+        "core": "ngvla-revC.01.core.cfg",
+        "spiral": "ngvla-revC.01.spiral.cfg",
+        "mid": "ngvla-revC.01.mid.cfg",
+        "long": "ngvla-revC.01.lba.cfg",
     },
 }
 if REV not in _COMPONENT_CFGS:
@@ -111,6 +124,19 @@ _SUBARRAYS = {
         "mid+long": ["mid", "long"],
         "main+long": ["core", "spiral", "mid", "long"],
     },
+    # Rev C offered set mirrors Rev D (bmason, WRAPUP.md release scope): same
+    # component structure, no core-inner/core-outer split.
+    "revC": {
+        "core": ["core"],
+        "spiral": ["spiral"],
+        "mid": ["mid"],
+        "core+spiral": ["core", "spiral"],
+        "spiral+mid": ["spiral", "mid"],
+        "main": ["core", "spiral", "mid"],
+        "long": ["long"],
+        "mid+long": ["mid", "long"],
+        "main+long": ["core", "spiral", "mid", "long"],
+    },
 }
 SUBARRAYS = _SUBARRAYS[REV]
 
@@ -141,6 +167,18 @@ _IMSIZE = {
     },
     # Rev D mirrors the Rev F imsize choices for the shared subarray shapes.
     "revD": {
+        "core": 4096,
+        "spiral": 4096,
+        "mid": 4096,
+        "core+spiral": 8192,
+        "spiral+mid": 8192,
+        "main": 15000,
+        "long": 8192,
+        "mid+long": 15000,
+        "main+long": 15000,
+    },
+    # Rev C mirrors Rev D (same subarray shapes).
+    "revC": {
         "core": 4096,
         "spiral": 4096,
         "mid": 4096,
@@ -208,6 +246,12 @@ CAP_REFERENCE = {
         "long+mid+spiral+core-outer": "core-outer",
     },
     "revD": {
+        "main": "core",
+        "mid+long": "mid",
+        "main+long": "main",
+    },
+    # Rev C: same heterogeneous shapes as Rev D, same references.
+    "revC": {
         "main": "core",
         "mid+long": "mid",
         "main+long": "main",
@@ -282,6 +326,16 @@ _MIN_UVRANGE = {
     "revD": {
         "long": 178.0,
         "mid+long": 178.0,
+    },
+    # Rev C lba's spurious shorts are its VLBA-style SITE-INTERNAL baselines:
+    # ~10 sites of 2-4 antennas, internal baselines 47.4-1115.0 m, then a gap
+    # to the first inter-site baseline at 53354 m.  A 2000 m cut removes all
+    # 32 site-internal baselines with huge margin on both sides.  mid is safe
+    # under the same cut (its b_min is 7858 m); main+long is NOT filtered
+    # (core's legitimate 38 m baselines live below any cut), as in D and F.
+    "revC": {
+        "long": 2000.0,
+        "mid+long": 2000.0,
     },
 }
 MIN_UVRANGE_M = _MIN_UVRANGE.get(REV, {})

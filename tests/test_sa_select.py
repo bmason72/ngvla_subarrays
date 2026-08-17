@@ -614,20 +614,51 @@ class TestConfigRegistry(unittest.TestCase):
     def test_campaign_combos_registered(self):
         from sa_select.curves import load_registry
         reg = load_registry()
-        for combo in [("revD", "track"), ("revF", "snapshot")]:
+        for combo in [("revD", "track"), ("revF", "snapshot"),
+                      ("revC", "track")]:
             self.assertIn(combo, reg, "campaign combo %s must be registered "
                           "so collect/make_report can route it" % (combo,))
 
     def test_campaign_metadata_csvs_load(self):
-        # the committed Rev D / snapshot metadata CSVs must stay schema-valid
+        # the committed campaign metadata CSVs must stay schema-valid
         # (their curve CSVs are produced later by the sweeps)
         from sa_select.curves import load_subarrays, load_registry, DATA_DIR
         reg = load_registry()
-        counts = {("revD", "track"): 9, ("revF", "snapshot"): 14}
+        counts = {("revD", "track"): 9, ("revF", "snapshot"): 14,
+                  ("revC", "track"): 9}
         for combo, n in counts.items():
             subs_csv, _ = reg[combo]
             info = load_subarrays(os.path.join(DATA_DIR, subs_csv))
             self.assertEqual(len(info), n, "%s subarray count" % (combo,))
+
+    def test_revc_campaign_config(self):
+        # Rev C (WRAPUP.md release scope): the curvegen config must resolve
+        # the Rev C.01 component cfgs, offer the Rev-D-shaped subarray set,
+        # and carry the site-internal spurious-shorts cut.  config freezes
+        # (rev, sim_mode) at import, so validate in a subprocess.
+        import subprocess
+        import sys
+        repo = REPO_ROOT
+        code = (
+            "import os, sys\n"
+            "sys.path.insert(0, os.path.join(%r, 'curvegen'))\n"
+            "import config\n"
+            "assert config.REV == 'revC' and config.SIM_MODE == 'track'\n"
+            "assert sorted(config.SUBARRAYS) == sorted(['core', 'spiral',"
+            " 'mid', 'core+spiral', 'spiral+mid', 'main', 'long',"
+            " 'mid+long', 'main+long'])\n"
+            "assert config.MIN_UVRANGE_M == {'long': 2000.0,"
+            " 'mid+long': 2000.0}\n"
+            "assert config.CAP_REFERENCE == {'main': 'core',"
+            " 'mid+long': 'mid', 'main+long': 'main'}\n"
+            "assert set(config.IMSIZE) == set(config.SUBARRAYS)\n"
+            "for comp in ['core', 'spiral', 'mid', 'long']:\n"
+            "    p = os.path.join(config.COMPONENT_DIR,"
+            " config.COMPONENT_CFGS[comp])\n"
+            "    assert os.path.isfile(p), p\n"
+        ) % repo
+        env = dict(os.environ, NGVLA_REV="revC", NGVLA_SIM_MODE="track")
+        subprocess.run([sys.executable, "-c", code], env=env, check=True)
 
 
 if __name__ == "__main__":

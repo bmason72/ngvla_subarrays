@@ -69,7 +69,7 @@ PY=/work2/10240/bmason72/stampede3/casaenv/bin/casapy
 # array index -> combo.  MUST stay in step with sa_select/data/config_registry.csv
 # (same COMBOS mapping as backfill_psf.sbatch; kept explicit here rather than
 # derived, for the same reason -- one array covers all four).
-COMBOS=("revF track" "revF snapshot" "revD track" "revD snapshot")
+COMBOS=("revF track" "revF snapshot" "revD track" "revD snapshot" "revC track")
 SEL="${COMBOS[${SLURM_ARRAY_TASK_ID:-0}]:-}"
 if [ -z "$SEL" ]; then
     echo "no combo for array index ${SLURM_ARRAY_TASK_ID:-0} -- nothing to do"

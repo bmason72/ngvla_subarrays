@@ -740,8 +740,9 @@ def _atomic_write(out_path, html):
     os.replace(tmp, out_path)
 
 
-_REV_DISPLAY = {"revF": "Rev F", "revD": "Rev D"}
-_REV_HTML = {"revF": "Rev&thinsp;F", "revD": "Rev&thinsp;D"}
+_REV_DISPLAY = {"revF": "Rev F", "revD": "Rev D", "revC": "Rev C.01"}
+_REV_HTML = {"revF": "Rev&thinsp;F", "revD": "Rev&thinsp;D",
+             "revC": "Rev&thinsp;C.01"}
 _SIM_LABEL = {"track": "4 h track", "snapshot": "snapshot"}
 _SIM_DESC_HTML = {"track": "4&thinsp;h track",
                   "snapshot": "single 60&thinsp;s snapshot at transit"}
@@ -840,9 +841,10 @@ def build_combined(out_path):
               % (rev, mode, len(payload.get("order", []))))
     if not combos:
         raise SystemExit("combined: no combo has curve data")
-    # dropdown order per bmason: Rev F track, Rev F snapshot, Rev D track,
-    # Rev D snapshot (rev first, track before snapshot; unknowns last)
-    pref = ["revF_track", "revF_snapshot", "revD_track", "revD_snapshot"]
+    # dropdown order per bmason: rev first (F, D, C), track before snapshot;
+    # unknowns last
+    pref = ["revF_track", "revF_snapshot", "revD_track", "revD_snapshot",
+            "revC_track"]
     combos.sort(key=lambda c: (pref.index(c["key"]) if c["key"] in pref
                                else len(pref), c["key"]))
     default = "revF_track" if "revF_track" in payloads else combos[0]["key"]

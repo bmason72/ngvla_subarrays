@@ -3,3 +3,4 @@ revF,track,subarrays.csv,revf_curves.csv
 revD,track,subarrays_revd.csv,revd_track_curves.csv
 revF,snapshot,subarrays_revf_snapshot.csv,revf_snapshot_curves.csv
 revD,snapshot,subarrays_revd_snapshot.csv,revd_snapshot_curves.csv
+revC,track,subarrays_revc.csv,revc_track_curves.csv

@@ -48,6 +48,15 @@ CALC_NAME = {
         "main": "main", "long": "long", "mid+long": "mid+long",
         "main+long": "main+long",
     },
+    # Rev C offers the same subarray shapes; the memo-96 pkl keys are shape
+    # names and the sensitivity anchor is N_ant-based (from OUR csv), so the
+    # same mapping applies.
+    "revC": {
+        "core": "core", "spiral": "spiral", "mid": "mid",
+        "core+spiral": "spiral+core", "spiral+mid": "spiral+mid",
+        "main": "main", "long": "long", "mid+long": "mid+long",
+        "main+long": "main+long",
+    },
 }
 
 _NOTE_STD = ("0.80*lambda/b_min for all 18-m subarrays (memo 67 core "
@@ -55,7 +64,7 @@ _NOTE_STD = ("0.80*lambda/b_min for all 18-m subarrays (memo 67 core "
              "with per-subarray disk-simulation measurements (memo 67 Sec. 2 "
              "method) eventually.")
 _NOTE_FILTERED = ("b_min/LAS reflect the uvrange>%gm spurious-shorts filter "
-                  "(the lba's small ~3-antenna clusters, baselines 36-174 m, "
+                  "(the lba's few-antenna cluster/site-internal baselines "
                   "removed; see config.MIN_UVRANGE_M). 0.80*lambda/b_min "
                   "(memo 67, applied uniformly per bmason). NB: the ngECT "
                   "sensitivity anchor is N_ant-based and does not model the "
