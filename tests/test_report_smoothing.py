@@ -213,7 +213,8 @@ class TestPayloadWiring(unittest.TestCase):
                   "heatmaps", "profile", "sens", "qa", "combo"}
         self.assertTrue(before <= set(self.data.keys()))
         self.assertEqual(set(self.data.keys()) - before,
-                         {"imaging_smooth", "pointsource_smooth"})
+                         {"imaging_smooth", "pointsource_smooth",
+                          "psf_exported"})
 
     def test_smooth_arrays_aligned_for_every_curve(self):
         imaging, imaging_smooth = self.data["imaging"], self.data["imaging_smooth"]

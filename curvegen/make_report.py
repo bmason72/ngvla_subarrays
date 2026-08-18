@@ -713,6 +713,16 @@ def build_payload():
     # combined report and standalone per-combo reports (so e.g. the snapshot
     # physics note and the Rev-F-reference card gating work everywhere)
     data["combo"] = combo_entry(REV, SIM_MODE)
+
+    # Subarrays with a lazy-load PSF payload on disk at build time.  The page
+    # uses this to tell "never exported" apart from "the psf/ folder is not
+    # next to this HTML file" when a payload script fails to load.
+    psf_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "reports", "psf", data["combo"]["key"])
+    data["psf_exported"] = sorted(
+        n for n in ACTIVE_ORDER
+        if os.path.isfile(os.path.join(
+            psf_dir, n.replace("+", "_").replace("-", "_") + ".js")))
     return data
 
 

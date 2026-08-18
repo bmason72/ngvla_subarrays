@@ -126,6 +126,7 @@ header .sub { color: var(--ink-2); max-width: 72ch; margin: 0; }
 .calc-caveat { margin-top: 10px !important; }
 #calc-table th:first-child, #calc-table td:first-child { text-align: right; }
 #calc-table th:nth-child(2), #calc-table td:nth-child(2) { text-align: left; }
+#calc-table tr.psf-inline td { text-align: left; padding: 10px 14px 14px; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0 4px; }
 .legend .chip {
   display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
@@ -154,8 +155,6 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; letter-spacing: 0.0
 details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 .flag { color: var(--warning); }
 .ok { color: var(--good); }
-.caveats { color: var(--ink-2); font-size: 14px; max-width: 82ch; }
-.caveats li { margin-bottom: 6px; }
 .hm-footnote {
   color: var(--muted); font-size: 12px; margin: 4px 0 0;
   font-variant-numeric: tabular-nums;
@@ -315,8 +314,9 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 <div class="card" id="psf-inspector">
   <h2>PSF inspector</h2>
   <p class="note">Inspect the captured PSF at any measured lattice point. Choose a subarray here,
-  click a raw-sample mark or heatmap cell, or use a calculator result&rsquo;s PSF button. Profile files
-  load only when requested and must travel with this HTML report in the <code>psf/</code> directory.</p>
+  or click a raw-sample mark or heatmap cell. (A calculator result&rsquo;s PSF button opens its PSF
+  in place, under the clicked row.) Profile files load only when requested and must travel with
+  this HTML report in the <code>psf/</code> directory.</p>
   <div class="psf-controls">
     <label class="s0-field"><span>subarray:</span><select id="psf-sa"></select></label>
     <span id="psf-status" role="status" aria-live="polite"></span>
@@ -326,37 +326,15 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 </div>
 
 <div class="card">
-  <h2>Why composite subarrays disagree with the calculator&rsquo;s native beams</h2>
-  <p class="note">The natural-weight PSF of core+spiral is a two-component composite: a narrow
-  spiral-scale spike on a broad core-scale plateau. A single-Gaussian fit is ill-defined on such a
-  beam &mdash; CASA&rsquo;s fit lands at 286&thinsp;mas here, while the memo-121-era value (147.7&thinsp;mas)
-  tracks the narrow spike. Neither is wrong; the &ldquo;resolution&rdquo; of an unsculpted composite beam is
-  simply not a single number. The sculpted (imaging-curve) beams are quasi-Gaussian and do not suffer
-  this ambiguity &mdash; one more reason the imaging curves are the operational reference.</p>
-  <div id="chart-profile"></div>
-</div>
-
-<div class="card">
   <h2>QA cross-checks</h2>
   <p class="note">Native (natural-weight, untapered) beam vs the sensitivity calculator&rsquo;s
   <code>subarray_data.pkl</code>. Component subarrays agree to &le;&thinsp;2%; composite-subarray
-  differences reflect the fit ambiguity above (and the pkl&rsquo;s pre-Rev-F Mid sites for mid-bearing rows).</p>
+  differences reflect single-Gaussian fit ambiguity on composite two-component beams (and the
+  pkl&rsquo;s pre-Rev-F Mid sites for mid-bearing rows).</p>
   <div class="tablewrap"><table id="qa-table"></table></div>
 </div>
 
 <div class="card">
-  <h2>Caveats &amp; status</h2>
-  <ul class="caveats">
-    <li><strong>core-inner</strong> is memo 121&rsquo;s CoreInner (57 antennas), taken here as the
-        innermost 57 core antennas by radius from the core centroid &mdash; an assumed membership
-        rule, to be verified against Viviana&rsquo;s list.</li>
-    <li>LAS = <strong>0.80&thinsp;&lambda;/b<sub>min</sub> uniformly</strong> for the 18-m subarrays
-        (memo-67 core value applied across the set); per-subarray disk-simulation measurements
-        eventually.</li>
-    <li>&eta; is assumed frequency-invariant when the curves are scaled from 30&thinsp;GHz
-        (PLAN.md open question 2); continuum fractional-bandwidth effects are not yet modeled.</li>
-    <li>Curves assume the memo-121 fixed-FOV single-pointing convention.</li>
-  </ul>
   <details><summary>Full displayed sample table (offerable points)</summary>
     <div class="tablewrap"><table id="data-table"></table></div>
   </details>
@@ -514,29 +492,61 @@ function nearestPsfKey(data, point) {
   return best ? best.key : null;
 }
 
-function openNearestPsf(saName, point) {
-  PSF_STATE.sa = saName;
-  PSF_STATE.key = null;
-  const select = document.getElementById('psf-sa');
-  if (select) select.value = saName;
-  scrollToPsf();
-  const comboKey = psfComboKey();
-  if (!comboKey) {
-    renderPsfPanel();
+function psfMissingMessage(saName) {
+  // build_payload records which subarrays had a payload file on disk when
+  // this page was built, so a failed script load can name the real problem
+  const exported = Array.isArray(DATA.psf_exported) ? DATA.psf_exported : [];
+  return exported.includes(saName)
+    ? 'PSF files exist for this campaign but did not load — the psf/ ' +
+      'directory must travel in the same directory as this HTML file'
+    : 'no PSF data exported for this campaign — run curvegen/export_psf_data.py';
+}
+
+// The calculator's per-row PSF button: expand the nearest measured PSF in an
+// extra table row directly under the clicked result (click again to close).
+function togglePsfInline(anchorTr, saName, point) {
+  const next = anchorTr.nextElementSibling;
+  if (next && next.classList.contains('psf-inline')) {
+    next.remove();
     return;
   }
-  const token = ++PSF_RENDER_TOKEN;
-  const status = document.getElementById('psf-status');
-  const params = document.getElementById('psf-params');
-  const chart = document.getElementById('psf-chart');
+  const tr = document.createElement('tr');
+  tr.className = 'psf-inline';
+  const td = document.createElement('td');
+  td.colSpan = anchorTr.children.length;
+  const status = document.createElement('p');
+  status.className = 'note';
+  const params = document.createElement('p');
+  params.className = 'note';
+  const chart = document.createElement('div');
+  td.append(status, params, chart);
+  tr.append(td);
+  anchorTr.after(tr);
+  const comboKey = psfComboKey();
+  if (!comboKey) {
+    status.textContent = 'PSF data unavailable for this report build';
+    return;
+  }
   status.textContent = 'loading PSF data ...';
-  clearNode(params);
-  clearNode(chart);
   loadPsfData(comboKey, saName, data => {
-    if (token !== PSF_RENDER_TOKEN || psfComboKey() !== comboKey ||
-        PSF_STATE.sa !== saName) return;
-    PSF_STATE.key = data ? nearestPsfKey(data, point) : null;
-    renderPsfPanel();
+    if (!tr.isConnected) return;
+    clearNode(status);
+    if (!data) {
+      status.textContent = psfMissingMessage(saName);
+      return;
+    }
+    const key = nearestPsfKey(data, point);
+    const entry = key ? data[key] : null;
+    if (!entry) {
+      status.textContent = 'no captured PSF near this lattice point';
+      return;
+    }
+    const parsed = parsePsfKey(key);
+    const sample = matchingPsfSample(saName, parsed);
+    renderPsfParams(saName, parsed, entry, sample, params);
+    if (!psfHasCuts(entry))
+      status.textContent = 'axis cuts pending backfill';
+    renderPsfChart(chart, saName, entry, sample);
   });
 }
 
@@ -839,8 +849,8 @@ function renderCalcTable(table, feasible, request) {
     button.type = 'button';
     button.className = 'psf-button';
     button.textContent = 'PSF';
-    button.title = 'Show the nearest measured PSF';
-    button.addEventListener('click', () => openNearestPsf(row.name, p));
+    button.title = 'Show or hide the nearest measured PSF under this row';
+    button.addEventListener('click', () => togglePsfInline(tr, row.name, p));
     psfCell.append(button);
     table.append(tr);
   });
@@ -1462,7 +1472,7 @@ function psfHasCuts(entry) {
          Array.isArray(entry.cut_min);
 }
 
-function renderPsfParams(saName, point, entry, sample) {
+function renderPsfParams(saName, point, entry, sample, el) {
   const parts = [saName];
   parts.push(point.weighting === 'natural'
     ? 'natural' : 'briggs robust ' + point.robust.toFixed(2));
@@ -1480,7 +1490,7 @@ function renderPsfParams(saName, point, entry, sample) {
       ? (100 * Number(sample.skirt)).toFixed(1) + '%' : '—';
     parts.push('eta ' + Number(sample.eta).toFixed(2) + ', skirt ' + skirt);
   }
-  document.getElementById('psf-params').textContent = parts.join('; ');
+  (el || document.getElementById('psf-params')).textContent = parts.join('; ');
 }
 
 function renderPsfChart(chart, saName, entry, sample) {
@@ -1648,8 +1658,7 @@ function renderPsfPanel() {
     clearNode(params);
     clearNode(chart);
     if (!data) {
-      status.textContent = 'no PSF data exported for this campaign — run ' +
-        'curvegen/export_psf_data.py (revF/track: pending the P2 anchor backfill)';
+      status.textContent = psfMissingMessage(saName);
       return;
     }
     const entry = data[key];
@@ -1662,7 +1671,7 @@ function renderPsfPanel() {
     const sample = matchingPsfSample(saName, point);
     renderPsfParams(saName, point, entry, sample);
     if (!psfHasCuts(entry))
-      status.textContent = 'axis cuts pending backfill (PLAN: PSF inspector P1/P2)';
+      status.textContent = 'axis cuts pending backfill';
     renderPsfChart(chart, saName, entry, sample);
   });
 }
@@ -1676,68 +1685,6 @@ function renderPsfPanel() {
     renderPsfPanel();
   });
 })();
-
-// PSF radial profile -----------------------------------------------------------
-function renderProfile() {
-  const P = DATA.profile, el = document.getElementById('chart-profile');
-  clearNode(el);
-  const W = 960, H = 320, M = {l: 46, r: 24, t: 16, b: 40};
-  const xmax = 1.0;
-  const X = v => M.l + v / xmax * (W - M.l - M.r);
-  const Y = v => H - M.b - v * (H - M.t - M.b);
-  const svg = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img',
-    'aria-label': 'core+spiral natural PSF radial profile'});
-  for (const t of [0, 0.25, 0.5, 0.75, 1.0]) {
-    svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: Y(t), y2: Y(t),
-      stroke: 'var(--grid)', 'stroke-width': 1}));
-    const lb = svgEl('text', {x: M.l - 7, y: Y(t) + 4, 'text-anchor': 'end',
-                              'class': 'tick-num'});
-    lb.textContent = t.toFixed(2); svg.append(lb);
-  }
-  for (const t of [0, 0.2, 0.4, 0.6, 0.8, 1.0]) {
-    const lb = svgEl('text', {x: X(t), y: H - M.b + 16, 'text-anchor': 'middle',
-                              'class': 'tick-num'});
-    lb.textContent = t.toFixed(1) + '″'; svg.append(lb);
-  }
-  svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: H - M.b, y2: H - M.b,
-    stroke: 'var(--axis)', 'stroke-width': 1}));
-  const xt = svgEl('text', {x: (M.l + W - M.r)/2, y: H - 6, 'text-anchor': 'middle'});
-  xt.textContent = 'radius from PSF peak (arcsec)'; svg.append(xt);
-  const yt = svgEl('text', {x: 12, y: (H - M.b + M.t)/2, 'text-anchor': 'middle',
-    transform: `rotate(-90 12 ${(H - M.b + M.t)/2})`});
-  yt.textContent = 'azimuthally averaged PSF'; svg.append(yt);
-
-  // reference verticals: the two "fitted FWHM" claims
-  for (const [mas, label, dash] of [[P.fitted_fwhm_mas, 'CASA fit 286 mas', '4 3'],
-                                    [P.memo121_fwhm_mas, 'memo-121-era fit 148 mas', '2 3']]) {
-    const x = X(mas / 1e3 / 2);   // half-width: profile radius of FWHM/2
-    svg.append(svgEl('line', {x1: x, x2: x, y1: Y(0.5) - 34, y2: H - M.b,
-      stroke: 'var(--muted)', 'stroke-width': 1.2, 'stroke-dasharray': dash}));
-    const lb = svgEl('text', {x: x + 4, y: Y(0.5) - 22});
-    lb.textContent = label; svg.append(lb);
-  }
-  svg.append(svgEl('line', {x1: M.l, x2: X(0.6), y1: Y(0.5), y2: Y(0.5),
-    stroke: 'var(--grid)', 'stroke-width': 1, 'stroke-dasharray': '2 3'}));
-  const hm = svgEl('text', {x: X(0.61), y: Y(0.5) + 4});
-  hm.textContent = 'half maximum'; svg.append(hm);
-
-  const g = svgEl('g', {'class': 'series-g'});
-  const inDom = P.r_arcsec.map((r, i) => [r, P.psf[i]]).filter(p => p[0] <= xmax);
-  const path = inDom.map((p, i) => (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' +
-                                   Y(p[1]).toFixed(1)).join('');
-  g.append(svgEl('path', {d: path, fill: 'none', stroke: css('core+spiral'),
-                          'stroke-width': 2, 'stroke-linejoin': 'round'}));
-  P.r_arcsec.forEach((r, i) => {
-    if (r > xmax) return;
-    const hit = svgEl('circle', {cx: X(r), cy: Y(P.psf[i]), r: 8, fill: 'transparent'});
-    hit.addEventListener('mousemove', ev => showTT(ev,
-      `<b>core+spiral natural PSF</b><br>r = ${(r*1000).toFixed(0)} mas<br>PSF = ${P.psf[i].toFixed(3)}`));
-    hit.addEventListener('mouseleave', hideTT);
-    g.append(hit);
-  });
-  svg.append(g);
-  el.append(svg);
-}
 
 // QA table ---------------------------------------------------------------------
 function renderQaTable() {
@@ -1799,13 +1746,10 @@ function updateComboHeader() {
     note.innerHTML = '';
     noteCard.style.display = 'none';
   }
-  // the PSF-profile and QA cards are Rev F / 4 h track reference diagnostics
-  // (hardcoded values) -- only show them on that campaign
-  const isRef = combo.key === 'revF_track';
-  for (const id of ['chart-profile', 'qa-table']) {
-    const card = document.getElementById(id).closest('.card');
-    if (card) card.style.display = isRef ? '' : 'none';
-  }
+  // the QA card is a Rev F / 4 h track reference diagnostic (hardcoded
+  // values) -- only show it on that campaign
+  const qaCard = document.getElementById('qa-table').closest('.card');
+  if (qaCard) qaCard.style.display = combo.key === 'revF_track' ? '' : 'none';
 }
 
 function renderAll() {
@@ -1820,7 +1764,6 @@ function renderAll() {
   renderMultiples();
   renderHeatmaps();
   renderPsfPanel();
-  renderProfile();
   renderQaTable();
   renderDataTable();
   runSubarrayCalculator();

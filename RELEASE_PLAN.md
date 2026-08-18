@@ -14,6 +14,12 @@
 > subsections, Development-history appendix, core+mid row dropped,
 > overlap factors & cap semantics corrected from code); comments beyond
 > the stop marker still pending bmason.  253 tests green (1 skipped).
+> **Page fixes (18 Aug pm, bmason review):** calculator PSF button now
+> renders the PSF inline under the clicked row; missing-payload message
+> now says when the psf/ dir is not next to the HTML (psf_exported
+> manifest); composite-beam explainer + Caveats&status cards removed
+> (sample table kept).  gpt-5.6-sol guard review: one finding, verified
+> false positive (manifest is per-payload), waived.
 
 Scope authority: `WRAPUP.md` (17 Aug) supersedes PLAN.md / NEXT_AGENT.md where
 they conflict.  Release = calculator **web page** (the in-report client-side
