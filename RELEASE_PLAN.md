@@ -1,11 +1,19 @@
 # RELEASE_PLAN — MVP release per WRAPUP.md (drafted 17 Aug 2026)
 
-> **Progress (17 Aug 2026, same day):** T0 DONE (commit 6332362).  T2 code
-> DONE (66a5e7c; campaign awaits bmason's launch).  T3 DONE (437d083;
-> release page builds, revC joins when its data lands).  T4 DONE (35ddd23).
-> T5 DONE (6a97b95).  T6 in progress (memo content updated; codex editorial
-> pass + final docs).  T1 + T2-compute: launch commands ready in
-> RUN_CAMPAIGNS.md "17 Aug release wave" — **bmason launches**.
+> **Progress (18 Aug 2026):** T0 DONE (6332362).  **T1 DONE** — retrofit
+> wave 2 (tracks) + backfills completed 18 Aug, exit 0; revF/track 6/14
+> maps converged, revD/track 2/9, the rest still at the audit cap; all
+> step features again classified genuine.  **Wave 3 = bmason decision**
+> (launch lines in RUN_CAMPAIGNS.md).  **T2 DONE** (code 66a5e7c; the
+> campaign ran 17-18 Aug, 9 subarrays, all curves + PSF payloads in; NO
+> combo-4 backfill needed — dry-run audit shows every anchor cut-bearing).
+> T3 DONE (437d083; release page rebuilt 18 Aug WITH revC).  T4 DONE
+> (35ddd23).  T5 DONE (6a97b95).  T6 in progress: bmason's review comments
+> (memo/myComments.tex, through §4 ¶1) applied 18 Aug with gpt-5.6-sol
+> consult+review — restructured §§1–3 (beam-cap/uv-filter/lattice
+> subsections, Development-history appendix, core+mid row dropped,
+> overlap factors & cap semantics corrected from code); comments beyond
+> the stop marker still pending bmason.  253 tests green (1 skipped).
 
 Scope authority: `WRAPUP.md` (17 Aug) supersedes PLAN.md / NEXT_AGENT.md where
 they conflict.  Release = calculator **web page** (the in-report client-side

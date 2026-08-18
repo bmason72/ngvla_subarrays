@@ -881,6 +881,35 @@ WRAPUP.md; live plan = RELEASE_PLAN.md).**
    T6 docs+memo).  bmason launches all Slurm jobs himself now — agents
    prepare command lines only.
 
+**SESSION DELTA (18 Aug 2026, Fable — 17-Aug release wave harvested).**
+1. *All 11 jobs of the 17-Aug wave COMPLETED, exit 0* (bmason launched
+   17 Aug pm): retrofit wave 2 tracks 3415615_{0,2} + backfills
+   3415617_0/3415618_2, and the FIRST revC/track campaign chain — prep
+   3415634 → sweep 3415635_0-3 → collect 3415636.
+2. *Retrofit wave-2 QA (from logs):* zero failed evals.  Convergence:
+   revF/track 6 of 14 maps "no proposals", 8 still at the 80-eval audit
+   cap; revD/track 2 of 9 converged, 7 at the cap.  Every wave-2 step
+   feature again classified "sampled resolution discontinuity"; ridges
+   "locally supported high-penalty interval" — consistent with wave 1
+   (physics, not under-sampling).  Both backfills exit 0 = all envelope
+   anchors cut-bearing.  Wave 3 is bmason's call (RELEASE_PLAN decision 1
+   said reassess after wave 2).
+3. *revC/track campaign DONE end-to-end:* 9 subarrays, 2091 result rows
+   (results-revC_track/), routed curves (sa_select/data/
+   revc_track_curves.csv, 1935 rows) + 3 beam caps filled into
+   subarrays_revc.csv by prep.  Residual worst in-band steps: long
+   0.74/0.75 both curves and main+long imaging 0.78 / ptsrc 0.30 — all
+   refine-budget hits (+60 pts each); every other subarray ≤ 0.22.
+4. *revC PSF backfill NOT needed:* `backfill_psf.py --dry-run` audit =
+   586/586 anchors already cut-bearing (fresh campaigns capture axis
+   cuts natively, feature P1).  The run-sheet `--array=4` line is
+   superseded; reports/psf/revC_track/ payloads (9 files) exported by
+   collect.
+5. *Reports + tests:* combined internal report rebuilt (5 campaigns) and
+   release page rebuilt (3 tracks; revC curves now live; revD+revC
+   imaging "Omitted" markers present).  253 tests green (1 skipped;
+   count grew from 225 with the T2-T5 test additions).
+
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)
 
 **Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage

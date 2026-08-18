@@ -1,42 +1,47 @@
-# NEXT_AGENT — start here (updated 17 Aug 2026)
+# NEXT_AGENT — start here (updated 18 Aug 2026)
 
 Hand-off sheet for whoever (human or agent) picks this up.  Read order:
 `WRAPUP.md` (bmason's 17 Aug scope — the authority) → `RELEASE_PLAN.md`
-(the live plan) → `CLAUDE.md` → `README.md` → `PLAN.md` (17-Aug delta
+(the live plan) → `CLAUDE.md` → `README.md` → `PLAN.md` (18-Aug delta
 first) → `RUN_CAMPAIGNS.md` → `casaLocation.md`.
 
-## Where things stand (17 Aug 2026)
+## Where things stand (18 Aug 2026)
 
-- **The 21-24 Jul wave COMPLETED unattended and was harvested 17 Aug:**
-  canary + adaptive retrofit (array 0-3) + all four PSF backfills, every
-  job exit 0.  6590 result rows committed; combined report rebuilt; 225
-  tests green.  PSF axis-cut payloads exist for all four campaigns.
-- **Retrofit is wave 1 of ~2-3:** snapshot maps mostly converged; nearly
-  every revF/track and revD/track map hit the 80-eval audit cap.  All
-  step features everywhere came back classified as genuine ("sampled
-  resolution discontinuity") — including the once-flagged revD/snapshot
-  long ~2.6 mas step.
-- **NEW SCOPE (WRAPUP.md):** release = web page + python calculator for
-  revF/track (ptsrc+imaging), revD/track (ptsrc only), revC/track (ptsrc
-  only — a NEW campaign to build and run).  Snapshots are not released.
-  Tasks T0-T6 in RELEASE_PLAN.md; T0 (harvest) is DONE.
+- **All compute for the release is DONE.**  The 17-Aug wave (retrofit
+  wave 2 tracks + backfills; the first revC/track campaign, prep → sweep
+  → collect) completed 18 Aug, every job exit 0, and was harvested the
+  same day: results committed, combined + release reports rebuilt, 253
+  tests green (1 skipped).
+- **revC/track is in the release page and calculator.**  9 subarrays,
+  PSF payloads included; NO combo-4 PSF backfill is needed (dry-run
+  audit: every anchor already cut-bearing).  Residual budget-limited
+  steps: long 0.74 (both curves), main+long imaging 0.78 / ptsrc 0.30;
+  all else ≤ 0.22.
+- **Retrofit wave 3 is an OPEN bmason decision:** wave 2 converged
+  revF/track 6/14 maps and revD/track 2/9; the rest hit the 80-eval
+  audit cap.  All step features again classified genuine ("sampled
+  resolution discontinuity").  Options: another wave (lines below), or
+  accept + document.
+- Scope (WRAPUP.md): release = web page + python calculator for
+  revF/track (ptsrc+imaging), revD/track (ptsrc only), revC/track
+  (ptsrc only).  Snapshots are not released.  RELEASE_PLAN T0-T5 DONE;
+  T6 (docs + memo) in progress.
 
 ## Immediate queue (in order; see RELEASE_PLAN.md for detail)
 
-1. **T1 — retrofit wave 2, tracks only.  bmason launches:**
+1. **bmason decision — retrofit wave 3?**  If yes (optionally add combo
+   4 to also chase revC's budget-limited long/main+long steps):
    ```
-   RID=$(sbatch --parsable --array=0,2 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/adaptive_retrofit.sbatch | tail -1)
-   for K in 0 2; do sbatch --array=$K --dependency=afterok:${RID}_$K /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch; done
+   RID=$(sbatch --parsable --array=0,2,4 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/adaptive_retrofit.sbatch | tail -1)
+   for K in 0 2 4; do sbatch --array=$K --dependency=afterok:${RID}_$K /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch; done
    ```
-2. **T2 — revC/track campaign:** extend config.py/registry by the revD
-   pattern (Rev C.01 component cfgs are in ngvla-configurations/; lba →
-   long), APPEND to config_registry.csv (indices 0-3 must not move),
-   tests, then bmason submits.
-3. **T3 — release web page** (3-track dropdown, revD/revC imaging marked
-   "Omitted/Intentionally blank", core+mid caveat removed, PSF cuts +
-   calculator verified).  **T4** calculator surface (revC routing, EOP
-   batch input).  **T5** MStroh formats (stretch).  **T6** docs + LaTeX
-   memo editorial pass (ASD-STE100 + Zinsser), compile clean.
+   (Tracks-only variant: `--array=0,2` and `for K in 0 2`.)  After it
+   drains: harvest = QA logs, rebuild combined + release reports, tests,
+   data commit — same as the 18-Aug delta in PLAN.md.
+2. **T6 — finish the memo:** bmason's review comments beyond the §4 ¶1
+   stop marker (memo/myComments.tex), then the final editorial pass
+   (ASD-STE100 + Zinsser), compile clean.
+3. **Final release commit + tag** (RELEASE_PLAN T6 last step).
 
 ## Working agreements (bmason) — updated 17 Aug
 

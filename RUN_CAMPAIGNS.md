@@ -1,31 +1,34 @@
 # Campaign run sheet (copy-paste, one command per step)
 
-## 17 Aug release wave (CURRENT — bmason launches all jobs himself)
+## 17 Aug release wave — COMPLETE (harvested 18 Aug; see PLAN.md 18-Aug delta)
 
-State: the 21-24 Jul retrofit chain COMPLETED and was harvested (PLAN.md
-17-Aug delta).  Snapshot maps converged; revF/track + revD/track stopped at
-the 80-eval audit cap = wave 1 of ~2-3.  Release scope = WRAPUP.md;
-plan = RELEASE_PLAN.md.
+Outcome (all 11 jobs exit 0): retrofit wave 2 tracks (3415615_{0,2}) +
+backfills (3415617_0, 3415618_2); revC/track campaign end-to-end (prep
+3415634 → sweep 3415635_0-3 → collect 3415636).  The revC `--array=4`
+PSF backfill from the original sheet was NEVER NEEDED — `backfill_psf.py
+--dry-run` shows every revC anchor already cut-bearing (fresh campaigns
+capture axis cuts natively).  Combined + release reports rebuilt 18 Aug;
+data committed.
+
+Wave-2 convergence: revF/track 6/14 maps "no proposals", revD/track 2/9;
+the rest stopped at the 80-eval audit cap.  All step features again
+classified genuine.  revC residual budget-limited steps: long 0.74 (both
+curves), main+long imaging 0.78 / ptsrc 0.30; all else ≤ 0.22.
+
+## NEXT launch on offer — retrofit wave 3 (bmason decision; bmason launches)
 
 ```
-# 1. Retrofit wave 2, TRACKS ONLY (combos 0=revF/track, 2=revD/track);
-#    resumable, each task ends with its own collect+report+PSF export:
-RID=$(sbatch --parsable --array=0,2 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/adaptive_retrofit.sbatch | tail -1)
-for K in 0 2; do sbatch --array=$K --dependency=afterok:${RID}_$K /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch; done
+# Wave 3, tracks incl. revC (drop ",4"/"4" for the tracks-only variant):
+RID=$(sbatch --parsable --array=0,2,4 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/adaptive_retrofit.sbatch | tail -1)
+for K in 0 2 4; do sbatch --array=$K --dependency=afterok:${RID}_$K /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch; done
 
-# 2. NEW revC/track campaign (registered as combo index 4; ptsrc release
-#    scope — the standard chain measures both curves, only ptsrc is released):
-bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh revC track --time 47:00:00
-#    ... then its PSF anchor backfill after the collect id it prints:
-sbatch --array=4 --dependency=afterok:<revC_COLLECT_id> /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch
-
-# 3. After everything drains: rebuild the combined (internal) report
+# After it drains: rebuild the internal + release reports
 cd /home1/10240/bmason72/Code/ngvla_subarrays/curvegen && \
-/work2/10240/bmason72/stampede3/casaenv/bin/casapy make_report.py --combined reports/ngvla-curves.html
+/work2/10240/bmason72/stampede3/casaenv/bin/casapy make_report.py --combined reports/ngvla-curves.html && \
+/work2/10240/bmason72/stampede3/casaenv/bin/casapy make_report.py --combined --release
 ```
 
-QA: retrofit logs per RUN sheet below ("Adaptive retrofit wave"); revC sweep
-logs per "Watch / QA-gate".  Job logs now land in
+QA: retrofit logs per "Adaptive retrofit wave" below.  Job logs land in
 /work2/10240/bmason72/stampede3/ (the July wave's were archived to
 oldNgvlaLogs/).  Combo indices: 0=revF/track, 1=revF/snapshot, 2=revD/track,
 3=revD/snapshot, 4=revC/track (the sbatch COMBOS arrays; appended, never
