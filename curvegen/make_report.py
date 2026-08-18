@@ -18,9 +18,12 @@ optionally, passes matching --rev / --sim-mode:
 """
 
 import argparse
+import base64
 import csv
+import gzip
 import json
 import os
+import re
 import sys
 
 import numpy as np
@@ -840,6 +843,80 @@ def combined_combo_plan(reg_rows, release=False):
     return plan
 
 
+PSF_REGISTER_RE = re.compile(
+    r'^window\.PSF_REGISTER\(\s*"([^"]+)"\s*,\s*(.*)\)\s*;?\s*$', re.S)
+
+
+def _reject_json_constant(tok):
+    """parse_constant callback for json.loads: Python's json module silently
+    ACCEPTS the NaN/Infinity/-Infinity extension by default, but the
+    browser's JSON.parse does not -- an embedded payload containing one
+    would parse fine here and then fail client-side.  Reject it up front."""
+    raise ValueError("JSON constant %r is not valid JSON (the browser's "
+                     "JSON.parse would reject it)" % (tok,))
+
+
+def embed_psf_payloads(html, combo_keys, psf_base=None):
+    """Inline every release-campaign PSF payload into `html` as gzip+base64
+    <script type="text/plain"> blocks, so the release page travels as ONE
+    file (no sibling reports/psf/ directory).  The lazy sibling-file loader
+    (report_template.html's loadPsfData) checks for a matching
+    data-psf-id block FIRST and, if found, inflates it client-side via
+    DecompressionStream -- the blocks are inert text (a <script
+    type="text/plain"> never executes), so they are safe to drop anywhere in
+    the DOM as long as they exist before the page's own script tries to read
+    them.
+
+    For each combo key (in the given order), reads sorted
+    <psf_base>/<key>/*.js -- each file is exactly one
+    window.PSF_REGISTER("<comboKey>/<subarray>", {...json...}); wrapper (a
+    missing combo directory is skipped, not an error: not every campaign has
+    PSF data exported).  Returns the new html with all blocks inserted
+    immediately before the template's single <script> tag (before the main
+    script runs, since it renders an initial PSF panel synchronously)."""
+    if psf_base is None:
+        psf_base = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "reports", "psf")
+    blocks = []
+    for key in combo_keys:
+        combo_dir = os.path.join(psf_base, key)
+        if not os.path.isdir(combo_dir):
+            continue
+        for base in sorted(os.listdir(combo_dir)):
+            if not base.endswith(".js"):
+                continue
+            path = os.path.join(combo_dir, base)
+            with open(path) as f:
+                text = f.read()
+            m = PSF_REGISTER_RE.match(text)
+            if not m:
+                raise ValueError(
+                    "embed_psf_payloads: %s does not match the "
+                    "window.PSF_REGISTER(...) wrapper" % path)
+            payload_id, json_text = m.group(1), m.group(2)
+            if "\\" in payload_id:
+                # the regex captures the SOURCE spelling of the id string;
+                # an escape (e.g. \/) would embed under the escaped spelling
+                # and never be found by the loader's literal id lookup
+                raise ValueError(
+                    "embed_psf_payloads: %s: id %r contains a JS escape -- "
+                    "escaped ids are unsupported" % (path, payload_id))
+            try:
+                json.loads(json_text, parse_constant=_reject_json_constant)
+            except ValueError as exc:
+                raise ValueError("embed_psf_payloads: %s: %s"
+                                 % (path, exc)) from None
+            compressed = gzip.compress(json_text.encode("utf-8"), 9)
+            b64 = base64.b64encode(compressed).decode("ascii")
+            blocks.append('<script type="text/plain" data-psf-id="%s">%s'
+                          '</script>' % (payload_id, b64))
+    marker = "<script>"
+    idx = html.find(marker)
+    if idx == -1:
+        raise ValueError("embed_psf_payloads: no <script> tag found in html")
+    return html[:idx] + "\n".join(blocks) + "\n" + html[idx:]
+
+
 def build_combined(out_path, release=False):
     """The all-campaigns report: one payload per registered (rev, sim_mode)
     with curve data, each built by a SUBPROCESS running this script with that
@@ -894,6 +971,17 @@ def build_combined(out_path, release=False):
     html = html.replace("NGVLA Rev F subarray curves",
                         "NGVLA subarray curves" if release
                         else "NGVLA subarray curves — all campaigns")
+    if release:
+        # the release page travels alone (scp'd as one HTML file), so its PSF
+        # payloads are embedded inline rather than left as sibling
+        # reports/psf/<key>/*.js files (see embed_psf_payloads)
+        html = embed_psf_payloads(html, [c["key"] for c in combos])
+        blocks = re.findall(
+            r'<script type="text/plain" data-psf-id="[^"]*">([^<]*)</script>',
+            html)
+        mb = sum(len(b) for b in blocks) / 1e6
+        print("release: embedded %d PSF payload blocks (%.1f MB base64)"
+              % (len(blocks), mb))
     _atomic_write(out_path, html)
     print("wrote", out_path)
 

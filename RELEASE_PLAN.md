@@ -20,6 +20,14 @@
 > manifest); composite-beam explainer + Caveats&status cards removed
 > (sample table kept).  gpt-5.6-sol guard review: one finding, verified
 > false positive (manifest is per-payload), waived.
+> **Standalone release page (18 Aug pm, bmason request):** the --release
+> build now embeds all PSF payloads gzip+base64 (inflated in-browser via
+> DecompressionStream on first use) — ONE ~17 MB file to scp, no psf/
+> dir.  Internal report keeps the lazy sibling-dir design (15 Jul
+> decision).  Implemented by a Sonnet subagent to Claude's spec (codex
+> build sandbox bwrap-broken 18 Aug); gpt-5.6-sol consult review: 4
+> findings, all 4 fixed (hang-guard try/catch, per-id missing message,
+> strict-JSON build guard, escaped-id guard).
 
 Scope authority: `WRAPUP.md` (17 Aug) supersedes PLAN.md / NEXT_AGENT.md where
 they conflict.  Release = calculator **web page** (the in-report client-side

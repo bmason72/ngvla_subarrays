@@ -251,14 +251,25 @@ in the git repo; tclean work dirs are recreated per run.
 
 ## 3. Reports
 
-- Flagship: `curvegen/reports/ngvla-curves.html` — ALL four campaigns with a
-  campaign dropdown (top right).  Rebuild locally any time:
+- Flagship (internal): `curvegen/reports/ngvla-curves.html` — ALL campaigns
+  with a campaign dropdown (top right).  PSF data lazy-loads from the
+  sibling `reports/psf/` directory, which must travel with the HTML.
+  Rebuild locally any time:
   ```
   cd /home1/10240/bmason72/Code/ngvla_subarrays/curvegen && \
   /work2/10240/bmason72/stampede3/casaenv/bin/casapy make_report.py --combined reports/ngvla-curves.html
   ```
+- Release (public): `curvegen/reports/ngvla-curves-release.html` — the three
+  track campaigns, **fully standalone** (~17 MB: all PSF payloads embedded
+  gzip+base64, inflated in-browser on first use).  scp/distribute the ONE
+  file; no psf/ directory needed.  Rebuild:
+  ```
+  /work2/10240/bmason72/stampede3/casaenv/bin/casapy make_report.py --combined --release
+  ```
 - Per-combo reports still build as before (`--rev/--sim-mode`); the campaign
-  collect stage refreshes both automatically.
+  collect stage refreshes the internal reports automatically.  NB the
+  release page is NOT rebuilt by collect — rebuild it by hand after new
+  data lands.
 
 ## Handy monitoring
 

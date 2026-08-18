@@ -315,8 +315,9 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   <h2>PSF inspector</h2>
   <p class="note">Inspect the captured PSF at any measured lattice point. Choose a subarray here,
   or click a raw-sample mark or heatmap cell. (A calculator result&rsquo;s PSF button opens its PSF
-  in place, under the clicked row.) Profile files load only when requested and must travel with
-  this HTML report in the <code>psf/</code> directory.</p>
+  in place, under the clicked row.) Profile data loads only when requested. (On the internal
+  report it lives in the sibling <code>psf/</code> directory, which must travel with the HTML;
+  the release page embeds it and is fully standalone.)</p>
   <div class="psf-controls">
     <label class="s0-field"><span>subarray:</span><select id="psf-sa"></select></label>
     <span id="psf-status" role="status" aria-live="polite"></span>
@@ -359,10 +360,20 @@ window.PSF_REGISTER = function (id, data) {
   PSF_CACHE[id] = data;
 };
 
+// Shared by both loadPsfData paths below (inline embedded block, lazy
+// sibling-file script): fill PSF_CACHE[id] with `value` unless something
+// (PSF_REGISTER, in the script path) already beat us to it, then drain and
+// answer every callback queued in PSF_WAITING[id].
+function settlePsf(id, value) {
+  if (!Object.prototype.hasOwnProperty.call(PSF_CACHE, id)) PSF_CACHE[id] = value;
+  const callbacks = PSF_WAITING[id] || [];
+  delete PSF_WAITING[id];
+  callbacks.forEach(fn => fn(PSF_CACHE[id]));
+}
+
 function loadPsfData(comboKey, saName, cb) {
   const id = comboKey + '/' + saName;
-  const owns = Object.prototype.hasOwnProperty;
-  if (owns.call(PSF_CACHE, id)) {
+  if (Object.prototype.hasOwnProperty.call(PSF_CACHE, id)) {
     cb(PSF_CACHE[id]);
     return;
   }
@@ -371,6 +382,39 @@ function loadPsfData(comboKey, saName, cb) {
     return;
   }
   PSF_WAITING[id] = [cb];
+
+  // Release build: the payload travels inline as a gzip+base64 <script
+  // type="text/plain" data-psf-id="..."> block (see make_report.py's
+  // embed_psf_payloads) instead of a sibling psf/ file -- check for one
+  // before falling back to the script-tag loader below.
+  const block = document.querySelector('script[data-psf-id=' + JSON.stringify(id) + ']');
+  if (block) {
+    if (typeof DecompressionStream === 'undefined') {
+      settlePsf(id, null);          // see psfMissingMessage: browser too old
+      return;
+    }
+    // atob(), Blob#stream(), pipeThrough(), and the DecompressionStream
+    // constructor can all throw SYNCHRONOUSLY (bad base64, an unsupported
+    // codec, ...) -- without this try/catch such a throw would escape
+    // loadPsfData with PSF_WAITING[id] still populated, so every later call
+    // for this id would queue behind a callback that never fires.
+    try {
+      const bytes = Uint8Array.from(atob(block.textContent.replace(/\s+/g, '')),
+                                    c => c.charCodeAt(0));
+      new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')))
+        .text()
+        .then(text => {
+          let data = null;
+          try { data = JSON.parse(text); } catch (error) { data = null; }
+          settlePsf(id, data);
+        })
+        .catch(() => settlePsf(id, null));
+    } catch (error) {
+      settlePsf(id, null);
+    }
+    return;
+  }
+
   const script = document.createElement('script');
   const stem = saName.replace(/[+-]/g, '_');
   script.src = 'psf/' + comboKey + '/' + stem + '.js';
@@ -378,13 +422,10 @@ function loadPsfData(comboKey, saName, cb) {
   const finish = () => {
     if (finished) return;
     finished = true;
-    if (!owns.call(PSF_CACHE, id)) PSF_CACHE[id] = null;
-    const callbacks = PSF_WAITING[id] || [];
-    delete PSF_WAITING[id];
     script.onload = null;
     script.onerror = null;
     if (script.parentNode) script.parentNode.removeChild(script);
-    callbacks.forEach(fn => fn(PSF_CACHE[id]));
+    settlePsf(id, null);
   };
   script.onload = finish;
   script.onerror = finish;
@@ -492,7 +533,22 @@ function nearestPsfKey(data, point) {
   return best ? best.key : null;
 }
 
-function psfMissingMessage(saName) {
+function psfMissingMessage(comboKey, saName) {
+  // A standalone (release) build embeds its PSF data as data-psf-id blocks
+  // instead of loading a sibling psf/ file, so a null cache entry there can
+  // only mean either the browser could not decode the embedded block for
+  // THIS id, or no block for this id was embedded at all -- check which,
+  // FIRST, ahead of the manifest-based diagnosis below, which only applies
+  // to the lazy sibling-file builds.
+  if (document.querySelector('script[data-psf-id]')) {
+    const id = comboKey + '/' + saName;
+    if (document.querySelector('script[data-psf-id=' + JSON.stringify(id) + ']'))
+      return 'this page embeds its PSF data compressed — viewing it needs a ' +
+        'browser with DecompressionStream (Chrome/Edge 80+, Firefox 113+, ' +
+        'Safari 16.4+)';
+    return 'no PSF data embedded for this subarray — rebuild the release ' +
+      'page (make_report.py --combined --release)';
+  }
   // build_payload records which subarrays had a payload file on disk when
   // this page was built, so a failed script load can name the real problem
   const exported = Array.isArray(DATA.psf_exported) ? DATA.psf_exported : [];
@@ -532,7 +588,7 @@ function togglePsfInline(anchorTr, saName, point) {
     if (!tr.isConnected) return;
     clearNode(status);
     if (!data) {
-      status.textContent = psfMissingMessage(saName);
+      status.textContent = psfMissingMessage(comboKey, saName);
       return;
     }
     const key = nearestPsfKey(data, point);
@@ -1658,7 +1714,7 @@ function renderPsfPanel() {
     clearNode(params);
     clearNode(chart);
     if (!data) {
-      status.textContent = psfMissingMessage(saName);
+      status.textContent = psfMissingMessage(comboKey, saName);
       return;
     }
     const entry = data[key];
