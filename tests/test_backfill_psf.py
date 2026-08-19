@@ -34,13 +34,15 @@ def _modules():
         return None
 
 
-def _profile_line(key, cut=False):
+def _profile_line(key, cut=False, cut_rmax_fwhm=10.0):
     rec = {"key": key, "res_geo_arcsec": 0.1,
            "r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2]}
     if cut:
         rec.update(bmaj_arcsec=0.10, bmin_arcsec=0.08, bpa_deg=12.0,
                    cut_r_arcsec=[-0.1, 0.0, 0.1],
                    cut_maj=[0.2, 1.0, 0.2], cut_min=[0.1, 1.0, 0.1])
+        if cut_rmax_fwhm is not None:
+            rec["cut_rmax_fwhm"] = cut_rmax_fwhm
     return json.dumps(rec)
 
 
@@ -122,6 +124,223 @@ class TestNeedsBackfill(unittest.TestCase):
         anchor = bf._canonical_key("briggs", -0.0, 1.0)
         self.assertEqual(anchor, "briggs_0.00_1.000")
         self.assertIn(anchor, keys)
+
+    def test_missing_cut_rmax_fwhm_is_stale(self):
+        """(a) cut_maj present but no cut_rmax_fwhm at all -- a line from
+        before this field existed -- must count as stale, not cut-bearing."""
+        bf = self.backfill
+        line = _profile_line("briggs_0.40_1.000", cut=True,
+                             cut_rmax_fwhm=None)
+        self.assertNotIn("briggs_0.40_1.000", bf.cut_bearing_keys([line]))
+
+    def test_current_rmax_is_cut_bearing(self):
+        """(b) cut_rmax_fwhm at the current measure.CAPTURE_RMAX_FWHM (10.0)
+        is cut-bearing."""
+        bf = self.backfill
+        line = _profile_line("briggs_0.40_1.000", cut=True,
+                             cut_rmax_fwhm=10.0)
+        self.assertIn("briggs_0.40_1.000", bf.cut_bearing_keys([line]))
+
+    def test_stale_rmax_is_not_cut_bearing(self):
+        """(c) cut_rmax_fwhm from the old (3-FWHM) range is stale: the range
+        bump makes every such anchor stale so it is re-imaged."""
+        bf = self.backfill
+        line = _profile_line("briggs_0.40_1.000", cut=True,
+                             cut_rmax_fwhm=3.0)
+        self.assertNotIn("briggs_0.40_1.000", bf.cut_bearing_keys([line]))
+
+    def test_non_numeric_rmax_is_stale_not_a_crash(self):
+        """(d) malformed cut_rmax_fwhm (e.g. a string that isn't a number)
+        must be treated as stale, and must never raise."""
+        bf = self.backfill
+        line = _profile_line("briggs_0.40_1.000", cut=True,
+                             cut_rmax_fwhm="x")
+        self.assertNotIn("briggs_0.40_1.000", bf.cut_bearing_keys([line]))
+
+    def test_last_line_wins_across_mixed_ranges(self):
+        """(e) last-line-wins still holds when the lines mix capture ranges:
+        an old-range line superseded by a current-range line is cut-bearing,
+        and vice versa."""
+        bf = self.backfill
+        lines = [
+            _profile_line("briggs_0.40_1.000", cut=True, cut_rmax_fwhm=3.0),
+            _profile_line("briggs_0.40_1.000", cut=True, cut_rmax_fwhm=10.0),
+            _profile_line("briggs_-1.20_2.000", cut=True, cut_rmax_fwhm=10.0),
+            _profile_line("briggs_-1.20_2.000", cut=True, cut_rmax_fwhm=3.0),
+        ]
+        keys = bf.cut_bearing_keys(lines)
+        self.assertIn("briggs_0.40_1.000", keys)
+        self.assertNotIn("briggs_-1.20_2.000", keys)
+
+    def test_missing_cut_array_is_stale(self):
+        """A line with cut_maj but no cut_min (or no cut_r_arcsec) is not
+        usable -- the report needs all three arrays to draw anything."""
+        bf = self.backfill
+        rec = {"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1,
+              "r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2],
+              "cut_r_arcsec": [-0.1, 0.0, 0.1], "cut_maj": [0.2, 1.0, 0.2],
+              "cut_rmax_fwhm": 10.0}   # no cut_min
+        self.assertNotIn("briggs_0.40_1.000",
+                         bf.cut_bearing_keys([json.dumps(rec)]))
+
+    def test_empty_cut_arrays_are_stale(self):
+        """A junk line with cut_maj/cut_min/cut_r_arcsec all present but
+        empty must not suppress backfill forever: the report has nothing to
+        draw from an empty array either."""
+        bf = self.backfill
+        rec = {"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1,
+              "r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2],
+              "cut_r_arcsec": [], "cut_maj": [], "cut_min": [],
+              "cut_rmax_fwhm": 10.0}
+        self.assertNotIn("briggs_0.40_1.000",
+                         bf.cut_bearing_keys([json.dumps(rec)]))
+
+    def test_mismatched_cut_lengths_are_stale(self):
+        """Unequal-length cut arrays can't be zipped index-for-index by the
+        report, so they don't count as usable cuts."""
+        bf = self.backfill
+        rec = {"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1,
+              "r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2],
+              "cut_r_arcsec": [-0.1, 0.0, 0.1], "cut_maj": [0.2, 1.0, 0.2],
+              "cut_min": [0.1, 1.0], "cut_rmax_fwhm": 10.0}
+        self.assertNotIn("briggs_0.40_1.000",
+                         bf.cut_bearing_keys([json.dumps(rec)]))
+
+    def test_infinite_rmax_is_stale(self):
+        """A poisoned cut_rmax_fwhm of Infinity (which Python's json module
+        accepts on read even though it is not valid JSON) must not satisfy
+        the range check -- json.dumps can't produce this line (allow_nan
+        rejects it), so it is built as a raw string, the way real-world
+        corruption on a shared filesystem could arrive."""
+        bf = self.backfill
+        line = ('{"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1, '
+               '"r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2], '
+               '"cut_r_arcsec": [-0.1, 0.0, 0.1], '
+               '"cut_maj": [0.2, 1.0, 0.2], "cut_min": [0.1, 1.0, 0.1], '
+               '"cut_rmax_fwhm": Infinity}')
+        self.assertNotIn("briggs_0.40_1.000", bf.cut_bearing_keys([line]))
+
+    def test_all_null_cut_arrays_are_stale(self):
+        """(a) cut_maj/cut_min present, non-empty, equal length -- but every
+        sample is null: drawCuts skips a null sample outright, so an
+        all-null arm draws nothing and is not usable."""
+        bf = self.backfill
+        rec = {"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1,
+              "r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2],
+              "cut_r_arcsec": [-0.1, 0.0, 0.1],
+              "cut_maj": [None, None, None], "cut_min": [None, None, None],
+              "cut_rmax_fwhm": 10.0}
+        self.assertNotIn("briggs_0.40_1.000",
+                         bf.cut_bearing_keys([json.dumps(rec)]))
+
+    def test_string_cut_arrays_are_stale(self):
+        """(b) cut_maj/cut_min full of strings (not real numbers) are
+        equally unusable -- a JS Number() coercion is not what the report
+        does; drawCuts wants a real number or nothing."""
+        bf = self.backfill
+        rec = {"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1,
+              "r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2],
+              "cut_r_arcsec": [-0.1, 0.0, 0.1],
+              "cut_maj": ["a", "b", "c"], "cut_min": ["d", "e", "f"],
+              "cut_rmax_fwhm": 10.0}
+        self.assertNotIn("briggs_0.40_1.000",
+                         bf.cut_bearing_keys([json.dumps(rec)]))
+
+    def test_huge_integer_rmax_is_stale_not_a_crash(self):
+        """(c) cut_rmax_fwhm as a legal-JSON integer with ~400 digits
+        overflows float() -- must be treated as stale, not raise."""
+        bf = self.backfill
+        huge = "1" + "0" * 400
+        line = ('{"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1, '
+               '"r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2], '
+               '"cut_r_arcsec": [-0.1, 0.0, 0.1], '
+               '"cut_maj": [0.2, 1.0, 0.2], "cut_min": [0.1, 1.0, 0.1], '
+               '"cut_rmax_fwhm": %s}' % huge)
+        self.assertNotIn("briggs_0.40_1.000", bf.cut_bearing_keys([line]))
+
+    def test_non_numeric_radii_are_stale(self):
+        """Radii must be real numbers: a value paired with a junk radius is
+        a sample renderPsfChart skips, so real values on string radii still
+        draw nothing."""
+        bf = self.backfill
+        rec = {"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1,
+              "r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2],
+              "cut_r_arcsec": ["x", "x", "x"],
+              "cut_maj": [0.2, 1.0, 0.2], "cut_min": [0.1, 1.0, 0.1],
+              "cut_rmax_fwhm": 10.0}
+        self.assertNotIn("briggs_0.40_1.000",
+                         bf.cut_bearing_keys([json.dumps(rec)]))
+
+    def test_single_sample_cuts_are_stale(self):
+        """One sample per cut passes no drawability test: an SVG line needs
+        two points per arm, so a lone r=0 sample draws nothing."""
+        bf = self.backfill
+        rec = {"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1,
+              "r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2],
+              "cut_r_arcsec": [0.0], "cut_maj": [1.0], "cut_min": [1.0],
+              "cut_rmax_fwhm": 10.0}
+        self.assertNotIn("briggs_0.40_1.000",
+                         bf.cut_bearing_keys([json.dumps(rec)]))
+
+    def test_one_drawable_arm_per_cut_suffices(self):
+        """A cut whose real samples all sit in ONE arm still draws that arm:
+        two real values at r >= 0 are a visible line even when the r <= 0 arm
+        is all null."""
+        bf = self.backfill
+        rec = {"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1,
+              "r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2],
+              "cut_r_arcsec": [-0.1, 0.0, 0.1],
+              "cut_maj": [None, 1.0, 0.2], "cut_min": [None, 1.0, 0.1],
+              "cut_rmax_fwhm": 10.0}
+        self.assertIn("briggs_0.40_1.000",
+                      bf.cut_bearing_keys([json.dumps(rec)]))
+
+    def test_huge_integer_cut_value_is_stale_not_a_crash(self):
+        """A ~400-digit integer inside cut_maj is legal strict JSON but
+        overflows math.isfinite -- it must read as not-a-real-number (and
+        here leaves the r<=0 arm with one real sample and the r>=0 arm with
+        two, so the line stays cut-bearing via the r>=0 arm), never crash
+        the planner."""
+        bf = self.backfill
+        huge = "1" + "0" * 400
+        line = ('{"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1, '
+               '"r_arcsec": [0.0, 0.1], "psf": [1.0, 0.2], '
+               '"cut_r_arcsec": [-0.1, 0.0, 0.1], '
+               '"cut_maj": [%s, 1.0, 0.2], "cut_min": [0.1, 1.0, 0.1], '
+               '"cut_rmax_fwhm": 10.0}' % huge)
+        self.assertIn("briggs_0.40_1.000", bf.cut_bearing_keys([line]))
+
+    def test_agreement_invalid_last_line_is_invisible_not_a_fallback_gap(self):
+        """(d) THE AGREEMENT CASE: a valid cut-bearing line followed by a
+        last line with good-looking cuts but a NaN buried in "psf" must NOT
+        supersede the valid one -- parse_profile_line rejects the NaN line
+        outright, so it is as invisible to the planner as it is to the
+        exporter (which would also fall back to the first line).  Report and
+        planner therefore agree: the key stays cut-bearing."""
+        bf = self.backfill
+        good = _profile_line("briggs_0.40_1.000", cut=True, cut_rmax_fwhm=10.0)
+        poisoned = ('{"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1, '
+                   '"r_arcsec": [0.0, 0.1], "psf": [1.0, NaN], '
+                   '"cut_r_arcsec": [-0.1, 0.0, 0.1], '
+                   '"cut_maj": [0.2, 1.0, 0.2], "cut_min": [0.1, 1.0, 0.1], '
+                   '"cut_rmax_fwhm": 10.0}')
+        keys = bf.cut_bearing_keys([good, poisoned])
+        self.assertIn("briggs_0.40_1.000", keys)
+
+    def test_agreement_invalid_last_line_does_not_promote_stale_key(self):
+        """(d) inverse: a valid AZIMUTHAL-ONLY line followed by an invalid
+        line with (otherwise) good cuts must NOT be treated as cut-bearing --
+        the invalid line is invisible, so the last-standing valid line (no
+        cuts) is what counts."""
+        bf = self.backfill
+        good = _profile_line("briggs_0.40_1.000", cut=False)
+        poisoned = ('{"key": "briggs_0.40_1.000", "res_geo_arcsec": 0.1, '
+                   '"r_arcsec": [0.0, 0.1], "psf": [1.0, NaN], '
+                   '"cut_r_arcsec": [-0.1, 0.0, 0.1], '
+                   '"cut_maj": [0.2, 1.0, 0.2], "cut_min": [0.1, 1.0, 0.1], '
+                   '"cut_rmax_fwhm": 10.0}')
+        keys = bf.cut_bearing_keys([good, poisoned])
+        self.assertNotIn("briggs_0.40_1.000", keys)
 
 
 class TestPointKeyNegativeZero(unittest.TestCase):

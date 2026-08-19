@@ -909,6 +909,20 @@ WRAPUP.md; live plan = RELEASE_PLAN.md).**
    release page rebuilt (3 tracks; revC curves now live; revD+revC
    imaging "Omitted" markers present).  253 tests green (1 skipped;
    count grew from 225 with the T2-T5 test additions).
+6. *(18 Aug pm)* PSF capture range 3 -> 10 FWHM (`measure.
+   CAPTURE_RMAX_FWHM`), same sampling density (134 bins / 271 cut
+   samples); cut lines record `cut_rmax_fwhm`; backfill planner treats
+   short-range or unusable lines as stale, and line validity is now the
+   exporter's own `parse_profile_line` (shared, so planner and exporter
+   can never disagree).  Chart: per-entry range + sqrt-r x scale; null
+   cut samples no longer render as fake zeros.  bmason's avg-above-cuts
+   report verified GENUINE (fitted-beam bmaj overestimation on messy
+   LONG cores + real angular structure), not a normalization bug —
+   radius is geo-mean-normalized in all 3 curves.  The queued wave-3
+   backfills (combos 0, 2) auto-refresh every anchor; revC needs a
+   separate `--array=4` backfill (supersedes item 4 above).  Three
+   codex review rounds (round 1 accidentally gpt-5.5; 2-3 gpt-5.6-sol),
+   7 findings all fixed; 280 tests green (1 skipped).
 
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)
 

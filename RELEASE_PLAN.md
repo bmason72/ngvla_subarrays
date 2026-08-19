@@ -28,6 +28,19 @@
 > build sandbox bwrap-broken 18 Aug); gpt-5.6-sol consult review: 4
 > findings, all 4 fixed (hang-guard try/catch, per-id missing message,
 > strict-JSON build guard, escaped-id guard).
+> **PSF capture range 3 -> 10 FWHM (18 Aug pm, bmason request):** new
+> `measure.CAPTURE_RMAX_FWHM=10` at the same sampling density; each cut
+> line records `cut_rmax_fwhm` and backfill treats shorter-range or
+> unusable cut lines as stale, so the queued wave-3 backfills (combos
+> 0, 2) refresh EVERY anchor automatically; combo 4 (revC) needs its own
+> `--array=4` backfill (line in RUN_CAMPAIGNS).  Chart: per-entry range,
+> sqrt-r x scale keeps the core legible; null (out-of-bounds) cut samples
+> no longer render as fake zeros.  bmason's avg-above-cuts observation
+> was verified GENUINE, not a bug: radius is geo-mean-normalized in all
+> three curves; the worst cases are fitted-beam bmaj overestimation on
+> messy LONG cores (cut half-power at 0.49x fitted) plus real angular
+> sidelobe structure.  Codex review round 1 (gpt-5.5 xhigh, model-default
+> slip): 4 findings, all fixed; round 2 on gpt-5.6-sol.  271 tests green.
 
 Scope authority: `WRAPUP.md` (17 Aug) supersedes PLAN.md / NEXT_AGENT.md where
 they conflict.  Release = calculator **web page** (the in-report client-side

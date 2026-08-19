@@ -8,7 +8,11 @@ elongation the azimuthal average hides).  Sweeps captured before the cut
 feature (feature v11 profiles are azimuthal-only; revF/track predates even
 those) left many anchors without cuts.  This is a resumable job that finds the
 anchors lacking a cut-bearing profile and RE-IMAGES only those, appending a
-profile+cuts JSONL line via exactly the sweep's capture path.
+profile+cuts JSONL line via exactly the sweep's capture path.  Backfill also
+REFRESHES anchors whose cuts were captured with a shorter capture radius than
+the current measure.CAPTURE_RMAX_FWHM: a range bump (e.g. 3 -> 10 FWHM) makes
+every old anchor stale, so a range upgrade re-runs automatically, the same
+scale as the original full backfill.
 
 It NEVER touches curve data.  The results CSVs are byte-identical after a run:
 the only writes are appended lines to results<suffix>/profiles/<stem>.jsonl.
@@ -41,7 +45,7 @@ Run (CASA's python via the casapy wrapper on TACC):
 """
 
 import argparse
-import json
+import math
 import os
 import shutil
 import sys
@@ -49,10 +53,10 @@ import traceback
 
 from config import (RESULTS_DIR, PROFILE_DIR, MIN_UVRANGE_M, REV, SIM_MODE)
 from sweep import Sweep, point_key, tclean_kwargs, run_tclean, TCLEAN_EXTS
-from measure import beam_arcsec
+from measure import beam_arcsec, CAPTURE_RMAX_FWHM
 from make_report import build_curve, env_key, offered_order, registry_paths
 from refine import samples_from, curve_max_res_mas, SKIRT_MAX
-from export_psf_data import normalize_key
+from export_psf_data import normalize_key, parse_profile_line, PROFILE_LINE_ERRORS
 
 
 # ------------------------------------------------------------------------- #
@@ -130,25 +134,111 @@ def anchor_keys(sweep, subarray):
                                     curve_max_res_mas(subarray))
 
 
-def cut_bearing_keys(profile_lines):
-    """{canonical_key} of profile JSONL lines that ALREADY carry axis cuts.
+def _rmax_current(rec):
+    """True iff `rec`'s cut_rmax_fwhm meets the CURRENT measure.CAPTURE_RMAX_FWHM.
 
-    Loader convention (sweep.capture_profile): the JSONL is append-only and the
-    LAST line per key wins -- so a later azimuthal-only re-measure correctly
-    supersedes an earlier cut-bearing line (that key then needs backfill
-    again).  A line "has cuts" iff it carries "cut_maj".  Keys are
-    normalize_key-canonicalized to match the anchor keys.
+    A record from before this field existed, a malformed/non-numeric value,
+    a non-finite one (e.g. a poisoned "Infinity", which Python's json module
+    accepts even though it is not valid JSON), or one too large for a float
+    (an OverflowError -- a strict-JSON integer with hundreds of digits is
+    legal JSON but not a legal float) is treated as stale (0), never as a
+    crash: a planner must survive junk in an append-only, multi-writer JSONL
+    file."""
+    try:
+        v = float(rec.get("cut_rmax_fwhm", 0))
+    except (TypeError, ValueError, OverflowError):
+        return False
+    return math.isfinite(v) and v >= CAPTURE_RMAX_FWHM - 1e-6
+
+
+def _is_real_number(v):
+    """True iff `v` is a finite int/float -- NOT a bool (a JSON true/false
+    would otherwise pass isinstance(v, int)) and not None/NaN/a string.
+    math.isfinite raises OverflowError on an integer too large for a float
+    (legal strict JSON), which must read as "not a real number", not a
+    planner crash."""
+    if not isinstance(v, (int, float)) or isinstance(v, bool):
+        return False
+    try:
+        return math.isfinite(v)
+    except OverflowError:
+        return False
+
+
+def _has_usable_cuts(rec):
+    """True iff `rec` carries axis-cut arrays the report can actually render.
+
+    The planner must match what the report can render: report_template.html's
+    psfHasCuts requires cut_r_arcsec/cut_maj/cut_min to ALL be present, and
+    renderPsfChart zips cut_r_arcsec against cut_maj/cut_min index-for-index,
+    so unequal or empty lists are unusable too.  Accepting a weaker line here
+    (e.g. one with "cut_maj": []) would mark an anchor cut-bearing forever
+    while the report shows no cuts for it -- a silent, permanent gap that no
+    resubmit would ever fix, since cut_bearing_keys is the only thing standing
+    between "already backfilled" and "needs re-imaging".
+
+    Renderability, concretely: every radius must be a real number (capture
+    writes a full linspace; a non-numeric radius makes renderPsfChart skip
+    that sample no matter how good its value is), and renderPsfChart's
+    drawCuts splits the samples into the r<=0 and r>=0 arms and draws a line
+    through each, skipping null/non-numeric values -- a line needs at least
+    two points, so each cut must have SOME arm with >= 2 real-valued samples
+    or it draws nothing.  (parse_profile_line's strict re-serialization
+    already rules out NaN/Infinity, but not None or a string.)
     """
-    has_cut = {}                               # canonical_key -> bool (last wins)
+    fields = ("cut_r_arcsec", "cut_maj", "cut_min")
+    if not all(isinstance(rec.get(f), list) for f in fields):
+        return False
+    lengths = {len(rec[f]) for f in fields}
+    if len(lengths) != 1 or 0 in lengths:
+        return False
+    radii = rec["cut_r_arcsec"]
+    if not all(_is_real_number(r) for r in radii):
+        return False
+
+    def drawable(values):
+        for arm in ((i for i, r in enumerate(radii) if r <= 0),
+                    (i for i, r in enumerate(radii) if r >= 0)):
+            if sum(1 for i in arm if _is_real_number(values[i])) >= 2:
+                return True
+        return False
+
+    return drawable(rec["cut_maj"]) and drawable(rec["cut_min"])
+
+
+def cut_bearing_keys(profile_lines):
+    """{canonical_key} of profile JSONL lines that ALREADY carry USABLE axis
+    cuts captured at (or beyond) the CURRENT measure.CAPTURE_RMAX_FWHM.
+
+    Line validity is export_psf_data.parse_profile_line's -- the SAME
+    definition the exporter uses to decide a line's "last valid line" status
+    (see its docstring).  An invalid line (bad JSON, missing fields, or a
+    NaN/Infinity that fails strict re-serialization) is skipped WITHOUT
+    touching `has_cut`, exactly as it is invisible to the exporter: a last
+    line that turns out invalid never supersedes an earlier valid one, so
+    exporter fallback and planner staleness can never disagree about which
+    line "counts" for a key.
+
+    Loader convention (sweep.capture_profile): the JSONL is append-only and
+    the LAST valid line per key wins -- so a later azimuthal-only re-measure
+    correctly supersedes an earlier cut-bearing line (that key then needs
+    backfill again).  A line "has cuts" iff _has_usable_cuts(rec) (all three
+    cut arrays present, non-empty, equal length, and each of cut_maj/cut_min
+    has at least one real numeric sample -- see its docstring) AND its
+    cut_rmax_fwhm is at least the current capture range: backfill also
+    REFRESHES anchors whose cuts were captured with a shorter radius than the
+    current range, so a range bump (e.g. 3 -> 10 FWHM) makes every old anchor
+    stale and they are re-imaged automatically, the same scale as the
+    original full backfill.  Keys are already normalize_key-canonicalized by
+    parse_profile_line, matching the anchor keys.
+    """
+    has_cut = {}                               # canonical_key -> bool (last valid wins)
     for line in profile_lines:
         try:
-            rec = json.loads(line)
-            key = rec["key"]
-        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
-            continue                           # malformed line -> skip, like the exporter
-        if not isinstance(key, str):
-            continue
-        has_cut[normalize_key(key)] = ("cut_maj" in rec)
+            key, rec = parse_profile_line(line)
+        except PROFILE_LINE_ERRORS:
+            continue                           # invalid line: has_cut untouched
+        has_cut[key] = _has_usable_cuts(rec) and _rmax_current(rec)
     return {k for k, has in has_cut.items() if has}
 
 

@@ -28,7 +28,7 @@ REPORT_PSF_DIR = os.path.join(SCRIPT_DIR, "reports", "psf")
 
 PROFILE_FIELDS = ("res_geo_arcsec", "r_arcsec", "psf")
 OPTIONAL_FIELDS = ("bmaj_arcsec", "bmin_arcsec", "bpa_deg",
-                   "cut_r_arcsec", "cut_maj", "cut_min")
+                   "cut_r_arcsec", "cut_maj", "cut_min", "cut_rmax_fwhm")
 CUT_FIELDS = ("cut_r_arcsec", "cut_maj", "cut_min")
 
 
@@ -37,34 +37,64 @@ def normalize_key(key):
     return key.replace("_-0.00_", "_0.00_")
 
 
+# Exceptions parse_profile_line can raise for an invalid line; callers catch
+# exactly this tuple (never a bare `except Exception`, so a genuine bug does
+# not get silently swallowed as "just a malformed line").
+PROFILE_LINE_ERRORS = (json.JSONDecodeError, KeyError, TypeError, ValueError)
+
+
+def parse_profile_line(line):
+    """Parse and validate one profile JSONL line.
+
+    THIS is the definition of a valid profile line, shared by the exporter
+    (transform_profile_lines) and backfill's planner (backfill_psf.
+    cut_bearing_keys) so the two can never disagree about which line is a
+    key's "last valid line" -- a line the exporter falls back past must be
+    equally invisible to the planner, or the report can go stale while the
+    planner thinks nothing needs re-imaging.
+
+    Valid means: parses as JSON; is a JSON object; has a string "key"; has
+    every PROFILE_FIELDS entry; and survives strict (allow_nan=False)
+    re-serialization -- the release page embeds this data as literal
+    JS/JSON, and a NaN/Infinity that Python's json module happily reads back
+    out is not valid JSON a browser (or esprima) can parse.
+
+    Returns (normalized_key, record) on success.  Raises one of
+    PROFILE_LINE_ERRORS on any invalidity.
+    """
+    record = json.loads(line)
+    if not isinstance(record, dict):
+        raise ValueError("expected a JSON object")
+    key = record["key"]
+    if not isinstance(key, str):
+        raise ValueError("'key' must be a string")
+    missing = [field for field in PROFILE_FIELDS if field not in record]
+    if missing:
+        raise ValueError("missing field(s): %s" % ", ".join(missing))
+    json.dumps(record, allow_nan=False)   # reject NaN/Infinity here
+    return normalize_key(key), record
+
+
 def transform_profile_lines(lines):
     """Return ({key: payload}, warnings) from append-ordered JSONL lines.
 
     The transform has no filesystem, environment, or configuration
-    dependencies.  Later lines replace earlier lines after key normalization.
+    dependencies.  Later lines replace earlier lines after key normalization,
+    using parse_profile_line's definition of "valid" -- an invalid last line
+    never overwrites an earlier valid one for the same key.
     """
     profiles = {}
     warnings = []
     allowed = PROFILE_FIELDS + OPTIONAL_FIELDS
     for line_num, line in enumerate(lines, 1):
         try:
-            record = json.loads(line)
-            if not isinstance(record, dict):
-                raise ValueError("expected a JSON object")
-            key = record["key"]
-            if not isinstance(key, str):
-                raise ValueError("'key' must be a string")
-            missing = [field for field in PROFILE_FIELDS
-                       if field not in record]
-            if missing:
-                raise ValueError("missing field(s): %s"
-                                 % ", ".join(missing))
-        except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+            key, record = parse_profile_line(line)
+        except PROFILE_LINE_ERRORS as e:
             warnings.append("line %d: %s" % (line_num, e))
             continue
         payload = {field: record[field] for field in allowed
                    if field in record}
-        profiles[normalize_key(key)] = payload
+        profiles[key] = payload
     return profiles, warnings
 
 

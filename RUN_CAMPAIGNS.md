@@ -15,13 +15,27 @@ the rest stopped at the 80-eval audit cap.  All step features again
 classified genuine.  revC residual budget-limited steps: long 0.74 (both
 curves), main+long imaging 0.78 / ptsrc 0.30; all else ≤ 0.22.
 
-## NEXT launch on offer — retrofit wave 3 (bmason decision; bmason launches)
+## Retrofit wave 3 — LAUNCHED 18 Aug (retrofit 3418621_{0,2}; backfills 3418623_0, 3418624_2)
+
+bmason launched the tracks-only variant (combos 0 and 2; no revC retrofit).
+
+**PSF range upgrade rides along (18 Aug pm):** capture now goes to 10 FWHM
+(was 3; `measure.CAPTURE_RMAX_FWHM`) and backfill treats shorter-range cuts
+as stale.  So the two QUEUED backfills refresh EVERY displayed-curve anchor
+for combos 0 and 2 — the scale of the original full backfill, well inside
+the 47 h walltime, resumable as always.  revC (combo 4) has no job queued
+and its anchors are now stale too; to bring its PSFs to 10 FWHM:
 
 ```
-# Wave 3, tracks incl. revC (drop ",4"/"4" for the tracks-only variant):
-RID=$(sbatch --parsable --array=0,2,4 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/adaptive_retrofit.sbatch | tail -1)
-for K in 0 2 4; do sbatch --array=$K --dependency=afterok:${RID}_$K /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch; done
+sbatch --array=4 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch
+```
 
+Snapshots (combos 1, 3) stay at 3 FWHM — not in the release; the report
+renders each point at its own captured range.  If the retrofit started
+before the range change was committed, its early captures are 3-FWHM;
+the dependent backfill then refreshes them (self-healing, no action).
+
+```
 # After it drains: rebuild the internal + release reports
 cd /home1/10240/bmason72/Code/ngvla_subarrays/curvegen && \
 /work2/10240/bmason72/stampede3/casaenv/bin/casapy make_report.py --combined reports/ngvla-curves.html && \

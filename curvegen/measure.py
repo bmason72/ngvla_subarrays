@@ -17,6 +17,13 @@ pure-numpy pieces (radial_profile) stay importable without CASA
 import numpy as np
 from scipy.interpolate import CubicSpline
 
+# Capture radius for the PSF profile and axis cuts, in units of the
+# geometric-mean fitted FWHM; 10 reaches the first negative lobe in
+# essentially all cases and usually the first positive ring of the azimuthal
+# profile (bmason, 18 Aug 2026).  Note that `_psf_cutout` still clamps at the
+# image edge.
+CAPTURE_RMAX_FWHM = 10.0
+
 
 def beam_arcsec(image_path):
     """(bmaj, bmin, bpa_deg) of the restoring beam, in arcsec."""
@@ -114,22 +121,37 @@ def _psf_cutout(imagename, r_max_arcsec):
     return cut, (half, half), cell, r_max_arcsec, sign0, sign1
 
 
-def psf_radial_profile(imagename, res_geo_arcsec, n_bins=40):
+def profile_from_cutout(cut, center, cell, r_max, n_bins):
+    """Pure-numpy azimuthal profile of a PSF cutout (the part of
+    psf_radial_profile that needs no CASA, kept separate so it stays
+    testable CASA-free).
+
+    Bins `cut` with `radial_profile`, then normalizes by the RAW PEAK PIXEL
+    of the cutout (`cut.max()`), not the binned peak: the axis cuts are
+    already raw-peak-normalized, and with wide bins the central bin can span
+    several pixels and dilute the peak, which would otherwise inflate the
+    whole profile relative to them.  Returns (r_arcsec list, psf list).
+    """
+    radii, means = radial_profile(cut, center, cell, r_max, n_bins=n_bins)
+    peak = float(np.asarray(cut).max())
+    if peak > 0:
+        means = means / peak
+    return list(radii), list(means)
+
+
+def psf_radial_profile(imagename, res_geo_arcsec, n_bins=134):
     """Compact radial profile of a PSF, for capture at sweep time.
 
     Opens `imagename` the same way psf_skirt does (central cutout only, so
     main-sized PSFs never load fully into memory), profiles it out to
-    r_max = 3 x `res_geo_arcsec`, and normalizes the profile to peak = 1.
-    Returns (r_arcsec list, psf list).
+    r_max = CAPTURE_RMAX_FWHM x `res_geo_arcsec`, and normalizes the profile
+    to the cutout's raw peak pixel (see profile_from_cutout).  Returns
+    (r_arcsec list, psf list).
     """
     # axis signs don't matter for an isotropic radial average
     cut, center, cell, r_max, _sign0, _sign1 = \
-        _psf_cutout(imagename, 3.0 * res_geo_arcsec)
-    radii, means = radial_profile(cut, center, cell, r_max, n_bins=n_bins)
-    peak = means.max() if len(means) else 1.0
-    if peak > 0:
-        means = means / peak
-    return list(radii), list(means)
+        _psf_cutout(imagename, CAPTURE_RMAX_FWHM * res_geo_arcsec)
+    return profile_from_cutout(cut, center, cell, r_max, n_bins)
 
 
 def _bilinear_sample(img, p0, p1):
@@ -208,19 +230,19 @@ def psf_axis_cuts(cutout, center, cell_arcsec, bpa_deg, r_max_arcsec, n=81,
     return list(r), cut_maj, cut_min
 
 
-def psf_axis_cuts_from_psf(psf_path, res_geo_arcsec, bpa_deg, n=81):
+def psf_axis_cuts_from_psf(psf_path, res_geo_arcsec, bpa_deg, n=271):
     """Major/minor-axis PSF cuts for capture at sweep time.
 
     Opens `psf_path` via the same central-cutout path as psf_radial_profile
-    (r_max = 3 x `res_geo_arcsec`), reading the image's real per-axis
-    coordinate-increment signs (see _psf_cutout / psf_axis_cuts), and
-    samples it with psf_axis_cuts.  The cutout is normalized by its own raw
-    peak pixel (not the radial profile's binned peak): r=0 always lands
-    exactly on the peak pixel, so for a well-formed PSF the two peaks agree
-    to well under a percent.  Returns (cut_r_arcsec, cut_maj, cut_min).
+    (r_max = CAPTURE_RMAX_FWHM x `res_geo_arcsec`), reading the image's real
+    per-axis coordinate-increment signs (see _psf_cutout / psf_axis_cuts),
+    and samples it with psf_axis_cuts.  The cutout is normalized by its own
+    raw peak pixel, the same convention as profile_from_cutout, so the cuts
+    and the azimuthal profile share one scale.  Returns (cut_r_arcsec,
+    cut_maj, cut_min).
     """
     cut, center, cell, r_max, sign0, sign1 = \
-        _psf_cutout(psf_path, 3.0 * res_geo_arcsec)
+        _psf_cutout(psf_path, CAPTURE_RMAX_FWHM * res_geo_arcsec)
     peak = float(cut.max())
     if peak > 0:
         cut = cut / peak

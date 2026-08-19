@@ -71,6 +71,36 @@ class TestRadialProfile(unittest.TestCase):
         self.assertTrue(np.isfinite(prof).all())
         self.assertLess(len(r), 40)
 
+    def _profile_from_cutout(self):
+        try:
+            from measure import profile_from_cutout
+        except ImportError as e:
+            self.skipTest("curvegen/measure.py not importable CASA-free: %s"
+                          % e)
+        return profile_from_cutout
+
+    def test_profile_from_cutout_normalized_by_raw_peak(self):
+        """profile_from_cutout must normalize by the cutout's RAW PEAK PIXEL,
+        not the binned peak: with a fine cell (many pixels per bin), the
+        central bin's mean is diluted below the single peak pixel, so the
+        binned first value must come out BELOW 1 -- the old means.max()
+        convention would instead have rescaled it back up to exactly 1."""
+        profile_from_cutout = self._profile_from_cutout()
+        fwhm = 0.3                       # arcsec
+        cell = 0.01                      # arcsec/pixel: 30 px per FWHM
+        n = 41
+        c = n // 2
+        yy, xx = np.mgrid[0:n, 0:n]
+        r_pix = np.hypot(yy - c, xx - c) * cell
+        sigma = fwhm / (2.0 * np.sqrt(2.0 * np.log(2.0)))
+        img = np.exp(-0.5 * (r_pix / sigma) ** 2)   # raw peak pixel = 1.0
+
+        # a coarse binning (few bins over r_max) puts many pixels, at a
+        # range of PSF values, in the central bin
+        r, prof = profile_from_cutout(img, (c, c), cell, r_max=fwhm, n_bins=4)
+        self.assertEqual(len(r), len(prof))
+        self.assertLess(prof[0], 1.0)
+
     def test_no_module_level_casatools_import(self):
         """The CASA-free contract, enforced: casatools must only be imported
         lazily inside functions (a reintroduced top-level import cannot be

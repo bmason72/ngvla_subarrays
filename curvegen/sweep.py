@@ -22,10 +22,10 @@ PSF radial profiles: when config.CAPTURE_PROFILES is on, every successfully
 imaged point also appends one JSON line ({"key": ..., "res_geo_arcsec": ...,
 "r_arcsec": [...], "psf": [...], plus the fitted beam and major/minor-axis
 cuts: "bmaj_arcsec", "bmin_arcsec", "bpa_deg", "cut_r_arcsec", "cut_maj",
-"cut_min"}) to PROFILE_DIR/<subarray file stem>.jsonl before the image
-products are deleted.  Appends are keyed by the lattice point: a re-measured
-point may append a second line, so consumers must take the LAST line per
-key.  A profile-capture failure never fails or skips the sweep point
+"cut_min", "cut_rmax_fwhm"}) to PROFILE_DIR/<subarray file stem>.jsonl before
+the image products are deleted.  Appends are keyed by the lattice point: a
+re-measured point may append a second line, so consumers must take the LAST
+line per key.  A profile-capture failure never fails or skips the sweep point
 (one-line warning only); a cuts-only failure degrades to an azimuthal-only
 line (older lines, from before the cuts existed, are azimuthal-only too and
 stay valid).
@@ -55,7 +55,7 @@ from config import (SUBARRAYS, IMSIZE, OVERSAMPLE, WORK_DIR, RESULTS_DIR,
                     CAPTURE_PROFILES, PROFILE_DIR)
 from simulate import make_ms
 from measure import (beam_arcsec, image_rms, psf_skirt, psf_radial_profile,
-                    psf_axis_cuts_from_psf)
+                    psf_axis_cuts_from_psf, CAPTURE_RMAX_FWHM)
 
 FIELDS = ["subarray", "weighting", "robust", "taper_mas", "imsize",
           "cell_arcsec", "bmaj_arcsec", "bmin_arcsec", "bpa_deg",
@@ -410,14 +410,23 @@ class Sweep:
                     cut_maj=[None if v is None else _sig5(v)
                              for v in cut_maj],
                     cut_min=[None if v is None else _sig5(v)
-                             for v in cut_min])
+                             for v in cut_min],
+                    # the REQUESTED capture range, not the achieved one: even
+                    # when _psf_cutout clamped at the image edge, re-imaging
+                    # with the same convention could not reach further, so
+                    # this line is still "current" for that range
+                    cut_rmax_fwhm=CAPTURE_RMAX_FWHM)
                 cuts_ok = True
             except Exception as e:
                 print("warning: axis-cut capture failed for %s: %s"
                       % (key, e), file=sys.stderr)
         os.makedirs(PROFILE_DIR, exist_ok=True)
         stem = self.subarray.replace("+", "_").replace("-", "_")
-        line = json.dumps(line_data) + "\n"
+        # the release-page embedder requires strict JSON, so never append a
+        # line it must reject: a NaN/Inf from a CASA-derived value raises
+        # here instead (caught by run_point's try/except, or by backfill's
+        # per-anchor exception handling, both of which just retry the point)
+        line = json.dumps(line_data, allow_nan=False) + "\n"
         # one os.write on an O_APPEND descriptor: the best atomicity
         # available when parallel shard jobs (sweep_parallel.py /
         # fill_grid.py) append to the same file; interleaving is still
