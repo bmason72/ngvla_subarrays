@@ -179,7 +179,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 
 <div class="wrap">
 <header>
-  <p class="eyebrow">NGVLA subarray-selection tool &middot; Track 2 curve generation &middot; 5&ndash;6 Jul 2026</p>
+  <p class="eyebrow">NGVLA subarray-selection tool</p>
   <!-- campaign dropdown: populated + shown by JS only when the injected data
        is a combined multi-campaign payload; inert in single-combo reports -->
   <label class="s0-field" id="combo-field" style="display:none; float:right; margin-top:4px">
@@ -187,14 +187,16 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
     <select id="combo-select" aria-label="campaign"></select>
   </label>
   <h1 id="page-h1">Rev&thinsp;F taperability &amp; sculptability curves</h1>
-  <p class="sub">Sensitivity cost (&eta;, the image rms relative to natural weighting) versus achieved
-  resolution at the 30&thinsp;GHz reference frequency, measured from noise simulations of each Rev&thinsp;F
-  subarray (4&thinsp;h track, dec&thinsp;+24&deg;) over a grid of Briggs robust and uv-taper values.
-  The <em>imaging</em> curves constrain the PSF skirt &mdash; the azimuthally averaged PSF level at
-  a radius of one FWHM (memo&thinsp;65 metric&thinsp;2b) &mdash; to a selectable threshold s<sub>0</sub>
-  (10% by default, the memo&thinsp;121 criterion): at each resolution the cheapest (min-&eta;)
-  beam meeting the criterion is shown, and where no beam can meet it the <em>best achievable</em>
-  skirt is reported and flagged (hollow), never trading resolution away.</p>
+  <p class="sub">These plots show sensitivity cost (&eta;) against angular resolution at
+  30&thinsp;GHz. Sensitivity cost is the image rms divided by the rms for natural weighting. The
+  sensitivity calculation uses underlying code similar to the
+  <a href="https://ngect.nrao.edu">ngVLA Exposure Calculator Tool (ngECT)</a>. The data come from
+  noise simulations of each Rev&thinsp;F subarray for a 4&thinsp;h track at
+  declination +24&deg;. The simulations use a grid of Briggs robust and uv-taper values, with
+  adaptive refinement where needed. The imaging curves use a selectable PSF skirt limit,
+  s<sub>0</sub>. The default limit is 10%. At each resolution, the curve shows the result with the
+  lowest &eta; that meets the limit. If no result meets the limit, the curve shows the lowest
+  available skirt and uses a hollow marker.</p>
 </header>
 
 <!-- per-campaign caveat (e.g. the snapshot-mode physics note); combined mode only -->
@@ -202,11 +204,10 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   <p class="note" id="combo-note" style="margin:0"></p>
 </div>
 
-<div class="tiles" id="tiles"></div>
-
 <div class="card" id="subarray-calculator">
   <h2>Subarray calculator</h2>
-  <p class="note">Evaluates the same tabulated engine curves shown below; no server, all client-side.</p>
+  <p class="note">Use the same tabulated curves as the plots below. The calculation runs in this
+  page.</p>
   <form class="calc-form" id="calc-form">
     <label class="calc-field"><span>Frequency [GHz]</span>
       <input id="calc-freq" name="freq" type="number" min="1.2" max="116" step="0.01" value="30" inputmode="decimal">
@@ -227,8 +228,29 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
       </select>
       <span class="note" id="calc-obs-note" style="display:none">point-source only for this campaign</span>
     </label>
-    <label class="calc-field"><span>Desired sensitivity [&micro;Jy/beam]</span>
-      <input id="calc-sens" name="sens" type="number" min="0" step="0.1" value="10" inputmode="decimal">
+    <label class="calc-field"><span>Skirt requirement</span>
+      <select id="calc-s0" name="skirt">
+        <option value="0.05">5%</option>
+        <option value="0.10" selected>10%</option>
+        <option value="0.15">15%</option>
+        <option value="0.20">20%</option>
+      </select>
+    </label>
+    <label class="calc-field"><span>Beam tolerance</span>
+      <select id="calc-beam-margin" name="beam_margin">
+        <option value="0.01">1%</option>
+        <option value="0.05" selected>5%</option>
+        <option value="0.10">10%</option>
+      </select>
+    </label>
+    <label class="calc-field"><span>Desired sensitivity (optional)</span>
+      <input id="calc-sens" name="sens" type="number" min="0" step="any" value="10" inputmode="decimal">
+    </label>
+    <label class="calc-field"><span>Sensitivity units</span>
+      <select id="calc-sens-unit" name="sens_unit">
+        <option value="uJy" selected>&micro;Jy/beam</option>
+        <option value="K">K</option>
+      </select>
     </label>
     <label class="calc-field"><span>Rank by</span>
       <select id="calc-rank" name="rank">
@@ -239,19 +261,24 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
     <button class="calc-button" type="submit">Compute</button>
   </form>
   <div class="calc-error" id="calc-error" role="alert" aria-live="polite"></div>
+  <div class="calc-error" id="calc-warning" role="status" aria-live="polite"></div>
   <div class="calc-summary" id="calc-summary"></div>
   <div class="tablewrap"><table id="calc-table"></table></div>
-  <details id="calc-infeasible"><summary>Infeasible subarrays</summary>
+  <details id="calc-infeasible"><summary>Subarrays that do not meet the requirements</summary>
     <ul class="calc-reasons" id="calc-reasons"></ul>
   </details>
-  <p class="note calc-caveat">Times assume the memo-96 sensitivity model (natural-weighting anchor x
-  curve eta), 1-h/1-MHz tabulated basis, single pointing, no overheads; spectral-line vs continuum
-  band-averaging differences are not modeled.</p>
+  <p class="note calc-caveat">The times use the memo-96 sensitivity model. The model multiplies
+  the natural-weighting reference value by &eta;. The table uses a 1&thinsp;h, 1&thinsp;MHz reference
+  value and one pointing. If desired sensitivity is blank, the calculator internally uses the
+  natural, untapered MAIN sensitivity in one minute at the selected frequency and bandwidth as a
+  ranking scale. Kelvin goals are converted separately using each candidate's achieved beam. The
+  times do not include overheads. The model does not include the difference in band averaging
+  between spectral-line and continuum observations.</p>
 </div>
 
 <div class="card">
   <div class="card-head">
-    <h2>Imaging curves (cheapest beam meeting &le; s<sub>0</sub>, else best achievable)</h2>
+    <h2>Imaging sensitivity cost by resolution</h2>
     <label class="s0-field" id="s0-field"><span>skirt threshold s0:</span>
       <select id="s0-select" aria-label="skirt threshold s0">
         <option value="0.05">5%</option>
@@ -263,61 +290,72 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   </div>
   <!-- shown instead of the card body when the active campaign's combo
        metadata carries imaging_omitted (release builds only) -->
-  <p class="note" id="imaging-omitted-note" style="display:none"><strong>Omitted / intentionally
-  blank</strong> &mdash; this campaign is released point-source only.</p>
+  <p class="note" id="imaging-omitted-note" style="display:none">This campaign contains only
+  point-source results. Imaging curves are not available.</p>
   <div id="imaging-card-body">
-  <p class="note">At each target resolution the curve shows the minimum-&eta; beam whose PSF skirt
-  &le;&thinsp;s<sub>0</sub>, computed by the shared interpolation engine
-  (continuous in resolution). Angular resolution is the primary requirement: where <em>no</em> beam
-  reaches s<sub>0</sub>, the criterion is relaxed to the
-  <em>best achievable</em> skirt and <strong>hollow triangles</strong> mark those points (they do
-  NOT meet the criterion; hover for the achieved skirt).
-  Dashed verticals mark each subarray&rsquo;s LAS at 30&thinsp;GHz; the core-bearing subarrays share
-  b<sub>min</sub> and hence a common LAS. This is the operational look-up view for imaging projects
-  (the memo&thinsp;76 figure&thinsp;1 analog).</p>
+  <p class="note">At each target resolution, the curve shows the beam with the lowest &eta; that
+  meets the selected PSF skirt limit. The interpolation engine calculates values continuously
+  across resolution. If no beam meets the limit, the curve shows the lowest available skirt.
+  Hollow triangles identify these results. They do not meet the selected limit. Point to a
+  triangle to see its skirt value. Dashed vertical lines show the largest angular scale (LAS) for
+  each subarray at 30&thinsp;GHz. Subarrays that contain the core have the same minimum baseline and the
+  same LAS. Use this plot to select a result for an imaging project.</p>
   <div class="legend" id="legend-img"></div>
   <div id="chart-imaging"></div>
   </div>
 </div>
 
 <div class="card">
-  <h2>Point-source curves (skirt unconstrained)</h2>
-  <p class="note">Same envelope over <em>all</em> beams regardless of PSF quality &mdash; applicable to
-  point-source detection projects. Near-natural weighting the two curves differ most: a messy skirt is
-  free here but costly to sculpt away.</p>
+  <h2>Point-source sensitivity cost by resolution</h2>
+  <p class="note">These curves include all beams and do not apply a PSF skirt limit. Use this plot
+  for point-source detection. Near natural weighting, the imaging and point-source curves can be
+  different because the point-source curve does not control the PSF skirt.</p>
   <div class="legend" id="legend-ps"></div>
   <div id="chart-ps"></div>
 </div>
 
 <div class="card">
-  <h2>Raw sweep samples</h2>
-  <p class="note">Offerable measured grid points with &eta;&thinsp;&le;&thinsp;5. Circles:
-  natural&thinsp;+&thinsp;taper branch. Squares: Briggs robust branch. Triangles: sculpt branch
-  (robust&thinsp;&times;&thinsp;taper). Filled marks pass the 10% reference skirt criterion; hollow
-  marks fail it. Hover any mark for its parameters.</p>
+  <div class="card-head">
+    <h2>Valid simulation results</h2>
+    <label class="s0-field"><span>view:</span>
+      <select id="samples-view-select" aria-label="simulation result view">
+        <option value="resolution" selected>resolution and sensitivity cost</option>
+        <option value="parameters">taper and robust</option>
+      </select>
+    </label>
+  </div>
+  <p class="note" id="samples-resolution-note">These plots show simulation results for which
+  &eta;&thinsp;&le;&thinsp;5. Circles show natural weighting with taper. Squares show Briggs
+  weighting without taper. Triangles show Briggs weighting with taper. Filled markers meet the
+  10% reference skirt limit. Hollow markers do not meet the limit. Point to a marker to see its
+  parameters.</p>
+  <p class="note" id="samples-parameters-note" style="display:none">These plots show the same
+  simulation results in uv-taper and robust space. Each dot is one result. The natural row shows
+  natural weighting. The taper axis is linear so that concentrations and gaps are easy to see.
+  Gaps show regions that have few results or no results. Point to a dot to see its parameters.</p>
   <div class="grid3" id="multiples"></div>
 </div>
 
 <div class="card">
-  <h2>Where the optima live in (robust,&thinsp;taper) space</h2>
-  <p class="note">The full sweep lattice per subarray: rows step from natural weighting down to
-  robust&thinsp;&minus;2, columns step through the uv tapers. Cell shade encodes &eta; (light&thinsp;=&thinsp;1,
-  dark&thinsp;=&thinsp;5); a dot marks beams passing the 10% default skirt criterion; a ring marks
-  the cells the 10% default imaging curve actually selects &mdash; the min-&eta; sculpted solution
-  at each resolution. Beam-cap
-  anchors are shown as diagnostics only; skipped and failed cells distinguish deliberate cap stops
-  from absent measurements. Hover any measured cell for its beam, &eta;, and skirt.</p>
+  <h2>Sweep grid in robust and taper space</h2>
+  <p class="note">Each plot shows the full sweep grid for one subarray. Rows show natural weighting
+  and Briggs robust values from +2 to &minus;2. Columns show uv-taper values. The color shows
+  &eta;: light colors are near 1 and dark colors are near 5. A dot identifies a result that meets
+  the default 10% skirt limit. A border identifies a result that the default imaging curve uses.
+  Striped cells are beam-cap anchors and are for diagnosis only. A slash identifies a cell that
+  was skipped after the row reached the beam cap. An X identifies a failed simulation. An empty
+  cell has no result. Point to a measured cell to see its beam, &eta;, and skirt.</p>
   <div class="legend" id="hm-legend"></div>
   <div class="grid3" style="grid-template-columns: repeat(auto-fit, minmax(460px, 1fr))" id="heatmaps"></div>
 </div>
 
 <div class="card" id="psf-inspector">
   <h2>PSF inspector</h2>
-  <p class="note">Inspect the captured PSF at any measured lattice point. Choose a subarray here,
-  or click a raw-sample mark or heatmap cell. (A calculator result&rsquo;s PSF button opens its PSF
-  in place, under the clicked row.) Profile data loads only when requested. (On the internal
-  report it lives in the sibling <code>psf/</code> directory, which must travel with the HTML;
-  the release page embeds it and is fully standalone.)</p>
+  <p class="note">Select a subarray to examine its measured PSF. You can also select a marker in
+  the simulation-results plots or a cell in the sweep grid. In the calculator, select a PSF button
+  to open the PSF below that row. The page loads profile data only when you request it. The internal
+  report uses the adjacent <code>psf/</code> directory. Keep that directory with the HTML file. The
+  release page contains the profile data and does not need the directory.</p>
   <div class="psf-controls">
     <label class="s0-field"><span>subarray:</span><select id="psf-sa"></select></label>
     <span id="psf-status" role="status" aria-live="polite"></span>
@@ -327,19 +365,21 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 </div>
 
 <div class="card">
-  <h2>QA cross-checks</h2>
-  <p class="note">Native (natural-weight, untapered) beam vs the sensitivity calculator&rsquo;s
-  <code>subarray_data.pkl</code>. Component subarrays agree to &le;&thinsp;2%; composite-subarray
-  differences reflect single-Gaussian fit ambiguity on composite two-component beams (and the
-  pkl&rsquo;s pre-Rev-F Mid sites for mid-bearing rows).</p>
+  <h2>Native-beam checks</h2>
+  <p class="note">This table compares the simulated native beam with the value in the sensitivity
+  calculator file <code>subarray_data.pkl</code>. The values for component subarrays agree within
+  2%. Composite subarrays can have larger differences because a single Gaussian does not fit a
+  two-component beam well. The calculator file also uses the Mid sites from before Rev&thinsp;F.</p>
   <div class="tablewrap"><table id="qa-table"></table></div>
 </div>
 
 <div class="card">
-  <details><summary>Full displayed sample table (offerable points)</summary>
+  <details><summary>Full table of valid simulation results</summary>
     <div class="tablewrap"><table id="data-table"></table></div>
   </details>
 </div>
+
+<div class="tiles" id="tiles"></div>
 </div>
 <div class="tooltip" id="tt"></div>
 
@@ -447,6 +487,7 @@ const css = name => SLOT[name] ? `var(${SLOT[name]})` : 'var(--muted)';
 // DATA-derived state, rebound by bindData() whenever the campaign changes
 let ACTIVE, SKIRT_KEYS, DEFAULT_S0;
 let currentS0 = '0.10';
+let currentSamplesView = 'resolution';
 function bindData() {
   ACTIVE = DATA.order.filter(n => (DATA.samples[n]||[]).length);
   SKIRT_KEYS = Array.isArray(DATA.skirt_setpoints)
@@ -607,7 +648,6 @@ function togglePsfInline(anchorTr, saName, point) {
 }
 
 // in-page subarray calculator -------------------------------------------------
-const CALC_BEAM_MARGIN = 0.05;
 const CALC_RECEIVER_BANDS = [[1.2, 50.5], [70.0, 116.0]];
 
 function finitePositive(x) {
@@ -698,33 +738,39 @@ function readCalcRequest() {
   const resolution = readCalcNumber('calc-res', 'Resolution', errors);
   const bandwidth = readCalcNumber('calc-bandwidth', 'Bandwidth', errors);
   const las = readCalcNumber('calc-las', 'LAS', errors, true);
-  const sensitivity = readCalcNumber('calc-sens', 'Desired sensitivity', errors);
+  const sensitivity = readCalcNumber('calc-sens', 'Desired sensitivity', errors, true);
+  const goalMode = sensitivity === null ? 'fiducial' : 'explicit';
   if (freq !== null && !inReceiverBand(freq))
     errors.push('Frequency must be in 1.2-50.5 or 70-116 GHz; 50.5-70 GHz is the receiver gap.');
   return errors.length ? {errors} : {request: {
-    freq, resolution, bandwidth, las, sensitivity,
+    freq, resolution, bandwidth, las, sensitivity, goalMode,
     obs: document.getElementById('calc-obs').value,
     rank: document.getElementById('calc-rank').value,
+    sensUnit: document.getElementById('calc-sens-unit').value,
+    beamMargin: Number(document.getElementById('calc-beam-margin').value),
+    skirtThreshold: Number(document.getElementById('calc-s0').value),
   }};
 }
 
-function lookupCurvePoint(name, obs, resRefMas) {
+function lookupCurvePoint(name, request, resRefMas) {
   // Mirrors envelope.solve's threshold policy over the pre-built curve points
-  // inside the +-5% window: point-source -> min eta; imaging -> min-eta among
+  // inside the selected beam window: point-source -> min eta; imaging -> min-eta among
   // points MEETING the skirt criterion (relaxed=false), else the best
   // achievable skirt (min-skirt, tie by eta).  The selected DATA.imaging[s0]
   // curve is already the engine's per-resolution threshold answer, so this
   // just picks the cheapest admissible one in the window.
-  const curves = obs === 'pointsource' ? DATA.pointsource : currentImagingCurves();
+  const curves = request.obs === 'pointsource' ? DATA.pointsource : currentImagingCurves();
   const curve = curves && Array.isArray(curves[name]) ? curves[name] : [];
   if (!curve.length) return {reason: 'no curve data tabulated for this subarray'};
-  const lo = resRefMas * (1 - CALC_BEAM_MARGIN);
-  const hi = resRefMas * (1 + CALC_BEAM_MARGIN);
+  const lo = resRefMas * (1 - request.beamMargin);
+  const hi = resRefMas * (1 + request.beamMargin);
   const win = curve.filter(p => p && finitePositive(Number(p.res))
     && finitePositive(Number(p.eta)) && p.res >= lo && p.res <= hi);
-  if (!win.length) return {reason: 'no beam within ±5% of request'};
+  if (!win.length) return {reason: request.beamMargin > 0
+    ? 'no beam within ±' + fmtSig(100 * request.beamMargin) + '% of request'
+    : 'no exact beam solution for request'};
   const minEta = pts => pts.reduce((a, b) => (b.eta < a.eta ? b : a));
-  if (obs !== 'imaging') return {point: minEta(win)};
+  if (request.obs !== 'imaging') return {point: minEta(win)};
   const strict = win.filter(p => !p.relaxed);   // meets skirt <= s0
   if (strict.length) return {point: minEta(strict)};
   // relaxed: best achievable skirt (min-skirt), ties broken by eta
@@ -765,6 +811,15 @@ function interpolateSigma(name, freq) {
   return {reason: 'outside receiver bands'};
 }
 
+function kelvinToMicroJy(tbK, thetaArcsec, freqGHz) {
+  const c = 2.99792458e8, kB = 1.380649e-23;
+  const thetaRad = thetaArcsec * Math.PI / (180 * 3600);
+  const omega = Math.PI * thetaRad * thetaRad / (4 * Math.log(2));
+  const lambda = c / (freqGHz * 1e9);
+  const jy = 2 * kB * tbK * omega / (lambda * lambda) / 1e-26;
+  return jy * 1e6;
+}
+
 function tcleanText(p, freq) {
   const parts = [p.weighting || 'unknown'];
   if (p.weighting === 'briggs' && Number.isFinite(Number(p.robust)))
@@ -777,12 +832,11 @@ function tcleanText(p, freq) {
 function flagInfo(p) {
   const flags = [], notes = [];
   if (p.relaxed) {
-    flags.push('relaxed');
-    notes.push('No beam here meets the skirt criterion (s0=' + fmtS0(currentS0)
-      + '); the best achievable '
-      + 'skirt (' + (Number.isFinite(Number(p.skirt))
+    flags.push('skirt limit not met');
+    notes.push('No beam at this resolution meets the skirt limit (s0=' + fmtS0(currentS0)
+      + '). The result has the lowest available skirt (' + (Number.isFinite(Number(p.skirt))
         ? (100 * Number(p.skirt)).toFixed(0) + '%' : 'n/a')
-      + ') is reported. Does NOT meet the criterion.');
+      + ').');
   }
   return {text: flags.join(', '), title: notes.join(' ')};
 }
@@ -791,7 +845,7 @@ function capInfeasibleReason(name, request, resRefMas) {
   const cap = DATA.caps && DATA.caps[name];
   const capRefMas = Number(cap);
   if (!finitePositive(capRefMas)) return null;
-  if (resRefMas * (1 - CALC_BEAM_MARGIN) <= capRefMas) return null;
+  if (resRefMas * (1 - request.beamMargin) <= capRefMas) return null;
   const capAtFreqMas = capRefMas * 30 / request.freq;
   return "requested beam is coarser than this subarray's beam cap (" +
     fmtRes(capAtFreqMas) + ") — beams this coarse are better made with its " +
@@ -805,7 +859,7 @@ function evaluateSubarray(name, request, order) {
   const nAnt = las ? Number(las.n_ant) : NaN;
   if (!finitePositive(nAnt)) reasons.push('missing antenna metadata');
 
-  const curve = lookupCurvePoint(name, request.obs, resRefMas);
+  const curve = lookupCurvePoint(name, request, resRefMas);
   if (!curve.point)
     reasons.push(capInfeasibleReason(name, request, resRefMas) || curve.reason);
 
@@ -827,11 +881,25 @@ function evaluateSubarray(name, request, order) {
   if (reasons.length) return {name, feasible: false, reasons, order};
 
   const eta = Number(curve.point.eta);
-  const tHours = Math.pow(eta * sens.sigma / request.sensitivity, 2) / request.bandwidth;
+  let goalMicroJy = request.sensitivity;
+  let goalOrigin = 'user';
+  if (request.goalMode === 'fiducial') {
+    const mainSens = interpolateSigma('main', request.freq);
+    if (!mainSens.sigma)
+      return {name, feasible: false, reasons: [mainSens.reason], order};
+    goalMicroJy = mainSens.sigma * Math.sqrt(60 / request.bandwidth);
+    goalOrigin = 'main_natural_1min_fiducial';
+  } else if (request.sensUnit === 'K') {
+    const achievedArcsec = Number(curve.point.res) * 30 / request.freq / 1000;
+    goalMicroJy = kelvinToMicroJy(request.sensitivity, achievedArcsec, request.freq);
+  }
+  const tHours = Math.pow(eta * sens.sigma / goalMicroJy, 2) / request.bandwidth;
   const antennaHours = tHours * nAnt;
   if (!finitePositive(tHours) || !finitePositive(antennaHours))
     return {name, feasible: false, reasons: ['sensitivity calculation failed'], order};
-  return {name, feasible: true, point: curve.point, tHours, antennaHours, nAnt, order};
+  return {name, feasible: true, point: curve.point, tHours, antennaHours,
+    nAnt, order, goalMicroJy, goalOrigin,
+    skirtMet: request.obs !== 'imaging' ? null : !curve.point.relaxed};
 }
 
 function clearNode(el) {
@@ -855,16 +923,18 @@ function addSubarrayCell(tr, name) {
   tr.append(td);
 }
 
-function renderCalcSummary(summaryEl, winner) {
+function renderCalcSummary(summaryEl, winner, request) {
   clearNode(summaryEl);
   if (!winner) {
-    summaryEl.textContent = 'No feasible subarray for this request.';
+    summaryEl.textContent = 'No subarray meets these requirements.';
     return;
   }
   const name = document.createElement('strong');
   name.textContent = winner.name;
   summaryEl.append('Best: ', name, ' — ', fmtDuration(winner.tHours),
     ' observing time, ', fmtSig(winner.antennaHours), ' antenna h.');
+  if (request.goalMode === 'fiducial')
+    summaryEl.append(' Costs use the natural, untapered MAIN sensitivity in one minute as the common goal.');
 }
 
 function renderCalcTable(table, feasible, request) {
@@ -882,7 +952,7 @@ function renderCalcTable(table, feasible, request) {
     const td = document.createElement('td');
     td.colSpan = 9;
     td.style.textAlign = 'left';
-    td.textContent = 'No feasible subarray.';
+    td.textContent = 'No subarray meets the requirements.';
     tr.append(td);
     table.append(tr);
     return;
@@ -914,7 +984,7 @@ function renderCalcTable(table, feasible, request) {
 
 function renderInfeasible(details, list, rows) {
   const summary = details.querySelector('summary');
-  summary.textContent = 'Infeasible subarrays (' + rows.length + ')';
+  summary.textContent = 'Subarrays that do not meet the requirements (' + rows.length + ')';
   clearNode(list);
   if (!rows.length) {
     const li = document.createElement('li');
@@ -931,6 +1001,7 @@ function renderInfeasible(details, list, rows) {
 
 function renderCalcError(errors) {
   document.getElementById('calc-error').textContent = errors.join(' ');
+  document.getElementById('calc-warning').textContent = '';
   clearNode(document.getElementById('calc-summary'));
   clearNode(document.getElementById('calc-table'));
   renderInfeasible(document.getElementById('calc-infeasible'),
@@ -950,8 +1021,21 @@ function runSubarrayCalculator() {
   const feasible = rows.filter(r => r.feasible);
   const infeasible = rows.filter(r => !r.feasible);
   const key = request.rank === 'time' ? 'tHours' : 'antennaHours';
-  feasible.sort((a, b) => (a[key] - b[key]) || (a.nAnt - b.nAnt) || (a.order - b.order));
-  renderCalcSummary(document.getElementById('calc-summary'), feasible[0]);
+  feasible.sort((a, b) => {
+    const groupA = request.obs === 'imaging' && !a.skirtMet ? 1 : 0;
+    const groupB = request.obs === 'imaging' && !b.skirtMet ? 1 : 0;
+    return (groupA - groupB) || (a[key] - b[key])
+      || (a.nAnt - b.nAnt) || (a.order - b.order);
+  });
+  const noStrict = request.obs === 'imaging'
+    && !feasible.some(row => row.skirtMet);
+  document.getElementById('calc-warning').textContent = noStrict
+    ? 'Warning: no feasible subarray meets the ' + fmtS0(request.skirtThreshold)
+      + ' skirt target;' + (feasible.length
+        ? ' all listed results use the best available relaxed skirt.'
+        : ' there are no relaxed beam/LAS-feasible results to list.')
+    : '';
+  renderCalcSummary(document.getElementById('calc-summary'), feasible[0], request);
   renderCalcTable(document.getElementById('calc-table'), feasible, request);
   renderInfeasible(document.getElementById('calc-infeasible'),
                    document.getElementById('calc-reasons'), infeasible);
@@ -988,6 +1072,17 @@ function syncCalcObs() {
     runSubarrayCalculator();
   });
   document.getElementById('calc-rank').addEventListener('change', runSubarrayCalculator);
+  ['calc-obs', 'calc-beam-margin', 'calc-sens-unit'].forEach(id =>
+    document.getElementById(id).addEventListener('change', runSubarrayCalculator));
+  const calcS0 = document.getElementById('calc-s0');
+  calcS0.addEventListener('change', () => {
+    const plotS0 = document.getElementById('s0-select');
+    currentS0 = calcS0.value;
+    if (plotS0) plotS0.value = currentS0;
+    renderImagingChart();
+    renderPsfPanel();
+    runSubarrayCalculator();
+  });
 })();
 
 // log-x, log-y curve chart --------------------------------------------------
@@ -1138,9 +1233,8 @@ function ttHtml(name, p) {
     : `briggs robust ${p.robust.toFixed(2)}` + (p.taper ? `, taper ${fmtRes(p.taper)}` : '');
   return `<b>${name}</b><br>beam ${fmtRes(p.res)}<br>η = ${p.eta.toFixed(2)}` +
          `<br>skirt ${p.skirt === null ? '—' : (100*p.skirt).toFixed(1) + '%'}` +
-         (p.relaxed ? ' <b>(relaxed — no beam here meets the skirt criterion '
-          + `(s0=${fmtS0(currentS0)}); `
-          + 'best achievable skirt reported)</b>' : '') +
+         (p.relaxed ? ' <b>(No beam at this resolution meets the skirt limit '
+          + `(s0=${fmtS0(currentS0)}). This result has the lowest available skirt.)</b>` : '') +
          `<br>${pars}`;
 }
 
@@ -1200,6 +1294,8 @@ function renderImagingChart() {
     }
     const hadResults = calcHasResults();
     currentS0 = select.value;
+    const calcSelect = document.getElementById('calc-s0');
+    if (calcSelect) calcSelect.value = currentS0;
     renderImagingChart();
     renderPsfPanel();
     if (hadResults) runSubarrayCalculator();
@@ -1209,6 +1305,8 @@ function renderImagingChart() {
 function syncS0Selector() {
   const select = document.getElementById('s0-select');
   if (select) select.value = currentS0;
+  const calcSelect = document.getElementById('calc-s0');
+  if (calcSelect) calcSelect.value = currentS0;
 }
 
 function renderPsChart() {
@@ -1218,7 +1316,7 @@ function renderPsChart() {
   clearNode(leg);
   legend(leg, curveChart(chart, DATA.pointsource,
     {...optsCommon, smooth: DATA.pointsource_smooth,
-     label: 'Point-source curves: eta vs resolution, skirt unconstrained'}));
+     label: 'Point-source curves: eta by resolution, with no skirt limit'}));
 }
 
 // stat tiles ------------------------------------------------------------------
@@ -1227,17 +1325,29 @@ function renderTiles() {
   const tiles = [
     {v: ACTIVE.length + '<span class="unit"> / ' + DATA.order.length + '</span>',
      l: 'subarrays with curve data'},
-    {v: String(nPts), l: 'offerable sample points shown'},
-    {v: '0', l: 'failed points', cls: 'ok'},
+    {v: String(nPts), l: 'valid simulation results shown'},
+    {v: '0', l: 'failed simulations', cls: 'ok'},
   ];
   document.getElementById('tiles').innerHTML = tiles.map(t =>
     `<div class="tile"><div class="v ${t.cls||''}">${t.v}</div><div class="l">${t.l}</div></div>`).join('');
 }
 
-// small multiples ---------------------------------------------------------------
-function multiple(el, name) {
+// simulation-result small multiples ---------------------------------------------
+function samplePanel(name) {
   const card = document.createElement('div');
-  card.innerHTML = `<p class="eyebrow" style="margin:0 0 4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${css(name)};vertical-align:-1px"></span> ${name} &middot; ${DATA.counts[name]} pts</p>`;
+  card.innerHTML = `<p class="eyebrow" style="margin:0 0 4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${css(name)};vertical-align:-1px"></span> ${name} &middot; ${DATA.counts[name]} results</p>`;
+  return card;
+}
+
+function openSamplePsf(name, p) {
+  openMeasuredPsf(
+    name, p.weighting,
+    p.weighting === 'natural' || p.robust === null ? 2.0 : Number(p.robust),
+    Number(p.taper) || 0.0);
+}
+
+function resolutionEtaMultiple(el, name) {
+  const card = samplePanel(name);
   const pts = DATA.samples[name];
   const W = 330, H = 230, M = {l: 34, r: 10, t: 8, b: 26};
   const xs = pts.map(p => p.res), ys = pts.map(p => p.eta);
@@ -1247,7 +1357,7 @@ function multiple(el, name) {
                  (Math.log10(xmax) - Math.log10(xmin)) * (W - M.l - M.r);
   const Y = v => H - M.b - Math.log10(v) / Math.log10(ymax) * (H - M.t - M.b);
   const svg = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img',
-                            'aria-label': `${name} raw samples`});
+                            'aria-label': `${name} simulation results by resolution and sensitivity cost`});
   for (const t of YT) {
     if (t > ymax) break;
     svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: Y(t), y2: Y(t),
@@ -1288,11 +1398,75 @@ function multiple(el, name) {
     m.style.cursor = 'pointer';
     m.addEventListener('mousemove', ev => showTT(ev, ttHtml(name, p)));
     m.addEventListener('mouseleave', hideTT);
-    m.addEventListener('click', () => openMeasuredPsf(
-      name, p.weighting,
-      p.weighting === 'natural' || p.robust === null ? 2.0 : Number(p.robust),
-      Number(p.taper) || 0.0));
+    m.addEventListener('click', () => openSamplePsf(name, p));
     svg.append(m);
+  }
+  card.append(svg);
+  el.append(card);
+}
+
+function parameterMultiple(el, name) {
+  const card = samplePanel(name);
+  const pts = DATA.samples[name];
+  const W = 330, H = 230, M = {l: 50, r: 12, t: 8, b: 42};
+  const maxTaper = Math.max(0, ...pts.map(p => Number(p.taper) || 0));
+  const xmax = maxTaper > 0 ? maxTaper * 1.03 : 1;
+  const naturalY = 2.55, ymin = -2.2, ymax = 2.75;
+  const X = v => M.l + (Number(v) || 0) / xmax * (W - M.l - M.r);
+  const Y = v => H - M.b - (v - ymin) / (ymax - ymin) * (H - M.t - M.b);
+  const svg = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img',
+    'aria-label': `${name} simulation results by uv taper and robust value`});
+
+  [-2, -1, 0, 1, 2].forEach(tick => {
+    svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: Y(tick), y2: Y(tick),
+      stroke: 'var(--grid)', 'stroke-width': 1}));
+    const label = svgEl('text', {x: M.l - 7, y: Y(tick) + 4,
+      'text-anchor': 'end', 'class': 'tick-num'});
+    label.textContent = tick > 0 ? '+' + tick : String(tick);
+    svg.append(label);
+  });
+  svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: Y(naturalY), y2: Y(naturalY),
+    stroke: 'var(--axis)', 'stroke-width': 1, 'stroke-dasharray': '3 3'}));
+  const naturalLabel = svgEl('text', {x: M.l - 7, y: Y(naturalY) + 4,
+    'text-anchor': 'end'});
+  naturalLabel.textContent = 'natural';
+  svg.append(naturalLabel);
+
+  [0, 0.25, 0.5, 0.75, 1].forEach(fraction => {
+    const value = maxTaper * fraction;
+    const x = X(value);
+    svg.append(svgEl('line', {x1: x, x2: x, y1: M.t, y2: H - M.b,
+      stroke: 'var(--grid)', 'stroke-width': 1}));
+    const label = svgEl('text', {x, y: H - M.b + 15,
+      'text-anchor': fraction === 0 ? 'start' : (fraction === 1 ? 'end' : 'middle'),
+      'class': 'tick-num'});
+    label.textContent = fraction === 0 ? 'no taper' : fmtRes(value);
+    svg.append(label);
+  });
+  svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: H - M.b, y2: H - M.b,
+    stroke: 'var(--axis)', 'stroke-width': 1}));
+  const xTitle = svgEl('text', {x: (M.l + W - M.r) / 2, y: H - 5,
+    'text-anchor': 'middle'});
+  xTitle.textContent = 'uv taper';
+  svg.append(xTitle);
+  const yTitle = svgEl('text', {x: 11, y: (M.t + H - M.b) / 2,
+    'text-anchor': 'middle', transform: `rotate(-90 11 ${(M.t + H - M.b) / 2})`});
+  yTitle.textContent = 'Briggs robust';
+  svg.append(yTitle);
+
+  for (const p of pts) {
+    const y = p.weighting === 'natural' ? naturalY : Number(p.robust);
+    if (!Number.isFinite(y)) continue;
+    const x = X(p.taper), cy = Y(y);
+    const dot = svgEl('circle', {cx: x, cy, r: 2.6, fill: css(name),
+      'class': 'mark', 'pointer-events': 'none'});
+    svg.append(dot);
+    const hit = svgEl('circle', {cx: x, cy, r: 7, fill: 'transparent'});
+    hit.style.cursor = 'pointer';
+    hit.addEventListener('mousemove', ev => showTT(ev, ttHtml(name, p)));
+    hit.addEventListener('mouseleave', hideTT);
+    hit.addEventListener('click', () => openSamplePsf(name, p));
+    svg.append(hit);
   }
   card.append(svg);
   el.append(card);
@@ -1301,8 +1475,25 @@ function multiple(el, name) {
 function renderMultiples() {
   const el = document.getElementById('multiples');
   clearNode(el);
-  for (const name of ACTIVE) multiple(el, name);
+  document.getElementById('samples-resolution-note').style.display =
+    currentSamplesView === 'resolution' ? '' : 'none';
+  document.getElementById('samples-parameters-note').style.display =
+    currentSamplesView === 'parameters' ? '' : 'none';
+  for (const name of ACTIVE) {
+    if (currentSamplesView === 'parameters') parameterMultiple(el, name);
+    else resolutionEtaMultiple(el, name);
+  }
 }
+
+(function wireSamplesViewSelector() {
+  const select = document.getElementById('samples-view-select');
+  if (!select) return;
+  select.addEventListener('change', () => {
+    currentSamplesView = select.value === 'parameters' ? 'parameters' : 'resolution';
+    hideTT();
+    renderMultiples();
+  });
+})();
 
 // robust-taper lattice heatmaps --------------------------------------------------
 function renderHeatmaps() {
@@ -1421,10 +1612,10 @@ function renderHeatmaps() {
           if (c.skirt !== null && c.skirt <= 0.10) drawSkirtDot(svg, x, y, CW, CH, c.eta);
           if (c.env) drawSelectedRing(svg, x, y, CW, CH);
           const extra = c.status === 'capped'
-            ? '<br>beyond the beam cap — interpolation anchor only' : '';
+            ? '<br>beam-cap anchor; not a valid simulation result' : '';
           addHit(svg, x, y, CW, CH, params +
             `<br>beam ${fmtRes(c.res)}<br>η = ${Number(c.eta).toFixed(2)}` +
-            `<br>skirt ${skirtText(c)}${c.env ? '<br>← on the 10% default imaging curve' : ''}` +
+            `<br>skirt ${skirtText(c)}${c.env ? '<br>used by the default imaging curve' : ''}` +
             extra, () => openMeasuredPsf(
               name, row.label === 'natural' ? 'natural' : 'briggs',
               row.label === 'natural' ? 2.0 : Number(row.label),
@@ -1432,10 +1623,10 @@ function renderHeatmaps() {
         } else if (c.status === 'skipped') {
           drawSkippedCell(svg, x, y, CW, CH);
           addHit(svg, x, y, CW, CH, params +
-            '<br>not measured: beam cap exceeded earlier in this row');
+            '<br>not measured; this row reached the beam cap');
         } else if (c.status === 'failed') {
           drawFailedCell(svg, x, y, CW, CH);
-          addHit(svg, x, y, CW, CH, params + '<br>measurement failed');
+          addHit(svg, x, y, CW, CH, params + '<br>simulation failed');
         }
       });
     });
@@ -1444,7 +1635,7 @@ function renderHeatmaps() {
       const foot = document.createElement('div');
       foot.className = 'hm-footnote';
       foot.textContent = '+' + hm.off_lattice +
-        ' 10% default imaging-curve anchors sit off this lattice (refinement points)';
+        ' refinement points used by the default imaging curve are outside this grid';
       wrap.append(foot);
     }
     holder.append(wrap);
@@ -1476,7 +1667,7 @@ function renderHeatmaps() {
   legendEntry(RAMP.map(c => cellSwatch((svg, x, y, w, h) =>
     svg.append(svgEl('rect', {x: x+1, y: y+1, width: w-2, height: h-2,
       fill: c, stroke: 'var(--surface)', 'stroke-width': 2, rx: 2})))),
-    'η 1 → 5 (color clamps at 5; tooltip shows the true value)', true);
+    'η from 1 to 5. The color stops at 5. Point to a cell to see its value.', true);
   legendEntry([
     cellSwatch((svg, x, y, w, h) => {
       drawMeasuredCell(svg, x, y, w, h, {eta: 1.4});
@@ -1486,27 +1677,27 @@ function renderHeatmaps() {
       drawMeasuredCell(svg, x, y, w, h, {eta: 4.2});
       drawSkirtDot(svg, x, y, w, h, 4.2);
     }),
-  ], 'skirt ≤ 10% default (white dot on dark cells)');
+  ], 'Dot: skirt is 10% or less. The dot is white on a dark cell.');
   legendEntry([cellSwatch((svg, x, y, w, h) => {
     drawMeasuredCell(svg, x, y, w, h, {eta: 3.0});
     drawSelectedRing(svg, x, y, w, h);
-  })], 'selected by the 10% default imaging curve');
+  })], 'Border: result used by the default imaging curve.');
   const defaultNote = document.createElement('span');
   defaultNote.style.cssText = 'font-size:12.5px;color:var(--muted)';
-  defaultNote.textContent = 'Dots/rings refer to s0=10% default.';
+  defaultNote.textContent = 'Dots and borders use the default limit, s0 = 10%.';
   hmLegend.append(defaultNote);
   if (heatmapStatus.capped)
     legendEntry([cellSwatch((svg, x, y, w, h) => {
       drawMeasuredCell(svg, x, y, w, h, {eta: 1.4});
       drawCappedHatch(svg, x, y, w, h, 1.4);
-    })], 'beyond the beam cap — anchor only');
+    })], 'Stripes: beam-cap anchor for interpolation only.');
   if (heatmapStatus.skipped)
     legendEntry([cellSwatch(drawSkippedCell)],
-      'not measured (beam cap exceeded earlier in row)');
+      'Slash: not measured after the row reached the beam cap.');
   if (heatmapStatus.failed)
-    legendEntry([cellSwatch(drawFailedCell)], 'failed');
+    legendEntry([cellSwatch(drawFailedCell)], 'X: failed simulation.');
   if (heatmapStatus.missing)
-    legendEntry([cellSwatch(drawNullCell)], 'not measured');
+    legendEntry([cellSwatch(drawNullCell)], 'Empty cell: no result.');
 }
 
 // lazy-loaded PSF inspector ----------------------------------------------------

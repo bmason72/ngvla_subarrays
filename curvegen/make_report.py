@@ -410,8 +410,8 @@ def result_key(row):
 def best_result_rows(rows):
     """Deduplicate append-style result CSV rows by lattice key.
 
-    Repair/fill jobs can leave stale rows behind.  Prefer offerable
-    measurements over diagnostics, and for identical statuses keep the later
+    Repair/fill jobs can leave stale rows behind.  Prefer valid simulation
+    results over diagnostics, and for identical statuses keep the later
     row because the result files are append-ordered.
     """
     out = {}
@@ -772,35 +772,28 @@ _SIM_DESC_HTML = {"track": "4&thinsp;h track",
 # the missing sub-natural branch is physics under the adopted convention, and
 # fragmented LONG-family segments are honest coverage gaps)
 _SNAPSHOT_NOTE_HTML = (
-    "<strong>Snapshot mode:</strong> a single 60&thinsp;s monochromatic "
-    "integration gives each baseline one uv sample, so on the density grid "
-    "used by Briggs weighting here (set by the untapered image&rsquo;s "
-    "imsize&thinsp;&times;&thinsp;cell) nearly every occupied uv cell holds "
-    "&le;&thinsp;1 visibility and robust weighting has almost no lever "
-    "&mdash; for sparse single-component subarrays (core, spiral, mid, "
-    "core-inner, long) the curves legitimately <em>begin at &asymp; the "
-    "natural-weighting beam</em> (verified on the untapered lattice rows, "
-    "where the gridding convention is identical for every robust). Only "
-    "composite subarrays, whose dense core cluster still multi-occupies uv "
-    "cells, reach finer-than-natural beams. A real continuum snapshot has "
-    "bandwidth + multi-dump uv filling that this monochromatic sim omits, "
-    "so robust may recover some lever in practice (open control, PLAN.md). "
-    "Snapshot beams are also strongly elongated (the geometric-mean "
-    "resolution shown hides the axis ratio), and fragmented (dotted) "
-    "LONG-family segments are rendered exactly as measured &mdash; "
-    "consistent with sparse instantaneous uv coverage. "
-    "Diagnosis 15 Jul 2026, PLAN.md.")
+    "<strong>Snapshot mode:</strong> The simulation uses one monochromatic "
+    "60&thinsp;s integration at transit. Each baseline gives one uv sample. "
+    "On the current density grid, most occupied uv cells contain no more "
+    "than one visibility. Thus, Briggs weighting has little effect for the "
+    "core, spiral, mid, core-inner, and long subarrays. Their curves start "
+    "near the natural-weighting beam. Composite subarrays can reach finer "
+    "beams because more than one sample can occur in a uv cell. A real "
+    "continuum snapshot has more uv coverage from its bandwidth and time "
+    "samples. Briggs weighting can have more effect on real data. Snapshot "
+    "beams can also be long and narrow. The plotted geometric-mean resolution "
+    "does not show the axis ratio. Dotted LONG-family segments show measured "
+    "coverage gaps. See PLAN.md for the analysis from 15 Jul 2026.")
 
 # the imaging-curve explanation shared by every combo's subtitle (matches the
 # template's static paragraph)
 _SUB_TAIL_HTML = (
-    "The <em>imaging</em> curves constrain the PSF skirt &mdash; the "
-    "azimuthally averaged PSF level at a radius of one FWHM (memo&thinsp;65 "
-    "metric&thinsp;2b) &mdash; to a selectable threshold s<sub>0</sub> (10% "
-    "by default, the memo&thinsp;121 criterion): at each resolution the "
-    "cheapest (min-&eta;) beam meeting the criterion is shown, and where no "
-    "beam can meet it the <em>best achievable</em> skirt is reported and "
-    "flagged (hollow), never trading resolution away.")
+    "The imaging curves use a selectable PSF skirt limit, s<sub>0</sub>. "
+    "The PSF skirt is the average PSF level at a radius of one FWHM. The "
+    "default limit is 10%. At each resolution, the curve shows the result "
+    "with the lowest &eta; that meets the limit. If no result meets the "
+    "limit, the curve shows the lowest available skirt and uses a hollow "
+    "marker.")
 
 
 def combo_entry(rev, sim_mode):
@@ -809,11 +802,16 @@ def combo_entry(rev, sim_mode):
     snap = sim_mode == "snapshot"
     h1 = "%s %staperability &amp; sculptability curves" % (
         rev_html, "snapshot " if snap else "")
-    sub = ("Sensitivity cost (&eta;, the image rms relative to natural "
-           "weighting) versus achieved resolution at the 30&thinsp;GHz "
-           "reference frequency, measured from noise simulations of each "
-           "%s subarray (%s, dec&thinsp;+24&deg;) over a grid of Briggs "
-           "robust and uv-taper values. %s"
+    sub = ("These plots show sensitivity cost (&eta;) against angular "
+           "resolution at 30&thinsp;GHz. Sensitivity cost is the image rms "
+           "divided by the rms for natural weighting. The sensitivity "
+           "calculation uses underlying code similar to the "
+           "<a href=\"https://ngect.nrao.edu\">ngVLA Exposure Calculator "
+           "Tool (ngECT)</a>. The data come from "
+           "noise simulations of each %s subarray. Each simulation uses a "
+           "%s at declination +24&deg;. The simulations use a grid of "
+           "Briggs robust and uv-taper values, with adaptive refinement "
+           "where needed. %s"
            % (rev_html, _SIM_DESC_HTML.get(sim_mode, sim_mode),
               _SUB_TAIL_HTML))
     return dict(key="%s_%s" % (rev, sim_mode),

@@ -52,6 +52,11 @@ class TestReleaseConstants(unittest.TestCase):
 
 class TestCombinedComboPlan(unittest.TestCase):
 
+    def test_combo_header_includes_refinement_and_ngect_context(self):
+        sub = mr.combo_entry("revD", "track")["sub_html"]
+        self.assertIn("adaptive refinement where needed", sub)
+        self.assertIn('href="https://ngect.nrao.edu"', sub)
+
     def test_non_release_keeps_every_row_in_order_unflagged(self):
         plan = mr.combined_combo_plan(ROWS)
         self.assertEqual([r["rev"] + "_" + r["sim_mode"] for r, _ in plan],
