@@ -33,6 +33,11 @@ class TestReportCalculatorControls(unittest.TestCase):
                       'step="any"', self.text)
         self.assertIn("if (!finitePositive(value))", self.text)
 
+    def test_resolution_accepts_sub_milliarcsecond_precision(self):
+        self.assertIn('id="calc-res" name="resolution" type="number" min="0" '
+                      'step="any"', self.text)
+        self.assertIn("readCalcNumber('calc-res', 'Resolution', errors)", self.text)
+
     def test_report_header_copy_and_stats_location(self):
         self.assertNotIn("Track 2 curve generation", self.text)
         self.assertNotIn("5&ndash;6 Jul 2026", self.text)

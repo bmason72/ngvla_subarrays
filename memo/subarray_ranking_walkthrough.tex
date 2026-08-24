@@ -57,42 +57,216 @@ frequency-invariant.
 
 \section{One candidate from each subarray}
 
-Let $m$ be the fractional beam tolerance (currently 0.05 by default).  The
-allowed reference-frequency beam interval is
-\begin{equation}
-  I_\theta=[\theta_{\rm req}(1-m),\theta_{\rm req}(1+m)].
-\end{equation}
-The achieved beam can therefore lie at either edge of the interval; it need not
-equal the central request.
+\subsection{The allowed beam interval}
 
-The measured robust--taper lattice is made continuous conservatively.  Adjacent
-points are interpolated along fixed-robust taper rows and fixed-taper Briggs
-columns.  Valid four-corner Briggs cells also admit interior robust and taper
-values.  On an edge, with
-\[
- u=\frac{\ln(\theta/\theta_a)}{\ln(\theta_b/\theta_a)},
-\]
-the engine interpolates $\ln\eta$ linearly, interpolates skirt linearly, and
-normally interpolates taper in log space.  It does not extrapolate beyond a
-measured family or bridge a pruned gap.
-
-For a point-source request, the subarray's operating point is
+Let $m$ be the fractional beam tolerance (currently 0.05 by default), and let
+$\theta_0=\theta_{\rm req}f/(30~{\rm GHz})$ be the central requested beam in
+the 30-GHz reference coordinates of the lattice.  Define
 \begin{equation}
- p_i^*=\mathop{\rm arg\,min}_{p:\,\theta(p)\in I_\theta}\eta(p).
+ \theta_- = \theta_0(1-m),\qquad
+ \theta_+ = \theta_0(1+m),\qquad
+ I_\theta=[\theta_-,\theta_+].
+ \label{eq:beam-window}
 \end{equation}
-For an imaging request with required skirt $s_0$, the current per-subarray
-policy is:
-\begin{enumerate}
-  \item If any point in $I_\theta$ has $s\le s_0$, choose the lowest-$\eta$
-        such point.  This is a \emph{strict} result.
-  \item Otherwise, if relaxation is enabled, choose the best achievable skirt
-        in $I_\theta$, breaking skirt ties by $\eta$.  This is a
-        \emph{relaxed} result and does not meet the requested skirt.
-  \item With relaxation disabled, absence of a strict point excludes the
-        subarray.
-\end{enumerate}
-Interpolation provenance and the winning \texttt{tclean} weighting, robust,
-and taper are retained in the returned candidate.
+At 30~GHz, $\theta_0=\theta_{\rm req}$.  The calculator does \emph{not}
+first set $\theta=\theta_0$ and then minimize $\eta$.  Beam size is itself an
+optimization variable constrained to $I_\theta$, so the returned
+$\theta_i^*$ can be the central request, either interval boundary, or an
+interior value.
+
+\subsection{Interpolation on a two-corner lattice edge}
+
+First consider two adjacent measured lattice points
+\begin{align*}
+ p_a&=(\theta_a,\eta_a,s_a,r_a,t_a),&
+ p_b&=(\theta_b,\eta_b,s_b,r_b,t_b),
+\end{align*}
+where $r$ is Briggs robust and $t$ is uv taper.  The points are joined only if
+they are adjacent along one lattice coordinate and pass the engine's gap
+checks.  For any $\theta$ bracketed by $\theta_a$ and $\theta_b$, put
+\begin{equation}
+ z(\theta)=
+ \frac{\ln\theta-\ln\theta_a}{\ln\theta_b-\ln\theta_a},
+ \qquad 0\le z\le1.
+ \label{eq:edge-fraction}
+\end{equation}
+The interpolated sensitivity cost and skirt are
+\begin{align}
+ \eta(\theta)&=\exp\!\left[(1-z)\ln\eta_a+z\ln\eta_b\right]
+               =\eta_a^{1-z}\eta_b^z,\label{eq:edge-eta}\\
+ s(\theta)&=(1-z)s_a+zs_b.\label{eq:edge-skirt}
+\end{align}
+On a fixed-robust taper-row edge, $r_a=r_b$ and
+\begin{equation}
+ r(\theta)=r_a,\qquad
+ t(\theta)=
+ \begin{cases}
+  \exp[(1-z)\ln t_a+z\ln t_b],&t_a>0\ \hbox{and}\ t_b>0,\\
+  (1-z)t_a+zt_b,&t_a=0\ \hbox{or}\ t_b=0.
+ \end{cases}
+ \label{eq:edge-row-parameters}
+\end{equation}
+The second line is used on an edge touching the untapered column because
+$\ln0$ is undefined.  This is the complete meaning of the earlier word
+``normally.''  On a fixed-taper Briggs-column edge, $t_a=t_b$ and
+\begin{equation}
+ t(\theta)=t_a,\qquad r(\theta)=(1-z)r_a+zr_b.
+ \label{eq:edge-column-parameters}
+\end{equation}
+Natural-weighting points participate only in fixed-weighting taper rows;
+four-corner cells, described next, are Briggs-only.
+
+\subsection{Interpolation inside a four-corner Briggs cell}
+
+Let a valid lattice cell have robust nodes $r_0<r_1$ and taper nodes
+$t_0<t_1$, with measured corners
+\begin{align*}
+ p_a&=(r_0,t_0;\theta_a,\eta_a,s_a),&
+ p_b&=(r_1,t_0;\theta_b,\eta_b,s_b),\\
+ p_c&=(r_0,t_1;\theta_c,\eta_c,s_c),&
+ p_d&=(r_1,t_1;\theta_d,\eta_d,s_d).
+\end{align*}
+All four corners must be present and lattice-adjacent; the engine does not
+form a cell across an intervening sample, a pruned taper gap, or a disallowed
+robust or resolution step.  Introduce normalized coordinates
+$q,u\in[0,1]$ along the robust and taper directions, respectively, and the
+bilinear weights
+\begin{equation}
+ w_a=(1-q)(1-u),\quad w_b=q(1-u),\quad
+ w_c=(1-q)u,\quad w_d=qu,
+ \qquad \sum_j w_j=1.
+ \label{eq:cell-weights}
+\end{equation}
+Writing $x_j=\ln\theta_j$ and $e_j=\ln\eta_j$, the interpolated physical
+quantities are
+\begin{align}
+ x(q,u)&=\sum_{j\in\{a,b,c,d\}}w_jx_j,&
+ \theta(q,u)&=\exp x(q,u),\label{eq:cell-theta}\\
+ e(q,u)&=\sum_{j\in\{a,b,c,d\}}w_je_j,&
+ \eta(q,u)&=\exp e(q,u),\label{eq:cell-eta}\\
+ s(q,u)&=\sum_{j\in\{a,b,c,d\}}w_js_j.&&
+ \label{eq:cell-skirt}
+\end{align}
+An imaging cell is usable only when skirt is measured at all four corners.
+The corresponding \texttt{tclean} parameters are
+\begin{align}
+ r(q)&=r_0+q(r_1-r_0),\label{eq:cell-robust}\\
+ t(u)&=
+ \begin{cases}
+  \exp[(1-u)\ln t_0+u\ln t_1],&t_0>0,\\
+  (1-u)t_0+ut_1,&t_0=0.
+ \end{cases}
+ \label{eq:cell-taper}
+\end{align}
+Thus the cell is bilinear in $\ln\theta$, $\ln\eta$, and $s$ as functions of
+$(q,u)$; reported robust is linear in $q$, and reported taper is geometric in
+$u$ except in a cell touching the untapered column.  The implementation rounds
+the returned robust value to three decimal places.
+
+For a particular trial beam $\theta_*$, the cell points that make exactly that
+beam lie on the one-dimensional iso-resolution locus
+\begin{equation}
+ x(q,u)=x_*,\qquad x_*=\ln\theta_*.
+ \label{eq:iso-resolution}
+\end{equation}
+For example, define
+\begin{align*}
+ A&=x_a,&B&=x_b-x_a,&C&=x_c-x_a,&
+ D&=x_a-x_b-x_c+x_d.
+\end{align*}
+Then $x(q,u)=A+Bq+Cu+Dqu$, and, away from the degenerate denominator,
+\begin{equation}
+ u(q;x_*)=\frac{x_*-A-Bq}{C+Dq}.
+ \label{eq:cell-isolocus}
+\end{equation}
+Only values with $0\le q\le1$ and $0\le u(q;x_*)\le1$ are in the cell.
+Substitution of equation~\eqref{eq:cell-isolocus} into
+equations~\eqref{eq:cell-eta}--\eqref{eq:cell-skirt} gives the corresponding
+$\eta(q)$ and $s(q)$ along that fixed-beam locus.  Once the optimizer chooses
+$q_*$, equations~\eqref{eq:cell-robust} and~\eqref{eq:cell-taper} give the
+returned robust $r_*$ and taper $t_*$, and
+$\eta_*=\eta(q_*,u_*)$, $s_*=s(q_*,u_*)$.  The implementation treats the
+degenerate case $C+Dq=0$ separately rather than dividing by zero.
+
+\subsection{How $I_\theta$ enters the point-source and imaging choices}
+
+Let $\mathcal P_i(\theta)$ denote all measured, edge-interpolated, and
+cell-interior operating points of subarray $i$ that produce beam $\theta$.
+For a point-source request, the selected operating point and its achieved beam
+are jointly
+\begin{equation}
+ (\theta_i^*,p_i^*)\in
+ \mathop{\rm arg\,min}_{\substack{\theta\in I_\theta\\
+                                  p\in\mathcal P_i(\theta)}}\eta(p).
+ \label{eq:point-source-choice}
+\end{equation}
+For an imaging request with required skirt $s_0$, define the strict feasible
+set
+\begin{equation}
+ \mathcal F_i=\{(\theta,p):\theta\in I_\theta,
+               \ p\in\mathcal P_i(\theta),\ s(p)\le s_0\}.
+ \label{eq:strict-set}
+\end{equation}
+If $\mathcal F_i$ is nonempty, the strict answer is
+\begin{equation}
+ (\theta_i^*,p_i^*)\in
+ \mathop{\rm arg\,min}_{(\theta,p)\in\mathcal F_i}\eta(p).
+ \label{eq:strict-choice}
+\end{equation}
+This equation is where $I_\theta$ enters the imaging case: $\theta_i^*$ is
+chosen at the same time as $\eta_i^*$, $s_i^*$, $r_i^*$, and $t_i^*$, rather
+than being fixed to $\theta_0$ beforehand.
+
+If $\mathcal F_i$ is empty and relaxation is enabled, let
+\begin{equation}
+ s_{i,\min}=\min_{\substack{\theta\in I_\theta\\
+                            p\in\mathcal P_i(\theta)}}s(p).
+\end{equation}
+The relaxed answer first minimizes skirt and then breaks numerical skirt ties
+by $\eta$:
+\begin{equation}
+ (\theta_i^*,p_i^*)\in
+ \mathop{\rm arg\,min}_{\substack{\theta\in I_\theta,
+                                  \ p\in\mathcal P_i(\theta)\\
+                                  s(p)\le s_{i,\min}+10^{-6}}}\eta(p).
+ \label{eq:relaxed-choice}
+\end{equation}
+It is flagged as relaxed and does not meet $s_0$.  With relaxation disabled,
+an empty $\mathcal F_i$ excludes the subarray.
+
+The candidate search is finite.  On each two-corner edge the engine evaluates
+measured points inside $I_\theta$, crossings of $\theta_-$ and $\theta_+$,
+and, for strict imaging, crossings of $s=s_0$.  These contain every edge
+minimum because equations~\eqref{eq:edge-eta} and~\eqref{eq:edge-skirt} are
+linear in $\ln\theta$ after taking $\ln\eta$.  In a four-corner cell, for a
+fixed $\theta_*$ the engine substitutes equation~\eqref{eq:cell-isolocus} and
+evaluates interior stationary points of $\eta$, stationary points of $s$, and
+crossings of $s=s_0$; the cell edges are already covered by the edge search.
+For a nonzero-width $I_\theta$, the current implementation repeats this
+fixed-beam calculation at 33 beams spaced uniformly in $\ln\theta$ from
+$\theta_-$ through $\theta_+$.  Thus edge minimization is analytic over the
+whole interval, while the additional cell-interior minimization over beam is
+a deterministic 32-subinterval scan.  A zero-width request evaluates the one
+specified beam exactly.  Finally the engine compares all candidates according
+to equations~\eqref{eq:point-source-choice}, \eqref{eq:strict-choice}, or
+\eqref{eq:relaxed-choice}.  It retains the winning measured anchors and the
+interpolated \texttt{tclean} weighting, robust, and taper values.
+
+No interpolation family extrapolates beyond its measured endpoints, and no
+edge or cell bridges a pruned gap.
+
+The preceding candidate-search description is the Python
+\texttt{Envelope.solve} path.  The in-page browser calculator uses the same
+interpolation results, but it does not rerun the cell solve for each form
+submission.  At report-build time the engine evaluates each subarray at
+beams spaced by 0.01 dex in $\log_{10}\theta$ (plus coverage endpoints) with
+zero beam margin, and embeds those curve points in the page.  At query time
+the browser restricts that stored set to $I_\theta$ and applies
+equations~\eqref{eq:point-source-choice}, \eqref{eq:strict-choice}, and
+\eqref{eq:relaxed-choice} to those points.  Thus the browser's
+$\theta_i^*$ is one of the embedded curve beams; its $\eta_i^*$, $s_i^*$,
+$r_i^*$, and $t_i^*$ were calculated from the edge or four-corner equations
+above when that curve point was built.
 
 Two other feasibility gates apply.  A heterogeneous subarray is excluded when
 the entire beam window is coarser than its beam cap; if the interval only
