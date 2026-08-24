@@ -19,6 +19,7 @@ invariant under this scaling (PLAN.md open question 2).
 
 import csv
 import os
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 from .envelope import Envelope, TRADE_SPAN
@@ -26,6 +27,17 @@ from .schema import SubarrayInfo, CurveSample
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 REF_FREQ_GHZ = 30.0
+
+
+@dataclass(frozen=True)
+class CurveSolveResult:
+    """Structured query outcome; ``solve()`` keeps the legacy tuple API."""
+
+    sample: Optional[CurveSample]
+    message: str
+    relaxed: bool = False
+    skirt_met: Optional[bool] = None
+    best_skirt: Optional[float] = None
 
 
 def _float_or_none(s: str) -> Optional[float]:
@@ -196,6 +208,17 @@ class CurveLibrary:
               skirt_threshold: Optional[float] = None,
               relax: bool = True
               ) -> Tuple[Optional[CurveSample], str]:
+        """Compatibility wrapper returning the historical ``(sample, msg)``."""
+        result = self.solve_detailed(
+            name, resolution, freq_ghz, beam_margin=beam_margin,
+            skirt_threshold=skirt_threshold, relax=relax)
+        return result.sample, result.message
+
+    def solve_detailed(self, name: str, resolution: float, freq_ghz: float,
+              beam_margin: float = 0.05,
+              skirt_threshold: Optional[float] = None,
+              relax: bool = True
+              ) -> CurveSolveResult:
         """Find the minimum-eta way for subarray `name` to reach `resolution`
         (arcsec) at `freq_ghz`, within a fractional beam tolerance.
 
@@ -212,7 +235,7 @@ class CurveLibrary:
         The returned message flags the relaxation.
         """
         if name not in self.samples or not self.samples[name]:
-            return None, "no curve data tabulated for this subarray"
+            return CurveSolveResult(None, "no curve data tabulated for this subarray")
 
         # work at the reference frequency: the window scales the same way
         res_ref = resolution * freq_ghz / REF_FREQ_GHZ
@@ -224,11 +247,12 @@ class CurveLibrary:
         info = self.subarrays.get(name)
         cap = info.beam_cap_arcsec if info else None
         if cap is not None and res_ref * (1 - beam_margin) > cap:
-            return None, ("requested beam is coarser than this subarray's "
-                          "beam cap (%.4g arcsec at the request frequency): "
-                          "beams this coarse are better made with its "
-                          "coarsest component subarray"
-                          % (cap * REF_FREQ_GHZ / freq_ghz))
+            return CurveSolveResult(
+                None, "requested beam is coarser than this subarray's "
+                "beam cap (%.4g arcsec at the request frequency): "
+                "beams this coarse are better made with its "
+                "coarsest component subarray"
+                % (cap * REF_FREQ_GHZ / freq_ghz))
 
         # the envelope engine interpolates within measured lattice rows, so
         # the answer varies continuously with the request (see envelope.py
@@ -242,30 +266,41 @@ class CurveLibrary:
             if choice.relaxed:
                 best = choice.best_skirt if choice.best_skirt is not None \
                     else choice.skirt
-                return sample, ("relaxed: no beam within the tolerance meets "
-                                "skirt <= %.2g; best achievable skirt is %.2g "
-                                "(reported beam skirt %.2g, eta %.2f) -- does "
-                                "NOT meet the criterion"
-                                % (skirt_threshold, best, choice.skirt,
-                                   choice.eta))
+                return CurveSolveResult(
+                    sample,
+                    "relaxed: no beam within the tolerance meets "
+                    "skirt <= %.2g; best achievable skirt is %.2g "
+                    "(reported beam skirt %.2g, eta %.2f) -- does "
+                    "NOT meet the criterion"
+                    % (skirt_threshold, best, choice.skirt, choice.eta),
+                    relaxed=True, skirt_met=False, best_skirt=best)
             if choice.traded:               # only in mode='legacy_trade'
-                return sample, ("traded: skirt %.2g > %.2g accepted under "
-                                "the 1-for-1 eta-skirt trade (legacy mode)"
-                                % (choice.skirt, skirt_threshold))
-            return sample, "ok"
+                return CurveSolveResult(
+                    sample,
+                    "traded: skirt %.2g > %.2g accepted under "
+                    "the 1-for-1 eta-skirt trade (legacy mode)"
+                    % (choice.skirt, skirt_threshold),
+                    skirt_met=False)
+            return CurveSolveResult(
+                sample, "ok",
+                skirt_met=True if skirt_threshold is not None else None)
 
         q = self.qualifying_samples(name, skirt_threshold)
         if skirt_threshold is not None and not q:
-            return None, ("no tabulated (robust, taper) combination meets the "
-                          "PSF-skirt threshold of %.2g" % skirt_threshold)
+            return CurveSolveResult(
+                None, "no tabulated (robust, taper) combination meets the "
+                "PSF-skirt threshold of %.2g" % skirt_threshold,
+                skirt_met=False)
         scale = REF_FREQ_GHZ / freq_ghz
         if not q:
-            return None, "no usable curve data for this subarray"
-        return None, ("no tabulated solution within +/-%.0f%% of %.4g arcsec; "
-                      "nearest qualifying samples span %.4g - %.4g arcsec "
-                      "at this frequency"
-                      % (100 * beam_margin, resolution,
-                         q[0].resolution * scale, q[-1].resolution * scale))
+            return CurveSolveResult(None, "no usable curve data for this subarray")
+        return CurveSolveResult(
+            None, "no tabulated solution within +/-%.0f%% of %.4g arcsec; "
+            "nearest qualifying samples span %.4g - %.4g arcsec "
+            "at this frequency"
+            % (100 * beam_margin, resolution,
+               q[0].resolution * scale, q[-1].resolution * scale),
+            skirt_met=False if skirt_threshold is not None else None)
 
     def _choice_to_sample(self, name: str, choice) -> CurveSample:
         """Engine Choice -> CurveSample (reference-frequency units).

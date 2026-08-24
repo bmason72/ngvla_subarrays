@@ -19,12 +19,21 @@ curves), main+long imaging 0.78 / ptsrc 0.30; all else ≤ 0.22.
 
 bmason launched the tracks-only variant (combos 0 and 2; no revC retrofit).
 
+**Status 19 Aug pm:** retrofits 3418621_0/2 COMPLETED exit 0 (their collects
+rebuilt per-combo + combined reports and PSF exports 09:44 / 16:01); all
+three range-refresh backfills are now launched and RUNNING: 3418623_0 revF,
+3418624_2 revD, and 3421939_4 revC.  **The 19 Aug 11:32 release-page rebuild
+was PREMATURE** — it embeds mostly 3-FWHM cuts (revF 0/2839 at 10 FWHM,
+revD 451/2852, revC 0/1935; verified by decoding its payloads) because the
+backfills carry the anchor refresh.  Rebuild both reports again AFTER the
+three backfills drain; harvest checklist in the PLAN.md 19-Aug delta.
+
 **PSF range upgrade rides along (18 Aug pm):** capture now goes to 10 FWHM
 (was 3; `measure.CAPTURE_RMAX_FWHM`) and backfill treats shorter-range cuts
 as stale.  So the two QUEUED backfills refresh EVERY displayed-curve anchor
 for combos 0 and 2 — the scale of the original full backfill, well inside
-the 47 h walltime, resumable as always.  revC (combo 4) has no job queued
-and its anchors are now stale too; to bring its PSFs to 10 FWHM:
+the 47 h walltime, resumable as always.  revC (combo 4) was launched later
+as 3421939_4 because its anchors are stale too.  The launch command was:
 
 ```
 sbatch --array=4 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch

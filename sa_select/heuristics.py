@@ -5,17 +5,15 @@ A heuristic is any callable  (feasible_candidates, request) -> ranked list
 of the same candidates, best first.  The engine looks built-in names up in
 HEURISTICS; passing your own callable to select_subarrays() works the same
 way, so trying a different selection strategy never requires touching the
-engine.
+engine.  For imaging requests the engine normally calls the heuristic once
+for skirt-met candidates and once for relaxed candidates, then concatenates
+those groups.  ``ObservingRequest.strict_first=False`` opts into one mixed
+pool.
 
-When no sensitivity goal was given, integration_time_hr / antenna_hours are
-None, so the built-ins fall back to *relative* costs, which follow from the
-radiometer equation (rms ∝ eta / sqrt(N(N-1) t)) at fixed target sensitivity:
-
-    time to reach a fixed rms       :  t     ∝  eta^2 / (N (N-1))
-    antenna-hours to reach that rms :  N t   ∝  eta^2 / (N-1)
-
-(cf. the (214/N * eta)^2 convention in CLAUDE.md, which approximates
-N(N-1) by N^2).
+The selector always resolves an absolute goal before invoking a built-in: a
+user goal, or the natural untapered MAIN sensitivity in one minute.  Built-ins
+therefore refuse candidates without absolute costs.  The relative helper
+functions below remain only for transition/audit comparisons.
 """
 
 from typing import Callable, Dict, List, Union
@@ -40,9 +38,9 @@ def by_integration_time(cands: List[Candidate], request: ObservingRequest
                         ) -> List[Candidate]:
     """Least telescope wall-clock time first."""
     def key(c):
-        t = c.integration_time_hr if c.integration_time_hr is not None \
-            else relative_time(c)
-        return (t, c.subarray.n_ant)          # tie-break: fewer antennas
+        if c.integration_time_hr is None:
+            raise ValueError("integration-time ranking requested without available costs")
+        return (c.integration_time_hr, c.subarray.n_ant)  # tie-break: fewer antennas
     return sorted(cands, key=key)
 
 
@@ -50,9 +48,9 @@ def by_antenna_hours(cands: List[Candidate], request: ObservingRequest
                      ) -> List[Candidate]:
     """Least total antenna-hours (the EOP resource-cost view) first."""
     def key(c):
-        ah = c.antenna_hours if c.antenna_hours is not None \
-            else relative_antenna_hours(c)
-        return (ah, c.subarray.n_ant)
+        if c.antenna_hours is None:
+            raise ValueError("antenna-hour ranking requested without available costs")
+        return (c.antenna_hours, c.subarray.n_ant)
     return sorted(cands, key=key)
 
 

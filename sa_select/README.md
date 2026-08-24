@@ -3,7 +3,7 @@
 Given an observing request (resolution, frequency, sensitivity, LAS, …) this
 returns a **ranked list of NGVLA subarrays** with the `tclean` parameters
 (Briggs `robust` + UV `taper`) to reach the beam, the sensitivity-loss factor
-`eta`, the PSF skirt, the LAS, and — when a sensitivity goal is given — the
+`eta`, the PSF skirt, the LAS, and — using an explicit or fiducial goal — the
 **integration time** and **antenna-hours**. It reads pre-tabulated curve data;
 **it does not need CASA** and runs anywhere with Python + numpy + scipy.
 
@@ -14,26 +14,22 @@ fills in when its campaign runs. Release scope (Aug 2026): Rev F track
 point-source+imaging; Rev D and Rev C.01 track point-source only — an
 imaging query against those prints a warning.
 
-## Minimal checkout (run it on any machine)
+## Install or run from a checkout
 
-You only need two sibling directories from the repo plus this package's data:
-
-```
-<repo>/
-├── sa_select/                     # this package (+ sa_select/data/*.csv)
-└── ngvla-sensitivity-calculator/  # the memo-96 / ngECT calculator + its .pkl
-```
-
-`sa_select/sensitivity.py` locates the calculator at `../ngvla-sensitivity-calculator`,
-so keep that relative layout. A git sparse checkout gets exactly this:
+The calculator is a normal Python package. Its curve tables and Memo-96
+sensitivity backing data are package resources; it does not require TACC,
+CASA, pickle files, or a sibling calculator checkout.
 
 ```bash
-git clone --no-checkout <repo-url> ngvla && cd ngvla
-git sparse-checkout init --cone
-git sparse-checkout set sa_select ngvla-sensitivity-calculator
-git checkout
-python3 -m pip install numpy scipy        # the only dependencies; no CASA
+git clone <repo-url> ngvla && cd ngvla
+python3 -m pip install .
+sa-select --help
 ```
+
+For development, `python3 -m sa_select ...` works directly from the repository
+root. `sa-select --data-info` reports all registered campaigns, the backing
+data schema, provenance, and source checksums. Before publishing a wheel beyond
+the collaboration, confirm the redistribution terms noted by that command.
 
 ## Use it
 
@@ -41,13 +37,15 @@ python3 -m pip install numpy scipy        # the only dependencies; no CASA
 ```bash
 python3 -m sa_select --resolution 0.01 --frequency 30 --sensitivity 1e-5 \
                      --las 0.5 --imaging --optimize antenna_hours
-# --point-source for detection projects; --unit K for a brightness-temp goal;
+# Omit --sensitivity to rank against the natural, untapered MAIN sensitivity
+# in one minute. --point-source ignores skirts; --unit K selects a K goal;
 # --delta-v <m/s> for a spectral-line rms; --rows for CSV output;
-# --rev/--sim-mode for another campaign's curves; --help for all.
+# --beam-margin 0 requests exact matching; --skirt-threshold is arbitrary;
+# --mixed-skirt-ranking opts out of strict-first imaging ranking.
 
 python3 -m sa_select --batch cases.csv --top 3   # EOP-style case list -> CSV
 # columns: case,resolution,frequency,sensitivity,sensitivity_unit,las,
-#          imaging,beam_margin,skirt_threshold,optimize,delta_v
+#          imaging,beam_margin,skirt_threshold,strict_first,optimize,delta_v
 # (empty cells fall back to the command-line flags)
 
 python3 -m sa_select --stroh subarray_data.json --resolution 0.1 \
@@ -69,22 +67,33 @@ result = select_subarrays(req)
 print(result.table())          # readable summary + why each SA was excluded
 best = result.best             # cheapest feasible Candidate (or None)
 rows = result.to_rows()        # list[dict], drops into a DataFrame
+summary = result.to_summary()  # structured warnings/ranking status
 ```
 
 Each `Candidate` carries: `subarray`, `n_ant`, `eta`, `weighting/robust/taper`,
 `skirt`, `las`, `integration_time_hr`, `antenna_hours`, `feasible`, `reasons`
-(why excluded) and `warnings` (e.g. a relaxed skirt criterion).
+(why excluded), `warnings`, structured skirt status, cost status, and goal
+origin. For imaging, skirt-met candidates rank ahead of relaxed candidates;
+each group is ordered by the requested cost metric. A structured
+`NO_SUBARRAY_MEETS_SKIRT` warning is returned if the strict group is empty.
 
 ## How sensitivity is computed
 
-The integration time comes from a **live call** to the memo-96 ngVLA sensitivity
-calculator (`ngvla-sensitivity-calculator/`) for the natural-weighting rms,
-scaled by our curve-derived `eta` and the radiometer equation — *not* a
-pre-baked table (the HTML report does pre-tabulate, for a no-Python page; this
-package calls the calculator directly). Note the calculator's anchor is
+The integration time uses the natural-weighting kernel and receiver/subarray
+tables from the Memo-96 ngVLA sensitivity calculator, packaged as inert JSON,
+scaled by our curve-derived `eta` and the radiometer equation. When no explicit
+goal is supplied, the common goal is natural, untapered MAIN in one minute at
+the requested frequency and spectral setup. Note the calculator's anchor is
 N_ant-based and does not model the spurious-short-baseline filter, so the
 absolute sensitivity for `long` alone is ~3.6 % optimistic (negligible for the
 combinations); imaging-quality (`eta`, skirt) is unaffected.
+
+The backing rms already contains the radiometer factor `N(N-1)`. The optional
+`n_ant_actual` correction replaces a stale nominal revision count, or completes
+a MAIN-donor rescale for a subarray missing from the backing calculator. It is
+unity when nominal and actual counts agree. Multiplying final time by the
+actual count to obtain antenna-hours is resource accounting, not a second
+sensitivity factor.
 
 ## Data
 
@@ -94,6 +103,9 @@ combinations); imaging-quality (`eta`, skirt) is unaffected.
   robust, taper) samples from `curvegen/` (the default).
 - `data/bootstrap_curves.csv` — the older memo-121 stand-in; pass
   `CurveLibrary(samples=…)` to use it.
+- `data/sensitivity_data.json` — portable Memo-96 receiver/subarray tables and
+  source-count data. Maintainers can regenerate and round-trip-check it with
+  `data/export_sensitivity_data.py` from trusted upstream files.
 
 ## Scope / caveats (v1)
 

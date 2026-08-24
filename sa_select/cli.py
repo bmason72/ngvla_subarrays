@@ -18,7 +18,8 @@ the way to reproduce an envelope-observing-program (EOP) case list.
 Recognized columns (all optional except resolution and frequency; empty
 cells fall back to the command-line flags): ``case, resolution, frequency,
 sensitivity, sensitivity_unit, las, imaging, beam_margin, skirt_threshold,
-optimize, delta_v``.  ``imaging`` accepts true/false/1/0/imaging/point-source.
+strict_first, optimize, delta_v``.  ``imaging`` and ``strict_first`` accept
+true/false/1/0/imaging/point-source.
 Output is one CSV row per case per ranked feasible candidate (``--top N``
 per case, default 1), with infeasible cases reported on a single row.
 
@@ -29,6 +30,7 @@ exclusion reasons).
 
 import argparse
 import csv
+import json
 import sys
 
 from .schema import ObservingRequest
@@ -46,7 +48,7 @@ _FALSE = {"0", "false", "no", "point-source", "ptsrc", "pointsource"}
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="sa_select",
+        prog="sa-select",
         description="Rank NGVLA subarrays (+ tclean weighting) for a "
                     "requested beam, frequency, sensitivity, and LAS.",
     )
@@ -56,7 +58,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="observing frequency, GHz (required unless --batch)")
     p.add_argument("--sensitivity", type=float, default=None,
                    help="target point-source sensitivity goal, in --unit "
-                        "(omit for a beam-only query, no integration time)")
+                        "(omit to use natural MAIN in one minute as a common "
+                        "fiducial goal)")
     p.add_argument("--unit", dest="sensitivity_unit", choices=["Jy/beam", "K"],
                    default="Jy/beam",
                    help="unit of --sensitivity (default: Jy/beam)")
@@ -77,6 +80,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--skirt-threshold", type=float, default=0.10,
                    help="max PSF level at r = 1 FWHM, imaging only "
                         "(default: 0.10)")
+    p.add_argument("--mixed-skirt-ranking", dest="strict_first",
+                   action="store_false", default=True,
+                   help="let the ranking heuristic compare skirt-met and "
+                        "relaxed imaging candidates in one pool (default: "
+                        "skirt-met candidates rank first)")
     p.add_argument("--optimize", choices=sorted(HEURISTICS), default="antenna_hours",
                    help="ranking heuristic (default: antenna_hours)")
     p.add_argument("--delta-v", dest="delta_v", type=float, default=None,
@@ -103,6 +111,9 @@ def build_parser() -> argparse.ArgumentParser:
                         "(default: 1)")
     p.add_argument("--rows", action="store_true",
                    help="print to_rows() as CSV instead of the summary table")
+    p.add_argument("--data-info", action="store_true",
+                   help="print packaged sensitivity-data provenance and registered "
+                        "campaigns as JSON, then exit")
     return p
 
 
@@ -133,6 +144,9 @@ def _request_from_row(row, args):
         imaging=_parse_imaging(row.get("imaging") or "", args.imaging),
         beam_margin=get("beam_margin", float, args.beam_margin),
         skirt_threshold=get("skirt_threshold", float, args.skirt_threshold),
+        strict_first=get("strict_first",
+                         lambda v: _parse_imaging(v, args.strict_first),
+                         args.strict_first),
         optimize=get("optimize", str, args.optimize),
         delta_v=get("delta_v", float, args.delta_v),
     )
@@ -154,6 +168,7 @@ def _run_batch(args, library) -> int:
 
     fields = ["case", "rank"]
     all_feasible = True
+    all_ranked = True
     rows_out = []
     warned_imaging = False
     for i, row in enumerate(cases):
@@ -169,10 +184,13 @@ def _run_batch(args, library) -> int:
         feasible = result.feasible
         if not feasible:
             all_feasible = False
+        if not result.ranking_available:
+            all_ranked = False
         picks = feasible[:max(args.top, 1)] if feasible else []
         for rank, c in enumerate(picks, start=1):
             r = result.to_rows()[result.candidates.index(c)]
-            r.update(case=case_id, rank=rank)
+            r.update(case=case_id,
+                     rank=rank if result.ranking_available else "")
             rows_out.append(r)
         if not picks:
             reasons = "; ".join("%s: %s" % (c.subarray.name, "; ".join(c.reasons))
@@ -190,11 +208,23 @@ def _run_batch(args, library) -> int:
     out = csv.DictWriter(sys.stdout, fieldnames=fields)
     out.writeheader()
     out.writerows(rows_out)
-    return 0 if all_feasible else 2
+    return 0 if all_feasible and all_ranked else 2
 
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
+
+    if args.data_info:
+        from .curves import load_registry
+        from .sensitivity import data_info
+        info = data_info()
+        info["campaigns"] = [
+            {"rev": rev, "sim_mode": mode,
+             "subarrays_csv": files[0], "samples_csv": files[1]}
+            for (rev, mode), files in sorted(load_registry().items())
+        ]
+        print(json.dumps(info, indent=2, sort_keys=True))
+        return 0
 
     if args.stroh is not None:
         from . import stroh
@@ -231,6 +261,7 @@ def main(argv=None) -> int:
             imaging=args.imaging,
             beam_margin=args.beam_margin,
             skirt_threshold=args.skirt_threshold,
+            strict_first=args.strict_first,
             optimize=args.optimize,
             delta_v=args.delta_v,
         )
@@ -240,6 +271,10 @@ def main(argv=None) -> int:
 
     _warn_release_scope(args.rev, args.sim_mode, request.imaging)
     result = select_subarrays(request, library=library)
+
+    for warning in result.warnings:
+        print("warning [%s]: %s" % (warning.code, warning.message),
+              file=sys.stderr)
 
     print("# %s/%s  resolution=%.4g\" frequency=%.4g GHz  %s  optimize=%s"
           % (args.rev, args.sim_mode, request.resolution, request.frequency,
@@ -254,7 +289,7 @@ def main(argv=None) -> int:
     else:
         print(result.table())
 
-    return 0 if result.feasible else 2
+    return 0 if result.feasible and result.ranking_available else 2
 
 
 if __name__ == "__main__":

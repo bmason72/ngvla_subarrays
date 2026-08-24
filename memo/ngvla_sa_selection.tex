@@ -19,77 +19,69 @@
 \maketitle
 
 \begin{abstract}
-This memo describes a query-time tool that assigns an \ngvla\ subarray and
-\texttt{tclean} weighting parameters for a requested angular resolution,
-observing frequency, sensitivity, largest angular scale (LAS), and
-point-source or imaging use case.  The method combines offline CASA
-simulations of taperability and PSF sculptability with a lightweight
-interpolation and ranking engine.  Curve tables now exist for four campaigns
-(Rev F and Rev D, each in four-hour track and snapshot modes).  The release
-scope covers Rev F track (point-source and imaging), Rev D track
-(point-source), and Rev C.01 track (point-source); the Rev C.01 campaign is
-staged but not yet measured at this writing, and the snapshot tables are
-internal.  Appendices give concise
-instructions for running the campaigns and reports and document the Python
-calculator interface.  The draft is intentionally factual: the LAS
-coefficient, the frequency invariance of the inefficiency factor, and the use
-of a single noise realization are current assumptions, not demonstrated
-properties of the array.
+This memo documents a prototype \ngvla\ subarray selection and ranking
+calculator and the assumptions and methodology behind it.  Given a requested
+angular resolution, observing frequency, sensitivity, largest angular scale
+(LAS), and point-source or imaging use case, the calculator returns ranked
+subarrays with the \texttt{tclean} weighting parameters that achieve the
+request, together with their cost in integration time and antenna hours.
+The method combines offline CASA simulations of taperability and PSF
+sculptability with query-time interpolation and ranking code.  The
+August 2026 release covers Rev F four-hour-track point-source and imaging
+curves and Rev D track point-source curves, with a Rev C.01 track campaign
+staged; appendices give run instructions and document the Python
+interface.  The LAS coefficient, the frequency
+invariance of the inefficiency factor, and the use of a single noise
+realization are current assumptions, not demonstrated properties of the
+array.
 \end{abstract}
 
 \section{Purpose and scope}
 
-The selection tool accepts a target resolution, frequency, optional
+The \ngvla\ will serve most science programs through subarrays, and the
+choice of subarray and imaging parameters sets both the image quality a
+program receives and the antenna hours it consumes.  The Envelope Observing
+Program (EOP) and proposal planning therefore need subarray assignment to
+be reproducible and quantitative rather than case-by-case.  This memo
+describes a prototype calculator for that assignment, its methods, and its
+assumptions.
+
+The calculator accepts a target resolution, frequency, optional
 sensitivity goal, optional LAS, imaging versus point-source mode, and beam
 margin.  It returns ranked subarrays with \texttt{tclean} parameters
 (Briggs \texttt{robust} and any outer uv taper), the sensitivity-loss
 factor $\eta$, the achieved beam, PSF-skirt diagnostics, integration time,
 antenna hours, and exclusion reasons.  By default it ranks candidates by
-antenna-hours, matching the EOP resource-cost framing; an integration-time
+antenna hours, consistent with EOP accounting; an integration-time
 ranking is also available.
 
-The Rev F scope is fourteen offered 18-m subarrays
-(Table~\ref{tab:subarrays}).  Seven are the original cases: core-inner,
-core, spiral, mid, core+spiral, spiral+mid, and main.  The Memo 121
-campaign adds long, mid+long, spiral+mid+long, main+long, and the three
-outer-core combinations spiral+core-outer, mid+spiral+core-outer, and
-long+mid+spiral+core-outer.  Core-outer (the outer 57 core antennas by
-radius, Memo 121's ``outer50core'') is measured only as a beam-cap anchor and
-is not offered.  One further combination, core+mid, was fully measured but is
-excluded from the offered set: no science case requested it and its uv
-coverage (core plus mid with no spiral) leaves a large gap that makes it
-uncompetitive; its sweep data are retained.  Long's spurious short baselines
-are handled by a uv-range filter described in \S\ref{sec:curvegen}.  SBA is
-deferred because it introduces different aperture issues (6-m dishes, no
-taper support in the sensitivity calculator).
+The Rev F scope is the fourteen offered 18-m subarrays of
+Table~\ref{tab:subarrays}, which include subarrays from Memo 121
+\cite{memo121}; Appendix~\ref{sec:history} records how the offered set
+evolved.  Long's spurious short baselines are removed by a uv-range filter
+(\S\ref{sec:uvfilter}).  The SBA is deferred: its 6-m dishes raise separate
+aperture issues, and the sensitivity calculator does not support tapering
+it.
 
-Beyond the Rev F four-hour-track baseline documented here, the same machinery
-runs as parameterized campaigns over a (configuration revision, simulation
-mode) axis.  A registry
-(\texttt{sa\_select/data/} \texttt{config\_registry.csv}) routes each
-combination to its own subarray-metadata and curve tables.  Four campaigns
-are complete: Rev F track, Rev F snapshot, Rev D track, and Rev D snapshot.
-A Rev C.01 track campaign is registered and staged
-(\S\ref{sec:campaigns}); it is not yet measured at this writing.  The
-\emph{release scope} (August 2026) is Rev F track (point-source and imaging
-curves), Rev D track (point-source only), and Rev C.01 track (point-source
-only, once measured).  The snapshot tables are not yet mature enough to
-release and stay internal.  The quantitative analysis in this memo remains
-the Rev F track case.
+The curve-generation pipeline is parameterized by a (configuration
+revision, simulation mode) pair, and a registry maps each pair to its own
+subarray-metadata and curve tables (\S\ref{sec:campaigns}).  The
+August 2026 release covers Rev F track (point-source and imaging curves)
+and Rev D track (point-source only); a Rev C.01 track table joins the
+release once its campaign is measured.  Snapshot-mode tables exist for
+Rev F and Rev D but remain internal.  The quantitative analysis in this
+memo focuses on the Rev F track case.
 
-The scientific convention is the Memo 121 single-pointing, fixed-field-of-view
-case \cite{memo121}.  Mosaics, observation-specific field of view, and spectral
-line uv-filling effects are outside the present selection rule.  This memo
-documents the Rev F curve product
-(\texttt{sa\_select/data/revf\_curves.csv}) and the shared engine used by
-the Rev F report.  Older bootstrap data derived from Memo 121 may still
-exist as a development table in source snapshots; do not read those as the
-Rev F performance result.  The single noise realization used for the current
-curves is also a caveat.
+This version of the calculator assumes, like Memo 121 and most other
+\ngvla\ imaging studies to date, a single channel, a single pointing, and a
+fixed field of view.
 
 \section{Definitions}
 
-For a weighting/taper choice $p$, the inefficiency factor is
+\subsection{Inefficiency and the point-source curve}
+\label{sec:eta}
+
+For a weighting \& taper choice $p$, the inefficiency factor is
 \begin{equation}
   \eta(p) = {\sigma_{\rm dirty}(p) \over \sigma_{\rm dirty}({\rm natural},0)} ,
 \end{equation}
@@ -99,19 +91,25 @@ construction.  Taperability, following Memos 55, 72, and 76
 \cite{memo55,memo72,memo76}, is the minimum $\eta$ as a function of requested
 beam when PSF shape is ignored.  This is the point-source curve.
 
+\subsection{PSF skirt and the imaging curve}
+\label{sec:skirt}
+
 For imaging projects, the tool also evaluates sculptability: the cost of
 achieving a usable PSF shoulder at the requested beam.  The PSF skirt $s$ is
 Memo 65 metric 2b, the azimuthally averaged PSF radial profile evaluated at
 one fitted clean-beam FWHM \cite{memo65}.  Memo 121 adopted $s \le 0.10$ as
 the nominal imaging threshold \cite{memo121}.  The default policy treats
 the requested resolution as the hard requirement and the skirt as a quality
-target, with two outcomes.  The result is \emph{strict} when some beam in
-the requested window meets $s \le 0.10$; the engine returns the cheapest
-such beam.  Otherwise the result is \emph{relaxed}: the engine returns and
-flags the beam with the best achievable skirt, and reports that skirt.  An earlier one-for-one
-$\eta$--skirt trade objective, which admitted a third \emph{traded} state up
-to $s \le 0.25$, is retired but retained as a diagnostic mode
+target, with two outcomes.  The result is \emph{strict} when some beam
+within the requested beam-margin interval meets $s \le 0.10$; the engine
+returns the lowest-$\eta$ such beam.  Otherwise the result is \emph{relaxed}: the engine returns and
+flags the beam with the best achievable skirt, and reports that skirt.  An
+earlier objective that traded $\eta$ against skirt is retired
+(Appendix~\ref{sec:history}) but remains available as a diagnostic mode
 (\S\ref{sec:engine}).
+
+\subsection{Frequency scaling and largest angular scale}
+\label{sec:scaling}
 
 Resolution, uv taper, and LAS are tabulated at 30 GHz and scaled as wavelength:
 \begin{equation}
@@ -120,29 +118,27 @@ Resolution, uv taper, and LAS are tabulated at 30 GHz and scaled as wavelength:
   {\rm LAS}(f) = {\rm LAS}_{30}{30~{\rm GHz}\over f}.
 \end{equation}
 The curve shape, including $\eta$, is assumed invariant under this scaling.
-That is a v1 assumption; fractional-bandwidth uv filling may break it for some
-continuum cases.
 
-LAS is computed from the shortest physical baseline in the Rev F configuration:
+LAS is computed from the shortest baseline in the configuration, after any
+applicable uv-range filtering (\S\ref{sec:uvfilter}):
 \begin{equation}
   {\rm LAS}(f) =
   C_{\rm LAS}{\lambda(f)\over b_{\min}}\,206264.8\quad{\rm arcsec}.
 \end{equation}
 For the current 18-m subarrays, $C_{\rm LAS}=0.80$ is adopted uniformly from
-the Memo 67 core result \cite{memo67}.  This uniform coefficient and the
-assumption that LAS is independent of robust and taper are caveats until
-per-subarray disk-simulation measurements are made.
+the Memo 67 core result \cite{memo67}; caveats on this choice are collected
+in \S\ref{sec:limitations}.
 
 \begin{table}[tb]
 \centering
 \small
-\caption{Rev F subarrays in the current memo scope.  Baselines are physical
+\caption{The fourteen offered Rev F subarrays.  Baselines are physical
 3-D separations from the Rev F configuration files; for the uv-filtered
-long-baseline subarrays (\S\ref{sec:curvegen}), $b_{\min}$ is the shortest
+long-baseline subarrays (\S\ref{sec:uvfilter}), $b_{\min}$ is the shortest
 baseline surviving the 178 m spurious-shorts cut.  Native beam is the
-untapered natural-weighting geometric-mean FWHM at 30 GHz from the Rev F curve
-table.  The LAS coefficient is the uniform adopted 18-m value, not a
-per-subarray measurement.}
+untapered natural-weighting geometric-mean FWHM at 30 GHz from the Rev F
+curve table.  All rows use the uniform adopted 18-m LAS coefficient
+$C_{\rm LAS}=0.80$, not a per-subarray measurement.}
 \label{tab:subarrays}
 \setlength{\tabcolsep}{4pt}
 \footnotesize
@@ -156,7 +152,6 @@ core        & 114 &    42.15 &    4271.93 & 0.710067 \\
 spiral      &  54 &   811.44 &   39270.01 & 0.0761312 \\
 mid         &  46 & 10121.09 & 1272904.19 & 0.00296188 \\
 core+spiral & 168 &    42.15 &   39270.01 & 0.285677 \\
-core+mid$^{\dagger}$ & 160 &    42.15 & 1272904.19 & 0.0178056 \\
 spiral+mid  & 100 &   811.44 & 1272904.19 & 0.0111234 \\
 main        & 214 &    42.15 & 1272904.19 & 0.0212162 \\
 long        &  30 & 515162.00 & 8685535.16 & 0.000315647 \\
@@ -169,9 +164,7 @@ long+mid+spiral+core-outer & 187 & 179.00 & 8685535.16 & 0.00257086 \\
 \bottomrule
 \end{tabular}
 \par\smallskip
-\small All rows currently use $C_{\rm LAS}=0.80$.
-$^{\dagger}$Measured but excluded from the offered set (see \S1).
-$^{\ddagger}$main+long is not uv-filtered (the core's legitimate
+\small $^{\ddagger}$main+long is not uv-filtered (the core's legitimate
 $\sim$42 m baselines lie below any useful cut), so its $b_{\min}$ is raw and
 its LAS is likely overstated; see \S\ref{sec:limitations}.
 \end{table}
@@ -179,140 +172,173 @@ its LAS is likely overstated; see \S\ref{sec:limitations}.
 \section{Curve generation: offline}
 \label{sec:curvegen}
 
-The offline simulations are noise-only CASA simulations at 30 GHz, declination
-$+24^\circ$, four hours of hour-angle coverage, 60 s integrations, and a 1 Jy
-simplenoise setup.  CASA produces a dirty image and PSF for each lattice point
-(\texttt{niter=0}).  The measured quantities are the fitted dirty beam,
-dirty-image rms, and the Memo 65 skirt.  The skirt measurement uses annular
-means of a central PSF cutout and a cubic-spline interpolation to radius
-$1\,{\rm FWHM}$, so large images do not need to be read fully into memory.
+The offline simulations are noise-only CASA simulations at 30 GHz:
+declination $+24^\circ$, four hours of hour-angle coverage centered on
+transit (hour angle $-2$ h to $+2$ h), 60 s integrations, and a 1 Jy
+simplenoise setup.  CASA produces a dirty image and PSF for each lattice
+point (\texttt{niter=0}).  The measured quantities are the fitted dirty
+beam, dirty-image rms, and the Memo 65 skirt.  The skirt measurement uses
+annular means of a central PSF cutout and a cubic-spline interpolation to
+radius $1\,{\rm FWHM}$, so large images do not need to be read fully into
+memory.
 
-The lattice is self-anchored for each subarray.  The first two seed points are
-untapered natural weighting and untapered Briggs robust $-2$.  Their measured
-beams define a taper grid from $0.3$ times the fine seed beam to $20$ times
-the natural seed beam, plus an untapered column.  The taper column count is 14,
-or 18 for the beam-capped heterogeneous subarrays below, whose fine-to-coarse
-dynamic range is larger and whose beam--taper mapping crosses a sharp
-spike-to-plateau transition.  Rows are natural weighting and Briggs robust
-$-2$ to $+2$ in steps of 0.4.  The full lattice is measured.  Earlier versions
-pruned rows once $\eta>5$ or once a Briggs row converged to the natural+taper
-edge, but the resulting holes blocked bilinear-cell interpolation and
-truncated the high-$\eta$ regime, so those prunes were removed.  The one
-surviving early stop is the heterogeneous beam cap described next.
+\subsection{The robust--taper lattice}
+\label{sec:lattice}
 
-Heterogeneous subarrays require an additional guard.  To be explicit about
-direction: the cap limits only the \emph{coarse} end of the offered curve
-(the fine end is uncapped, set by what Briggs robust $-2$ delivers), and the
-cap reference is the \emph{coarsest} constituent, never the longest-baseline
-one.  For a composite subarray, beams coarser than the natural beam of its
-coarsest component (or of the largest offered subarray it contains) are
-usually a false economy: the composite array has tapered away the long
-spacings and is acting like the coarser subarray at lower apparent cost.
-Each such subarray therefore carries a beam cap equal to the measured
-natural geometric-mean beam of its reference subarray.  The reference
+For each subarray, a grid of weighting and taper settings is simulated,
+anchored by two untapered measurements: the natural-weighting beam
+$\theta_{\rm nat}$ and the nominally finest beam, untapered Briggs robust
+$-2$, denoted $\theta_{\rm hi}$.  The uv-taper axis holds 14
+logarithmically spaced values from $0.3\,\theta_{\rm hi}$ to
+$\theta_{\rm low} = 20\,\theta_{\rm nat}$ (18 values for subarrays that
+carry a beam cap, \S\ref{sec:beamcap}, which span a larger fine-to-coarse
+range), plus an untapered column.  Rows are natural weighting and Briggs
+robust $-2$ to $+2$ in steps of 0.4.  The sweep attempts the full lattice;
+only the beam-cap rule stops a row early.  (Earlier cost-saving prune
+rules are retired; see Appendix~\ref{sec:history}.)
+
+\subsection{Beam caps}
+\label{sec:beamcap}
+
+Selected composite subarrays --- those formed from more than one component
+configuration and spanning the largest fine-to-coarse ranges --- carry a
+beam cap $\theta_{\rm cap}$ that limits the low-resolution end of the
+offered range to a useful one.  Excessively coarse beams are achievable
+but in general very inefficient: tapering away a composite's long spacings
+leaves it imitating a coarser subarray at higher cost.  The cap is the
+measured natural beam of a designated reference subarray, the
+configuration that remains once the composite's longer-baseline components
+are tapered away; in effect, a capped subarray's $\theta_{\rm low}$ is
+$\theta_{\rm cap}$ rather than $20\,\theta_{\rm nat}$.  The reference
 mappings are mid+long $\to$ mid; spiral+mid+long $\to$ spiral+mid;
-main+long $\to$ main; the core-outer mixtures $\to$ core-outer; and main
-and core+mid $\to$ core.  The subarray-metadata CSV records the caps.  The
-offered ranges relay from one subarray to the next with roughly a
-factor-two overlap at every seam, because the reference subarray's own
-curve starts near half its natural beam.  At 30 GHz (Rev F, track),
-mid+long spans 0.51--2.82 mas and hands off to mid (2.03--54.6 mas);
-spiral+mid+long spans 0.50--11.0 mas and hands off to spiral+mid
-(2.36--869 mas); main+long spans 0.50--21.2 mas and hands off to main
-(2.62--709 mas, itself capped at core's 710 mas natural beam).  For the
-default Rev F track campaign the caps are the measured values behind
-Table~\ref{tab:subarrays}.  Every other campaign re-measures its caps from
-its own natural seeds (snapshot beams are elliptical and sparse, and Rev D
-geometry differs), with a fail-closed preflight so a full grid can never
-run uncapped.  Points whose measured beam
-exceeds the cap are marked beam-capped and are not collected into the curve
-table.  A row is pruned after two consecutive capped points, rather than one,
-to avoid reacting to a single clean-beam-fit discontinuity near the
-spike-to-plateau transition.  The same sweep files are resumable, and
-row-parallel execution writes one Briggs row per shard before merging.
+main+long $\to$ main; the core-outer combinations $\to$ core-outer; and
+main $\to$ core.  The adopted caps are recorded in the subarray-metadata
+CSV; for Rev F track they are the reference subarrays' native beams in
+Table~\ref{tab:subarrays}, plus core-outer's 491 mas.
 
-The Long configuration adds one further guard.  Long contains small
+The cap acts in two places.  During the sweep, each measured beam is
+compared with the cap: a point whose beam exceeds the cap is recorded with
+a beam-capped status, and after two consecutive beam-capped points the
+remaining, coarser tapers in that row are recorded as skipped and never
+imaged.  Two consecutive points are required so that a single
+clean-beam-fit discontinuity in the beam--taper relation does not stop the
+row.  At query time, beam-capped points serve only as interpolation
+anchors: the offered curve is clipped exactly at the cap, so no beam
+coarser than the cap is offered or displayed.
+
+Each capped subarray's offered range overlaps its reference subarray's.
+The overlap is set by the reference subarray's own natural-to-robust$(-2)$
+range and varies widely.  At 30 GHz (Rev F, track), mid+long and mid overlap
+over 2.08--2.96 mas (a factor of 1.4); spiral+mid+long and spiral+mid over
+2.36--11.1 mas (4.7); main+long and main over 2.62--21.2 mas (8.1).  Main
+itself is capped at core's 710 mas natural beam.
+
+\subsection{Filtering spurious short baselines}
+\label{sec:uvfilter}
+
+The Long configuration also requires a baseline filter.  Long contains small
 $\sim$3-antenna clusters whose internal baselines run 37--176 m, followed by
 a $\sim$2900$\times$ gap to its 515 km long baselines.  Those short spacings
 do not contribute to long-baseline imaging, but they fragment the
 fitted-beam and $\eta$ behavior.  Imaging therefore applies a uv-range cut
 of $>178$ m for long, mid+long, spiral+mid+long, and
-long+mid+spiral+core-outer.  The cut also applies to the natural seed, which
+long+mid+spiral+core-outer.  The cut also applies to the
+natural-weighting measurement $\theta_{\rm nat}$, which
 keeps the $\eta$ normalization self-consistent.  The 178 m value
 sits in the 176.2--179.0 m gap: it removes all 30 spurious Long baselines
 while keeping core-outer's legitimate $b_{\min}=179.0$ m spacings.  It is
 not applied to main+long, whose core contributes legitimate $\sim$42 m
 baselines below any useful cut.  Table~\ref{tab:subarrays}'s $b_{\min}$, and
-hence the LAS, reflect the filtered values.
+hence the LAS, reflect these cuts where applied.
 
 \subsection{Simulation modes and campaign parameterization}
 \label{sec:campaigns}
 
-The generation machinery is parameterized by a (configuration revision,
-simulation mode) pair.  The revision selects the component antenna
-configurations: Rev F, Rev D, or Rev C.01.  Rev D's lba component has the
-same spurious-short pathology as Rev F Long and receives the same 178 m cut.
-Rev C.01's lba is different: about ten VLBA-style sites of two to four
-antennas, with site-internal baselines of 47--1115 m and a gap to the first
-inter-site baseline at 53.4 km, so its cut is 2000 m (long and mid+long;
-main+long stays unfiltered, as in the other revisions).  The Rev C.01
-offered set mirrors Rev D (nine subarrays; no core-inner/core-outer split).
-The simulation mode selects the hour-angle coverage: \emph{track} is the
-four-hour coverage described above, and \emph{snapshot} is a single 60 s
-integration centered on transit, which probes the sparse-uv regime where
-weighting and taper behave differently and natural beams are strongly
-elliptical.  A registry (\texttt{sa\_select/data/config\_registry.csv})
-routes each combination to its own subarray-metadata CSV (geometry, LAS
-coefficients, measured beam caps) and its own collected curve table, so
-combinations never overwrite one another.  Campaigns run as a three-stage
-Slurm pipeline on TACC (Appendix~\ref{sec:runbook}).  The prep stage builds
-the configurations, runs the two seed points per subarray, and measures and
+The curve-generation pipeline is parameterized by a (configuration
+revision, simulation mode) pair.  The revision selects the component
+antenna configurations: Rev F, Rev D, or Rev C.01.  Rev D's lba component
+has the same isolated short-baseline clusters as Rev F Long and receives
+the same 178 m cut.  Rev C.01's lba is different: about ten VLBA-style
+sites of two to four antennas, with site-internal baselines of 47--1115 m
+and a gap to the first inter-site baseline at 53.4 km, so its cut is
+2000 m (long and mid+long; main+long stays unfiltered, as in the other
+revisions).  The Rev C.01 offered set mirrors Rev D (nine subarrays; no
+core-inner/core-outer split).  The simulation mode selects the hour-angle
+coverage: \emph{track} is the four-hour coverage described above, and
+\emph{snapshot} is a single 60 s integration centered on transit, which
+probes the sparse-uv regime where weighting and taper behave differently
+and natural beams are strongly elliptical.  A registry
+(\texttt{sa\_select/data/config\_registry.csv}) maps each pair to its own
+subarray-metadata CSV (geometry, LAS coefficients, measured beam caps) and
+its own collected curve table, so combinations never overwrite one
+another.
+
+Campaigns run as a three-stage Slurm pipeline on TACC
+(Appendix~\ref{sec:runbook}).  The prep stage builds the configurations,
+measures $\theta_{\rm nat}$ and $\theta_{\rm hi}$ for each subarray, and
 records the beam caps; it acts as the quality-assurance gate.  The sweep
-stage, a job array, measures the full lattice; each subarray with baselines
-longer than 2600 km gets its own node.  The collect stage routes the results
-into the registered curve CSV and regenerates the HTML reports.  Every stage
-is resumable.  The
-Rev F track, Rev F snapshot, Rev D track, and Rev D snapshot campaigns are
-complete; the Rev C.01 track campaign drops into the selector through the
-registry without code changes once its sweep runs.
+stage, a job array, measures the full lattice; each subarray with
+baselines longer than 2600 km gets its own node.  The collect stage routes
+the results into the registered curve CSV and regenerates the HTML
+reports, local pages that plot every campaign's curves with the same
+engine the selector uses.  Each subarray's measurements accumulate in a
+sweep file, a CSV with one row per attempted lattice point carrying a
+status (ok, beam-capped, skipped, or failed); measured rows record the
+fitted beam, rms, and skirt.  The sweep never re-attempts a recorded
+point, which makes every stage resumable; within the sweep stage, each
+Briggs row runs as its own subprocess and writes a shard file that is
+merged into the sweep file afterward.
 
 \subsection{Refinement after the first lattice}
 \label{sec:refinement}
 
-Two passes improve the raw lattice where the displayed curves need it.
+Two passes add samples where the initial lattice leaves the displayed
+curves defective or unconverged.
 
-The first is an escalating refinement of curve defects
-(\texttt{curvegen/refine.py}).  It finds steps in either displayed curve and
-works through a ladder of responses.  First it re-targets the step interval
-in resolution with a secant step.  Then it runs staged taper scans at both
-bracketing robust values, so new points always complete rows or cells the
-interpolation engine can use.  Later stages chase coverage gaps and sample
-bounded ``bump'' regions where a winner sits above its neighbors' chord.  A
-step that survives every applicable probe is classified from the measured
-rows as a genuine sampled discontinuity and left as an honest step in the
-display, never interpolated across.
+The first (\texttt{curvegen/refine.py}) targets defects in a displayed
+curve, such as a discontinuous jump in the $\eta$--$\theta$ relation, with
+a staged response.  It first adds a single probe at the log-midpoint
+resolution of the jump, placed by secant interpolation along the existing
+lattice row or column that brackets the jump, so the new point extends a
+row or column rather than landing isolated inside a cell.  If the jump
+persists, it measures logarithmically spaced tapers inside the jump
+interval at both bracketing robust values, so column segments and
+interpolation cells form there.  Later stages fill coverage gaps and
+sample bounded local maxima, regions where the selected point lies above
+the chord joining its neighbors.  A discontinuity that remains after every
+applicable stage is classified from the measured rows as a genuine sampled
+feature and left as a measured step in the display, never interpolated
+across.
 
-The second pass is a goal-oriented adaptive sampler
-(\texttt{curvegen/adaptive.py}).  It treats the existing point table as a
-quadtree over (robust, taper) and measures only where the display and query
-tolerances are not yet met (resolution within 5\%, $\eta$ within 0.1, skirt
-within 0.02 absolute).  It certifies already-converged regions without new
-measurements.  It localizes cliffs to input-space brackets, classifies
-features (smooth, step, ridge, noise), and plans shrinking waves of new
-points under a per-map audit cap.  Run in retrofit mode over all four completed campaigns
-(July 2026), it removed the known lattice artifacts (for example a
-sawtooth on the Rev D track spiral+mid imaging curve, step 1.16 to 0.18 in
-$\eta$) and certified the remaining sharp steps as physics --- most
-prominently the snapshot taper-onset cliffs, where the input surface is
-smooth but the achievable resolution jumps.
+The second pass is an adaptive sampler (\texttt{curvegen/adaptive.py}).
+It organizes the (robust, taper) plane as a quadtree --- rectangles
+recursively split into four quadrants --- built over the existing point
+table.  A cell is converged when a bilinear prediction from its corners
+matches its interior measurements within the display and query tolerances:
+resolution within 5\%, $\eta$ within 0.1 (a permissive bound relative to
+the $\eta^2$ dependence of observing time), and skirt within 0.02
+absolute.  Converged regions are certified
+without new measurements.  Unconverged cells are classified from their
+residuals and interior probes as smooth (bilinear within tolerance after
+refinement), step (a resolution discontinuity localized to an interval
+between measured points), ridge (interior points above the chord of the
+cell rim), or unresolved.  New measurements go at cell centers and edge
+midpoints, queued in batches sized to a per-map limit on the total number
+of measured points.  Run in retrofit mode over all four completed
+campaigns (July 2026), this pass removed the known lattice artifacts (for
+example, reducing a sawtooth discontinuity on the Rev D track spiral+mid
+imaging curve from $\Delta\eta = 1.16$ to $0.18$) and confirmed the
+remaining sharp steps as measured array behavior --- most prominently the
+snapshot resolution discontinuities at taper onset, where the input
+surface is smooth but the achievable resolution jumps.
 
-Two presentation aids ride on top.  Display-only smoothing draws each curve
-line through a bounded smooth interpolant (maximum deviation 0.03 in $\eta$,
-0.02 on the optimistic side); raw points, tooltips, and every query path use
-the raw data, and the smoother never bridges a real step or gap.  A PSF
-inspector in the HTML report shows, for any curve anchor, the azimuthal PSF
-profile and the major/minor-axis cuts; axis cuts are captured natively for
-new points and were backfilled for all pre-existing curve anchors.
+Two features affect presentation only.  Display smoothing draws each curve
+line through a bounded smooth interpolant (it may shift a curve by at most
+0.03 in $\eta$, and by at most 0.02 toward lower $\eta$); raw points,
+tooltips, and every
+query path use the raw data, and the smoother never bridges a real step or
+gap.  A PSF inspector in the HTML report shows, for any curve point, the
+azimuthal PSF profile and the major/minor-axis cuts.
 
 \begin{figure}[tb]
 \centering
@@ -322,9 +348,10 @@ offered Rev F subarrays: minimum $\eta$ versus achievable geometric-mean
 beam, ignoring PSF shape.  Left: the compact/core family; right: the
 long-baseline family (the panels intentionally do not share an x-axis).
 Curves are the engine's interpolated envelopes over the measured
-(robust, taper) lattice --- the same code path the selector uses --- clipped
-at each heterogeneous subarray's beam cap and at the report's $\eta \le 5$
-display trim; gaps are unmeasured stretches, not interpolation.}
+(robust, taper) lattice --- the same interpolation the selector uses ---
+clipped at each capped subarray's beam cap (\S\ref{sec:beamcap}) and at
+the report's $\eta \le 5$ display trim; gaps are unmeasured stretches, not
+interpolation.}
 \label{fig:taperability}
 \end{figure}
 
@@ -334,8 +361,8 @@ display trim; gaps are unmeasured stretches, not interpolation.}
 \caption{Imaging (sculptability) envelopes for the same subarrays under the
 default threshold policy with $s_{\max}=0.10$ (panels as in
 Fig.~\ref{fig:taperability}).  Solid: strict ($s \le 0.10$ achieved).
-Dashed: relaxed points whose best achievable skirt is $\le 0.25$ (the
-retired trade cap, kept here purely as a readability bucket).  Dotted:
+Dashed: relaxed points whose best achievable skirt is $\le 0.25$ (a
+display category only; see Appendix~\ref{sec:history}).  Dotted:
 relaxed points whose best achievable skirt exceeds $0.25$, concentrated near
 the finest resolutions of the long-containing composites.  Five of those
 composites (mid+long, spiral+mid+long, main+long, mid+spiral+core-outer,
@@ -347,23 +374,31 @@ their offered range.}
 \section{Curve engine: query time}
 \label{sec:engine}
 
-The query engine uses the same interpolation code for the selector and for the
-HTML report.  Samples are grouped by lattice row, where a row is one
-weighting/robust value and taper varies.  Within each accepted adjacent
-segment the engine interpolates $\ln \eta$, skirt $s$, and $\ln T$ linearly
-in $\ln \theta$.  Column segments do the same along the robust direction at
-fixed taper between lattice-adjacent Briggs rows.  Four lattice-adjacent
-corner points define a bilinear cell ($\ln\theta$, $\ln\eta$, and $s$
-bilinear in normalized cell coordinates); the constrained optimum along a
-resolution locus is enumerated analytically.  A cell forms only where all
-four edges are free of intervening measured points, so a cell edge
-coincides exactly with a row or column segment and never undercuts a more
-accurate one-dimensional fit.  The cell construction was validated against
-a brute-force two-dimensional oracle on the real Rev F table.  Segment
-gates are conservative: segments connect only taper-adjacent samples with
-lattice-like taper and resolution steps, exact duplicates are dropped,
-robust $-0.0$ is canonicalized to $0.0$, and there is no extrapolation
-beyond a row endpoint.
+The selector and the HTML report (\S\ref{sec:campaigns}) query the
+measured lattice through one shared interpolation engine.  Samples are
+grouped into rows (one weighting choice --- natural or one Briggs robust
+value --- with taper varying) and columns (one taper value, with robust
+varying across Briggs rows).  Two measured points adjacent
+along a row or column form an interpolation segment when their spacing is
+lattice-like: along a row, successive tapers within a factor 2.05 and
+resolutions within a factor 1.6; along a column, a robust gap of at most
+0.45 and resolutions within a factor 2.  Any measured point between two
+others splits the pair, so segments always join nearest measured
+neighbors.  Within a segment the engine interpolates $\ln\eta$ and the
+taper $\ln T$ linearly in $\ln\theta$ ($\eta$ and $T$ are positive,
+multiplicative quantities; untapered samples, $T=0$, are interpolated
+linearly); the skirt $s$ can be near zero or negative and is interpolated
+linearly in $\ln\theta$.  Where four corner points are pairwise adjacent
+in both directions --- no other measured point on any edge --- they define
+a bilinear cell ($\ln\theta$, $\ln\eta$, and $s$ bilinear in normalized
+cell coordinates), so the engine always works with the smallest available
+cells and every cell edge coincides exactly with a row or column segment.
+The constrained optimum along a requested-resolution locus is enumerated
+analytically, and the engine does not extrapolate outside measured
+segments or cells.  On the real Rev F
+curve table, the cell construction matches a brute-force scan of the same
+interpolated surfaces to within $6\times10^{-3}$ in both $\eta$ and
+skirt, with no strict/relaxed classification differences.
 
 For a request with fractional beam margin $m$, the engine works over the
 interval $[\theta(1-m),\theta(1+m)]$ at the 30 GHz reference scale,
@@ -503,7 +538,7 @@ uv filling as open use cases \cite{plan}.  The Memo 67 LAS coefficient is
 applied uniformly to all 18-m subarrays and is assumed independent of robust
 and taper.  SBA remains deferred (6-m dishes, no taper support in the
 sensitivity calculator).  Long is now included via the 178 m
-spurious-shorts uv filter (\S\ref{sec:curvegen}), with one residual caveat:
+spurious-shorts uv filter (\S\ref{sec:uvfilter}), with one residual caveat:
 main+long is unfiltered, so its raw $b_{\min}$ makes its quoted LAS likely
 optimistic.  The sensitivity calculator also recenters continuum requests to
 receiver-band midpoints internally, while the curve/LAS scaling currently uses
@@ -682,6 +717,50 @@ taper is a placeholder and every result carries a warning that says so.
 The module also reads his per-subarray CASA \texttt{.cfg} files into
 subarray metadata (physical baselines, with an optional
 spurious-short-baseline cut).
+
+\section{Development history}
+\label{sec:history}
+
+This appendix records development detours that shaped the current design
+but no longer belong in the main flow.
+
+\paragraph{The offered set.}  The Rev F offered set grew in two stages.  Seven
+subarrays came first: core-inner, core, spiral, mid, core+spiral,
+spiral+mid, and main.  Subarrays from Memo 121 were added later: long,
+mid+long, spiral+mid+long, main+long, and the three outer-core
+combinations spiral+core-outer, mid+spiral+core-outer, and
+long+mid+spiral+core-outer.  Core-outer (the outer 57 core antennas by
+radius, Memo 121's ``outer50core'') is measured only as a beam-cap
+reference (\S\ref{sec:beamcap}) and is not offered.  One further
+combination, core+mid, was fully measured but excluded from the offered
+set: no science case requested it, and its uv coverage (core plus mid with
+no spiral) leaves a large gap that makes it uncompetitive.  Its sweep data
+are retained, and the sensitivity path still supports it.
+
+\paragraph{Lattice pruning.}  Early sweeps pruned rows once $\eta>5$ or once a
+Briggs row converged to the natural+taper edge.  The resulting holes
+blocked bilinear-cell interpolation and truncated the high-$\eta$ regime,
+so those rules were removed; the beam cap (\S\ref{sec:beamcap}) is the
+only remaining early stop.
+
+\paragraph{The imaging objective.}  The first imaging objective traded $\eta$
+against skirt one-for-one above the threshold and admitted a third
+\emph{traded} outcome up to a skirt of 0.25 (the equation is given in
+\S\ref{sec:engine}).  It was replaced in July 2026 by the threshold policy
+of \S\ref{sec:skirt}.  The trade objective survives as a diagnostic mode,
+and the 0.25 value survives only as a display category in
+Figure~\ref{fig:imaging}.
+
+\paragraph{Bootstrap curves.}  Before the Rev F campaign, a development curve
+table bootstrapped from Memo 121 figures stood in for measured curves.
+Copies may persist in old source snapshots; they are not Rev F results.
+
+\paragraph{Campaign chronology.}  The Rev F track, Rev F snapshot, Rev D
+track, and Rev D snapshot campaigns were completed by July 2026.  The
+adaptive retrofit (\S\ref{sec:refinement}) ran over all four in July 2026.
+The Rev C.01 track campaign was registered and staged in August 2026.  PSF
+major/minor-axis cuts are captured natively for new points and were
+backfilled for all pre-existing curve points.
 
 \begin{thebibliography}{9}
 

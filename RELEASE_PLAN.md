@@ -41,6 +41,13 @@
 > messy LONG cores (cut half-power at 0.49x fitted) plus real angular
 > sidelobe structure.  Codex review round 1 (gpt-5.5 xhigh, model-default
 > slip): 4 findings, all fixed; round 2 on gpt-5.6-sol.  271 tests green.
+> **(19 Aug) Wave-3 in flight; release page STALE for PSF range:** the
+> 19-Aug 11:32 release rebuild predates the still-running wave-3
+> backfills that refresh anchors to 10 FWHM (page verified mostly
+> 3-FWHM: revF 0/2839 cuts at 10, revD 451/2852, revC 0/1935).  revC's
+> range-refresh backfill was subsequently launched as 3421939_4.  Rebuild
+> + re-verify
+> after all backfills drain; harvest checklist in PLAN.md 19-Aug delta.
 
 Scope authority: `WRAPUP.md` (17 Aug) supersedes PLAN.md / NEXT_AGENT.md where
 they conflict.  Release = calculator **web page** (the in-report client-side

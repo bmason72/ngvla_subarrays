@@ -8,6 +8,7 @@ Run with the CASA python (stdlib unittest only, no pytest) from the repo root.
 import contextlib
 import csv
 import io
+import json
 import os
 import tempfile
 import unittest
@@ -29,6 +30,14 @@ def run_cli(argv):
 
 
 class TestCliRevRouting(unittest.TestCase):
+
+    def test_data_info_requires_no_observing_request(self):
+        code, out, err = run_cli(["--data-info"])
+        self.assertEqual(code, 0)
+        self.assertFalse(err)
+        info = json.loads(out)
+        self.assertEqual(info["schema"], "ngvla.memo96.sensitivity-tables")
+        self.assertTrue(info["campaigns"])
 
     def test_default_rev_query_runs(self):
         code, out, _ = run_cli(["--resolution", "0.01", "--frequency", "30",
@@ -129,7 +138,7 @@ class TestBatchMode(unittest.TestCase):
 
 class TestNAntActualWiring(unittest.TestCase):
     """selector must pass the metadata CSV's n_ant to integration_time so a
-    revision whose antenna counts differ from the calculator pkl (Rev C) gets
+    revision whose antenna counts differ from the backing table (Rev C) gets
     the N(N-1) rescale; for Rev F/D the counts match and the factor is 1."""
 
     def test_selector_passes_n_ant_actual(self):

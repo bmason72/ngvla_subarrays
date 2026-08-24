@@ -924,6 +924,39 @@ WRAPUP.md; live plan = RELEASE_PLAN.md).**
    codex review rounds (round 1 accidentally gpt-5.5; 2-3 gpt-5.6-sol),
    7 findings all fixed; 280 tests green (1 skipped).
 
+**SESSION DELTA (19 Aug 2026, Fable — 10-FWHM report claim was premature;
+wave-3 status + harvest checklist).**
+1. *bmason flagged: the released report's PSF plots still stop at ~3 FWHM*
+   despite the 18-Aug range change being reported done.  CONFIRMED by
+   decoding the release page's embedded payloads (built 19 Aug 11:32):
+   revF/track **0**/2839 cuts at 10 FWHM, revD/track 451/2852 (only the
+   wave-3 retrofit's own new points), revC/track 0/1935.  Root cause: the
+   3→10 change was CODE-complete (a2c1577) but the DATA refresh of
+   existing anchors is the wave-3 backfill jobs, which had not run when
+   the page was rebuilt — the 11:32 rebuild was premature and the "done"
+   claim wrong.  The chart itself is correct (per-entry captured range,
+   floor 3; `report_template.html` ~line 1573).  **Treat the current
+   ngvla-curves-release.html as STALE for PSF range.**
+2. *Wave-3 state (19 Aug pm):* retrofits 3418621_0/2 COMPLETED exit 0
+   (collects rebuilt per-combo + combined reports and PSF exports at
+   09:44 / 16:01); backfills 3418623_0 (revF) + 3418624_2 (revD) still
+   RUNNING, healthy (logs show the stale-anchor refresh proceeding, e.g.
+   revD 455 anchors re-imaged at 7 h elapsed).  revC (combo 4) backfill
+   3421939_4 was launched later and is also RUNNING; it is required for
+   the release because all 1935 revC cuts in the 11:32 page are 3-FWHM
+   (the 18-Aug "not needed" verdict predates range-versioning).
+3. *Harvest checklist when the backfills drain* (any session can run it):
+   (a) exit codes via sacct — NONZERO = anchors still lack cuts, a
+   resubmit signal, not a bug; (b) verify range coverage by counting
+   `cut_rmax_fwhm: 10` vs untagged entries in `reports/psf/*/*.js`
+   (untagged = old 3-FWHM); (c) rebuild combined + release reports
+   (RUN_CAMPAIGNS lines); (d) re-verify the release page by decoding its
+   `data-psf-id` embed blocks; (e) tests + data milestone commit.
+4. *Working-agreement addition (bmason):* long-running local agent work
+   (persistent monitors, big report rebuilds) belongs on a **dev node
+   (idev), not a login node**.  A squeue-polling monitor started this
+   session on a login node was killed on bmason's request.
+
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)
 
 **Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage

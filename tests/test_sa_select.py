@@ -20,6 +20,7 @@ import csv
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BOOTSTRAP_CSV = os.path.join(REPO_ROOT, "sa_select", "data", "bootstrap_curves.csv")
@@ -316,8 +317,10 @@ class TestHeuristicPlumbing(SyntheticLibraryTestCase):
         # can be verified by picking the one the built-ins would NOT pick.
         self.lib = self.make_library(
             subarray_rows=[
-                ["small", "small", 10, 100.0, 1000.0, 0.85, "small", ""],
-                ["big", "big", 100, 100.0, 1000.0, 0.85, "big", ""],
+                # MAIN is the same-dish natural-rms donor; n_ant_actual then
+                # scales it to each synthetic array's count.
+                ["small", "small", 10, 100.0, 1000.0, 0.85, "main", ""],
+                ["big", "big", 100, 100.0, 1000.0, 0.85, "main", ""],
             ],
             sample_rows=[
                 ["small", "1.0", "1.0", "0.05", "briggs", "0.0", "0.1", "30.0", "s", ""],
@@ -380,6 +383,27 @@ class TestObservingRequestValidation(unittest.TestCase):
         with self.assertRaises(ValueError):
             ObservingRequest(resolution=0.0, frequency=30.0)
 
+    def test_negative_beam_margin_means_exact_and_warns(self):
+        req = ObservingRequest(resolution=1.0, frequency=30.0,
+                               beam_margin=-0.05)
+        self.assertEqual(req.beam_margin, 0.0)
+        self.assertTrue(req.normalization_warnings)
+
+    def test_zero_beam_margin_is_exact_without_warning(self):
+        req = ObservingRequest(resolution=1.0, frequency=30.0,
+                               beam_margin=0.0)
+        self.assertEqual(req.beam_margin, 0.0)
+        self.assertFalse(req.normalization_warnings)
+
+    def test_invalid_thresholds_and_nonfinite_values_raise(self):
+        for kwargs in [dict(skirt_threshold=-0.01), dict(skirt_threshold=1.01),
+                       dict(beam_margin=1.0), dict(beam_margin=float("nan")),
+                       dict(resolution=float("inf"))]:
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                values = dict(resolution=1.0, frequency=30.0)
+                values.update(kwargs)
+                ObservingRequest(**values)
+
 
 # =============================================================================
 # C. Sensitivity-module tests
@@ -409,6 +433,120 @@ class TestSensitivity(unittest.TestCase):
     def test_absurd_frequency_raises_value_error(self):
         with self.assertRaises(ValueError):
             sens.natural_rms("main", 300.0, t_obs_hr=1.0)
+
+    def test_antenna_count_correction_is_applied_exactly_once(self):
+        goal = 1e-6
+        # Direct backing entry, matching count: no correction.
+        t_main = sens.integration_time("main", 30.0, 1.0, goal)
+        self.assertAlmostEqual(
+            sens.integration_time("main", 30.0, 1.0, goal, n_ant_actual=214),
+            t_main, delta=1e-14)
+
+        # Direct entry with a campaign-revision count override (Rev C-like).
+        t_core_nom = sens.integration_time("core", 30.0, 1.0, goal)
+        t_core_actual = sens.integration_time(
+            "core", 30.0, 1.0, goal, n_ant_actual=110)
+        self.assertAlmostEqual(t_core_actual / t_core_nom,
+                               114 * 113 / (110 * 109), places=12)
+
+        # Missing entries use MAIN as donor.  With or without a further
+        # campaign override, the product telescopes to MAIN -> final count.
+        for calc_name, final_n in [("core-inner", 57), ("core-inner", 55)]:
+            actual = None if final_n == 57 else final_n
+            t = sens.integration_time(calc_name, 30.0, 1.0, goal,
+                                      n_ant_actual=actual)
+            expected = t_main * 214 * 213 / (final_n * (final_n - 1))
+            self.assertAlmostEqual(t, expected, delta=1e-12 * expected)
+
+
+class TestRankingPolicies(SyntheticLibraryTestCase):
+
+    def _library(self, skirts=(0.05, 0.20)):
+        return self.make_library(
+            subarray_rows=[
+                ["strict", "strict", 10, 100, 1000, 0.85, "main", ""],
+                ["relaxed", "relaxed", 100, 100, 1000, 0.85, "main", ""],
+            ],
+            sample_rows=[
+                ["strict", 1.0, 3.0, skirts[0], "briggs", 0, 0.1, 30, "s", ""],
+                ["relaxed", 1.0, 1.0, skirts[1], "briggs", 0, 0.1, 30, "r", ""],
+            ])
+
+    def test_strict_candidates_rank_before_cheaper_relaxed_candidates(self):
+        req = ObservingRequest(resolution=1.0, frequency=30.0,
+                               imaging=True, skirt_threshold=0.10)
+        grouped = select_subarrays(req, library=self._library())
+        self.assertEqual(grouped.best.subarray.name, "strict")
+        self.assertTrue(grouped.best.skirt_met)
+        self.assertGreater(grouped.feasible[0].antenna_hours,
+                           grouped.feasible[1].antenna_hours)
+
+        mixed_req = ObservingRequest(resolution=1.0, frequency=30.0,
+                                     imaging=True, skirt_threshold=0.10,
+                                     strict_first=False)
+        mixed = select_subarrays(mixed_req, library=self._library())
+        self.assertEqual(mixed.best.subarray.name, "relaxed")
+
+    def test_no_strict_candidate_has_structured_warning(self):
+        req = ObservingRequest(resolution=1.0, frequency=30.0,
+                               imaging=True, skirt_threshold=0.01)
+        result = select_subarrays(req, library=self._library())
+        self.assertFalse(result.any_subarray_meets_skirt)
+        self.assertIn("NO_SUBARRAY_MEETS_SKIRT",
+                      [warning.code for warning in result.warnings])
+        self.assertTrue(all(c.skirt_relaxed for c in result.feasible))
+
+    def test_one_minute_main_fiducial(self):
+        lib = self.make_library(
+            subarray_rows=[["main", "main", 214, 100, 1000, 0.85, "main", ""]],
+            sample_rows=[["main", 1.0, 1.0, 0.05, "natural", "", "", 30, "m", ""]])
+        result = select_subarrays(
+            ObservingRequest(resolution=1.0, frequency=30.0, imaging=False),
+            library=lib)
+        self.assertTrue(result.ranking_available)
+        self.assertAlmostEqual(result.best.integration_time_hr, 1 / 60, places=12)
+        self.assertEqual(result.best.goal_origin, "main_natural_1min_fiducial")
+        summary = result.to_summary()
+        self.assertEqual(summary["goal_origins"],
+                         ["main_natural_1min_fiducial"])
+        self.assertAlmostEqual(summary["fiducial_goal_jy"],
+                               sens.natural_rms("main", 30.0, 1 / 60))
+
+    def test_kelvin_goal_uses_achieved_candidate_beam(self):
+        lib = self.make_library(
+            subarray_rows=[["main", "main", 214, 100, 1000, 0.85, "main", ""]],
+            sample_rows=[["main", 1.02, 1.0, 0.05, "natural", "", "", 30, "m", ""]])
+        request = ObservingRequest(
+            resolution=1.0, frequency=30.0, sensitivity=2.0,
+            sensitivity_unit="K", imaging=False, beam_margin=0.05)
+        result = select_subarrays(request, library=lib)
+        self.assertAlmostEqual(
+            result.best.sensitivity_jy,
+            sens.tb_to_jy(2.0, result.best.resolution, 30.0), places=15)
+        self.assertNotAlmostEqual(
+            result.best.sensitivity_jy, sens.tb_to_jy(2.0, 1.0, 30.0),
+            places=15)
+
+    def test_explicit_cost_failure_excludes_candidate(self):
+        req = ObservingRequest(resolution=1.0, frequency=30.0,
+                               sensitivity=1e-6, imaging=True)
+        with mock.patch.object(sens, "integration_time", side_effect=RuntimeError("boom")):
+            result = select_subarrays(req, library=self._library())
+        self.assertIsNone(result.best)
+        self.assertFalse(result.feasible)
+        self.assertTrue(all(c.cost_status == "failed" for c in result.candidates))
+        self.assertTrue(all(any("boom" in reason for reason in c.reasons)
+                            for c in result.candidates))
+
+    def test_fiducial_cost_failure_retains_feasibility_but_disables_rank(self):
+        req = ObservingRequest(resolution=1.0, frequency=30.0, imaging=True)
+        with mock.patch.object(sens, "integration_time", side_effect=RuntimeError("boom")):
+            result = select_subarrays(req, library=self._library())
+        self.assertTrue(result.feasible)
+        self.assertFalse(result.ranking_available)
+        self.assertIsNone(result.best)
+        self.assertIn("COST_UNAVAILABLE", [w.code for w in result.warnings])
+        self.assertTrue(all(c.integration_time_hr is None for c in result.feasible))
 
 
 # =============================================================================
@@ -485,10 +623,9 @@ class TestSkirtRelaxation(SyntheticLibraryTestCase):
 
 class TestPortability(unittest.TestCase):
     """The selection path must stay CASA-free so it runs on a machine that
-    never ran the sweeps, from a minimal checkout: sa_select/ +
-    ngvla-sensitivity-calculator/ (siblings) + sa_select/data/*.csv, needing
-    only numpy + scipy (bmason 8 Jul 2026, item 4).  Guards against a future
-    edit accidentally importing CASA into the query path."""
+    never ran the sweeps.  All runtime tables are package resources; only
+    numpy + scipy are needed.  Guards against accidental CASA, sibling-path,
+    pickle, or cwd dependencies."""
 
     def test_selection_path_imports_no_casa(self):
         import subprocess
@@ -514,12 +651,23 @@ class TestPortability(unittest.TestCase):
                          "CASA-free for the standalone checkout.\n%s"
                          % (p.stderr, p.stdout))
 
-    def test_live_sensitivity_uses_ngect(self):
-        # the standalone integration time must come from the live ngECT
-        # calculator (not a pre-tabulation): natural_rms invokes it
-        from sa_select import sensitivity as sens
-        rms = sens.natural_rms("main", 30.0, t_obs_hr=1.0, delta_v=1e6)
-        self.assertGreater(rms, 0.0)          # a real ngECT call succeeded
+    def test_sensitivity_is_independent_of_cwd_and_sibling_checkout(self):
+        old_cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as directory:
+            try:
+                os.chdir(directory)
+                rms = sens.natural_rms("main", 30.0, t_obs_hr=1.0,
+                                       delta_v=1e6)
+            finally:
+                os.chdir(old_cwd)
+        self.assertGreater(rms, 0.0)
+
+    def test_runtime_source_does_not_unpickle_or_chdir(self):
+        import inspect
+        source = inspect.getsource(sens)
+        self.assertNotIn("import pickle", source)
+        self.assertNotIn("os.chdir", source)
+        self.assertNotIn("spec_from_file_location", source)
 
 
 class TestBeamCapLibrary(SyntheticLibraryTestCase):

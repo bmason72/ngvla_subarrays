@@ -1,91 +1,44 @@
-"""
-Thin wrapper around ``ngvla-sensitivity-calculator`` for the subarray-selection tool.
+"""Natural-weight sensitivity used by the subarray selector.
 
-The upstream calculator (``ngvla-sensitivity-calculator/ngVLA_sensitivity_calculator.py``,
-V. Rosero) computes the natural-weighting thermal (+confusion) point-source rms for the
-ten subarray keys in its ``subarray_data.pkl``.  It *also* has its own built-in resolution
--> inefficiency mapping (``eta_w``), but that mapping is a placeholder
-(``eta_w = log10(theta_mas * freq_GHz / 30)`` -- see ``sigma_ps_fn`` around line 308; the
-loaded spline ``cs`` is only used to bound-check theta, never evaluated) and is NOT the
-taperability-curve eta this package computes elsewhere.  So this module only ever calls the
-calculator at its **native** resolution (``theta=-1``, which hard-codes ``eta_w=1``) and then
-applies our own eta (from ``curves.py``) on top, as ``sigma = eta * natural_rms``.
+This is the small, explicitly used kernel of V. Rosero's ngVLA Memo-96
+sensitivity calculator.  Runtime data are inert JSON package resources, so the
+module neither imports a sibling checkout nor changes the process working
+directory.  Only native, natural-weight rms is calculated here; taper/robust
+loss is supplied by this project's measured eta curves.
 
-Units used by this module (matches ``schema.py``): frequency in GHz, time in HOURS,
-angles in ARCSEC, flux density in Jy/beam, brightness temperature in K. The upstream
-calculator internally uses uJy and seconds; conversions happen at the boundary in this file.
-
-``core+mid`` is not one of the calculator's ten subarray keys. Per-antenna properties
-(SEFD, aperture efficiency, Tsys) come from ``receiver_data.pkl`` which is keyed only by
-*receiver band*, not by subarray, and the antenna diameter is fixed at D=18 m for every
-subarray except the SBA (D=6 m). So for any two 18-m subarrays the natural-weighting
-thermal rms scales *exactly* as 1/sqrt(N*(N-1)) at fixed frequency and integration time.
-We exploit that to synthesize ``core+mid`` (N=114+46=160) from the ``main`` array (N=214)
-as a "donor": compute main's native rms, then rescale by
-sqrt(N_main*(N_main-1) / N_coremid*(N_coremid-1)).  The one imperfection: the confusion-
-noise term (added in quadrature) depends on the *native beam size*, which differs between
-main and core+mid and which we do not have for core+mid (it isn't in the calculator's
-spline table). In practice this is a non-issue: at the sub-arcsec native resolutions of
-these Rev F configurations the calculator's confusion term evaluates to 0 uJy (see the
-module self-test), so the donor rescaling is effectively exact end to end.
+Units are GHz, hours, arcsec, Jy/beam, K, and (for ``delta_v``) m/s.
 """
 
-import contextlib
-import importlib.util
-import io
-import os
-import pickle
+from importlib import resources
+import json
 
 import numpy as np
-
-# ---------------------------------------------------------------------------
-# Load the upstream calculator as a private module, without touching sys.path
-# or the ngvla-sensitivity-calculator/ directory's contents. It reads its two
-# .pkl files via *relative* paths on every call, so every call into it below
-# is wrapped in `_in_calculator_dir()`.
-# ---------------------------------------------------------------------------
-
-_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-_CALC_DIR = os.path.normpath(os.path.join(_THIS_DIR, "..", "ngvla-sensitivity-calculator"))
-_CALC_FILE = os.path.join(_CALC_DIR, "ngVLA_sensitivity_calculator.py")
+from scipy.interpolate import CubicSpline, interp1d
 
 
-@contextlib.contextmanager
-def _in_calculator_dir():
-    """Temporarily chdir into ngvla-sensitivity-calculator/ (it opens its .pkl files
-    by relative path) and swallow its stdout chatter."""
-    prev_cwd = os.getcwd()
-    buf = io.StringIO()
-    os.chdir(_CALC_DIR)
-    try:
-        with contextlib.redirect_stdout(buf):
-            yield buf
-    finally:
-        os.chdir(prev_cwd)
+def _load_tables():
+    resource = resources.files("sa_select").joinpath("data", "sensitivity_data.json")
+    with resource.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if (payload.get("schema") != "ngvla.memo96.sensitivity-tables"
+            or payload.get("schema_version") != 1):
+        raise RuntimeError("unsupported packaged sensitivity-data schema")
+    return payload
 
 
-def _load_calculator():
-    spec = importlib.util.spec_from_file_location("_ngvla_sensitivity_calculator", _CALC_FILE)
-    mod = importlib.util.module_from_spec(spec)
-    with _in_calculator_dir():
-        spec.loader.exec_module(mod)
-    return mod
-
-
-_calc = _load_calculator()
-
-with _in_calculator_dir():
-    with open("subarray_data.pkl", "rb") as _f:
-        _SUBARRAY_TABLE = pickle.load(_f)
+_DATA = _load_tables()
+_RECEIVER_TABLE = _DATA["receiver_data"]
+_SUBARRAY_TABLE = _DATA["subarray_data"]
+_BAND_ORDER = _DATA["table_key_order"]["receiver_data"]
 
 #: N_ant for every subarray key the calculator itself knows about.
 _N_ANT_TABLE = {name: int(info["N_ant"]) for name, info in _SUBARRAY_TABLE.items()}
 
 #: Subarrays absent from the calculator's tables are synthesized by donor rescaling
 #: from `main`: for same-band 18-m arrays the per-antenna parameters are band-keyed,
-#: so sigma scales exactly as 1/sqrt(N(N-1)) (verified in the self-test).  The value
-#: is the subarray's true N_ant.  (Confusion caveat unchanged: zero at Rev F native
-#: resolutions in the current calculator path.)
+#: so thermal sigma scales exactly as 1/sqrt(N(N-1)) (verified in the self-test).
+#: The value is the subarray's nominal target N_ant.  The donor also carries
+#: MAIN's native-beam confusion term; it is negligible at these resolutions.
 _DONOR = "main"
 _DONOR_N_ANT = {
     "core+mid": 160,                    # measured but dropped from the offered set
@@ -100,6 +53,20 @@ CORE_MID_N_ANT = _DONOR_N_ANT["core+mid"]   # kept for callers/tests
 
 #: Names natural_rms()/integration_time() accept, in addition to the calculator's own keys.
 KNOWN_CALC_NAMES = sorted(_N_ANT_TABLE) + sorted(_DONOR_N_ANT)
+
+
+def data_info():
+    """Machine-readable provenance and coverage of the packaged backing data."""
+    return {
+        "schema": _DATA["schema"],
+        "schema_version": _DATA["schema_version"],
+        "provenance": _DATA["provenance"],
+        "redistribution_note": _DATA["redistribution_note"],
+        "source_sha256": dict(_DATA["source_sha256"]),
+        "receiver_bands": list(_BAND_ORDER),
+        "backing_subarrays": list(_DATA["table_key_order"]["subarray_data"]),
+        "supported_calc_names": list(KNOWN_CALC_NAMES),
+    }
 
 
 def _resolve_calc_name(calc_name):
@@ -126,27 +93,82 @@ def _n_ant_for(calc_name):
     return n_target if n_target is not None else _N_ANT_TABLE[query_name]
 
 
-def _call_sigma_ps(subarray, freq_ghz, type_cal, t_int_s, theta, delta_v):
-    """Call the upstream sigma_ps_fn, converting its sys.exit(0)-on-error convention
-    into a normal Python exception with a readable message."""
-    try:
-        with _in_calculator_dir() as buf:
-            return _calc.sigma_ps_fn(
-                subarray=subarray,
-                freq=freq_ghz,
-                type_cal=type_cal,
-                t_int=t_int_s,
-                theta=theta,
-                delta_v=delta_v,
-                verbose=False,
-            )
-    except SystemExit:
-        lines = [ln for ln in buf.getvalue().splitlines() if ln.strip()]
-        detail = lines[-1] if lines else "the sensitivity calculator rejected this request"
-        raise ValueError(
-            "ngVLA sensitivity calculator error for subarray=%r, freq=%.4g GHz, theta=%r: %s"
-            % (subarray, freq_ghz, theta, detail)
-        )
+def _band_for(freq_ghz):
+    valid = []
+    for key in _BAND_ORDER:
+        frequencies = np.asarray(_RECEIVER_TABLE[key]["freq"], dtype=float)
+        if freq_ghz < frequencies.max() and freq_ghz >= frequencies.min():
+            valid.append(key)
+    if not valid:
+        raise ValueError("frequency %.4g GHz is outside all receiver bands" % freq_ghz)
+    # Preserve the upstream overlap policy and original table order.
+    return valid[-1]
+
+
+def _confusion_ujy(freq_ghz, theta_arcsec):
+    counts = _DATA["confusion_counts"]
+    log_s_jy = np.asarray(counts["log_s_jy"], dtype=float)
+    n_total_sr = np.asarray(counts["n_total_sr"], dtype=float)
+    omega = 1.0 / (25.0 * n_total_sr)
+    theta_fwhm = (
+        np.sqrt(4.0 * np.log(2.0) * omega / np.pi)
+        * np.rad2deg(1.0) * 3600.0
+    )
+    confusion = 1e6 * (10.0 ** log_s_jy) / 5.0
+    scaled = confusion * (freq_ghz / 1.4) ** -0.7
+    fn = interp1d(theta_fwhm, scaled, bounds_error=False, fill_value=0)
+    return float(fn(theta_arcsec))
+
+
+def _native_rms_ujy(subarray, freq_ghz, t_obs_hr, delta_v):
+    """Memo-96 native-beam result, kept separate for parity testing."""
+    if subarray not in _SUBARRAY_TABLE:
+        raise ValueError("unknown backing subarray %r" % subarray)
+    if not np.isfinite(freq_ghz) or freq_ghz <= 0:
+        raise ValueError("frequency must be positive")
+    if not np.isfinite(t_obs_hr) or t_obs_hr <= 0:
+        raise ValueError("t_obs_hr must be positive")
+    if delta_v is not None and (not np.isfinite(delta_v) or delta_v <= 0):
+        raise ValueError("delta_v must be positive when supplied")
+
+    band_key = _band_for(freq_ghz)
+    receiver = _RECEIVER_TABLE[band_key]
+    frequencies = np.asarray(receiver["freq"], dtype=float)
+    tprime_spline = CubicSpline(frequencies, receiver["tprimeSys"])
+    efficiency_spline = CubicSpline(frequencies, receiver["antEff"])
+    f_low, f_high = frequencies.min(), frequencies.max()
+    nu = float(freq_ghz)
+
+    if delta_v is None:
+        if band_key != "BAND_6":
+            sample_freqs = np.linspace(f_low, f_high, 100)
+            nu = float(np.mean([f_low, f_high]))
+        else:
+            if nu - 10.0 < f_low:
+                nu = f_low + 10.0
+            elif nu + 10.0 > f_high:
+                nu = f_high - 10.0
+            sample_freqs = np.linspace(nu - 10.0, nu + 10.0, 100)
+        tprime = float(np.mean(tprime_spline(sample_freqs)))
+        eta_a = float(np.mean(efficiency_spline(sample_freqs)))
+        bandwidth_hz = float(receiver["max_bw"]) * 1e9
+    else:
+        tprime = float(tprime_spline(nu))
+        eta_a = float(efficiency_spline(nu))
+        bandwidth_hz = nu * float(delta_v) / 2.9979246e8 * 1e9
+
+    parameters = _SUBARRAY_TABLE[subarray]
+    n_ant = int(parameters["N_ant"])
+    diameter_m = 6.0 if subarray == "sba" else 18.0
+    area_m2 = np.pi * (diameter_m / 2.0) ** 2
+    sefd_jy = (2.0 * 1.38e-23 * tprime / (0.9625 * eta_a * area_m2)) / 1e-26
+    thermal_ujy = sefd_jy / (
+        0.98 * np.sqrt(2.0 * bandwidth_hz * t_obs_hr * 3600.0
+                       * n_ant * (n_ant - 1))
+    ) / 1e-6
+    theta_arcsec = float(parameters["theta_nat_30_GHz"]) * 30.0 / nu / 1e3
+    confusion_ujy = _confusion_ujy(nu, theta_arcsec)
+    return float(np.hypot(thermal_ujy, confusion_ujy))
 
 
 # ---------------------------------------------------------------------------
@@ -170,7 +192,7 @@ def natural_rms(calc_name, freq_ghz, t_obs_hr=1.0, delta_v=None):
         On-source integration time, hours.
     delta_v : float or None
         Channel width, m/s, for a spectral-line rms. None (default) means continuum,
-        using the full receiver bandwidth (``max_bw`` in receiver_data.pkl, e.g. 13.5 GHz
+        using the full receiver bandwidth (``max_bw`` in the packaged receiver table, e.g. 13.5 GHz
         for Band 4, 20 GHz for Band 5) rather than a narrow channel.
 
     Returns
@@ -179,19 +201,8 @@ def natural_rms(calc_name, freq_ghz, t_obs_hr=1.0, delta_v=None):
         rms in Jy/beam, at the subarray's native (untapered, natural-weighted) resolution.
     """
     query_name, n_target = _resolve_calc_name(calc_name)
-    type_cal = "continuum" if delta_v is None else "line"
-    delta_v_arg = 10e3 if delta_v is None else delta_v  # ignored by calc when type_cal=='continuum'
-
-    data_to_print, _performance, band_info = _call_sigma_ps(
-        query_name, freq_ghz, type_cal, t_obs_hr * 3600.0, theta=-1, delta_v=delta_v_arg
-    )
-    sigma_rms_ujy = data_to_print[1]
-    eta_w = band_info[3]
-    if abs(eta_w - 1.0) > 1e-9:
-        raise AssertionError(
-            "expected eta_w == 1 at native resolution (theta=-1), got %r -- "
-            "the calculator's internal convention may have changed" % eta_w
-        )
+    sigma_rms_ujy = _native_rms_ujy(
+        query_name, freq_ghz, t_obs_hr=t_obs_hr, delta_v=delta_v)
 
     if n_target is not None:
         n_donor = _N_ANT_TABLE[query_name]
@@ -238,6 +249,8 @@ def integration_time(calc_name, freq_ghz, eta, goal_jy_per_beam, delta_v=None, n
     sigma_ref = natural_rms(calc_name, freq_ghz, t_obs_hr=t_ref_hr, delta_v=delta_v)
 
     if n_ant_actual is not None:
+        if not isinstance(n_ant_actual, (int, np.integer)) or n_ant_actual < 2:
+            raise ValueError("n_ant_actual must be an integer >= 2")
         n_nominal = _n_ant_for(calc_name)
         sigma_ref = sigma_ref * np.sqrt(
             n_nominal * (n_nominal - 1) / (n_ant_actual * (n_ant_actual - 1))
@@ -289,8 +302,7 @@ def jy_to_tb(s_jy, theta_arcsec, freq_ghz):
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-
-    print("calculator dir:", _CALC_DIR)
+    print("packaged data schema:", _DATA["schema"], _DATA["schema_version"])
     print("known calc_names:", KNOWN_CALC_NAMES)
     assert _N_ANT_TABLE["core"] + _N_ANT_TABLE["mid"] == CORE_MID_N_ANT, (
         "core+mid antenna count assumption is stale: core=%d mid=%d != %d"
@@ -349,34 +361,5 @@ if __name__ == "__main__":
     print("\n(d) tb_to_jy(%.3g K, %.3g arcsec, %.3g GHz) = %.6g Jy; jy_to_tb round-trip = %.6g K"
           % (tb0, theta0, freq0, s0, tb_back))
     assert abs(tb_back - tb0) / tb0 < 1e-9
-
-    # (e) cross-check against the calculator's own sigma_T (K) for a native-resolution case
-    with _in_calculator_dir():
-        data_to_print, _perf, band_info = _calc.sigma_ps_fn(
-            subarray="main", freq=30.0, type_cal="continuum", t_int=3600.0, theta=-1, verbose=False
-        )
-    nu_used, sigma_rms_ujy, sigma_T_calc, sigma_conf_ujy = data_to_print
-    band_key, theta_native_arcsec, _delta_nu, eta_w_calc = band_info
-    print(
-        "\n(e) cross-check @ native res: calculator band=%s, re-centered freq=%.4f GHz, "
-        "native theta=%.4f mas, eta_w=%.3f, sigma_rms=%.4f uJy, sigma_conf=%.4f uJy, sigma_T=%.4f K"
-        % (band_key, nu_used, theta_native_arcsec * 1e3, eta_w_calc, sigma_rms_ujy, sigma_conf_ujy, sigma_T_calc)
-    )
-    assert eta_w_calc == 1.0
-    assert abs(sigma_rms_ujy * 1e-6 - rms_main) < 1e-12, "our natural_rms must match the raw call exactly"
-    # our own tb_to_jy formula, applied to the *thermal-only* uJy number, should reproduce
-    # the calculator's sigma_T once we add back its confusion contribution the same way it does
-    thermal_only_ujy = sigma_rms_ujy  # eta_w==1 already applied inside sigma_ps_fn
-    sigma_T_ours = jy_to_tb(thermal_only_ujy * 1e-6, theta_native_arcsec, nu_used)
-    print(
-        "    our jy_to_tb of the same rms/theta/freq = %.4f K (calculator's sigma_T incl. confusion = %.4f K)"
-        % (sigma_T_ours, sigma_T_calc)
-    )
-    # sigma_conf is 0 at this fine a native resolution, so the two should agree closely.
-    # NB: they agree to ~0.5%, not machine precision -- the calculator's sigma_T uses a
-    # hardcoded constant (1.216) in place of the analytic 2*k_B/lambda^2/Omega prefactor,
-    # which works out to ~1.222 with precise CODATA c, k_B; see PLAN.md / final report.
-    if sigma_conf_ujy == 0:
-        assert abs(sigma_T_ours - sigma_T_calc) / sigma_T_calc < 1e-2
 
     print("\nAll self-tests passed.")

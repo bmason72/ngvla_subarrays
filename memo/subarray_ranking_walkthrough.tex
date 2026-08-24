@@ -1,0 +1,186 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
+
+\setlength{\emergencystretch}{2em}
+\newcommand{\ngvla}{ngVLA}
+\newcommand{\arcsec}{^{\prime\prime}}
+
+\title{How the \ngvla\ Subarray Calculator Constructs a Ranked List}
+\author{Short technical note accompanying the subarray-selection memo}
+\date{21 August 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note describes the query-time construction of the ranked subarray list,
+assuming that the robust--taper measurements and subarray metadata already
+exist.  A 30~GHz request is used so that the frequency scaling is transparent.
+The main point is that the calculator does not rank subarrays by inefficiency
+$\eta$ alone.  It first finds one feasible imaging operating point for each
+subarray, then ranks those points by integration time or antenna hours.
+\end{abstract}
+
+\section{Inputs and conventions}
+
+For each offered subarray $i$, the calculator needs metadata
+$(N_i,b_{\min,i},C_{{\rm LAS},i},\theta_{{\rm cap},i})$ and measured lattice
+points
+\[
+  p=(\theta,\eta,s,{\rm weighting},{\rm robust},{\rm taper}).
+\]
+Here $s$ is the PSF skirt at one fitted FWHM, and
+\begin{equation}
+  \eta(p)=\frac{\sigma_{\rm dirty}(p)}
+  {\sigma_{\rm dirty}({\rm natural},0)}
+\end{equation}
+is normalized to the natural, untapered rms of the \emph{same} subarray.
+Thus equal $\eta$ does not imply equal absolute sensitivity for subarrays with
+different antenna counts.
+
+The registered configuration and observing mode select one metadata table and
+one curve table.  The default is Rev~F, four-hour track.  The selector evaluates
+every metadata row independently; it does not first construct a single envelope
+across different subarrays.
+
+At a general observing frequency $f$, the reference-curve coordinate is
+\[
+  \theta_{30}=\theta_{\rm req}\frac{f}{30~{\rm GHz}}.
+\]
+For the 30~GHz case in this note, $\theta_{30}=\theta_{\rm req}$ and returned
+tapers also need no scaling.  The current model treats $\eta$ and skirt as
+frequency-invariant.
+
+\section{One candidate from each subarray}
+
+Let $m$ be the fractional beam tolerance (currently 0.05 by default).  The
+allowed reference-frequency beam interval is
+\begin{equation}
+  I_\theta=[\theta_{\rm req}(1-m),\theta_{\rm req}(1+m)].
+\end{equation}
+The achieved beam can therefore lie at either edge of the interval; it need not
+equal the central request.
+
+The measured robust--taper lattice is made continuous conservatively.  Adjacent
+points are interpolated along fixed-robust taper rows and fixed-taper Briggs
+columns.  Valid four-corner Briggs cells also admit interior robust and taper
+values.  On an edge, with
+\[
+ u=\frac{\ln(\theta/\theta_a)}{\ln(\theta_b/\theta_a)},
+\]
+the engine interpolates $\ln\eta$ linearly, interpolates skirt linearly, and
+normally interpolates taper in log space.  It does not extrapolate beyond a
+measured family or bridge a pruned gap.
+
+For a point-source request, the subarray's operating point is
+\begin{equation}
+ p_i^*=\mathop{\rm arg\,min}_{p:\,\theta(p)\in I_\theta}\eta(p).
+\end{equation}
+For an imaging request with required skirt $s_0$, the current per-subarray
+policy is:
+\begin{enumerate}
+  \item If any point in $I_\theta$ has $s\le s_0$, choose the lowest-$\eta$
+        such point.  This is a \emph{strict} result.
+  \item Otherwise, if relaxation is enabled, choose the best achievable skirt
+        in $I_\theta$, breaking skirt ties by $\eta$.  This is a
+        \emph{relaxed} result and does not meet the requested skirt.
+  \item With relaxation disabled, absence of a strict point excludes the
+        subarray.
+\end{enumerate}
+Interpolation provenance and the winning \texttt{tclean} weighting, robust,
+and taper are retained in the returned candidate.
+
+Two other feasibility gates apply.  A heterogeneous subarray is excluded when
+the entire beam window is coarser than its beam cap; if the interval only
+overlaps the cap, it is clipped at the cap.  A requested largest angular scale
+is checked using
+\begin{equation}
+ {\rm LAS}_i=C_{{\rm LAS},i}\frac{\lambda}{b_{\min,i}}206264.8.
+\end{equation}
+At 30~GHz and $C_{\rm LAS}=0.8$, this is approximately
+$1649/b_{\min,i}[{\rm m}]$ arcsec.  LAS is reported but is not a gate when the
+request omits it.  There is no query-time $\eta\le5$ rejection.
+
+\section{Sensitivity cost and the role of antenna count}
+
+For a supplied flux-density goal $g$, the sensitivity wrapper obtains the
+one-hour natural rms $\sigma_{{\rm nat},i}$ from the Memo~96 calculator and
+applies the curve-derived inefficiency externally:
+\begin{equation}
+ \sigma_i(t)=\eta_i\sigma_{{\rm nat},i}(1~{\rm h})
+             \sqrt{\frac{1~{\rm h}}{t}},
+ \qquad
+ t_i=\left(\frac{\eta_i\sigma_{{\rm nat},i}(1~{\rm h})}{g}\right)^2{\rm h}.
+\end{equation}
+The resource cost is then
+\begin{equation}
+ A_i=N_i t_i
+\end{equation}
+in antenna hours.  A brightness-temperature goal is converted to Jy/beam
+using the candidate's achieved beam and request frequency before evaluating
+the same expression.
+
+There is no double counting of $N_i$ in these equations.  The upstream natural
+rms already contains
+\begin{equation}
+ \sigma_{{\rm nat},i}\mathrel{\propto}
+ \frac{1}{\sqrt{N_i(N_i-1)t}}.
+\end{equation}
+The wrapper rescales this reference natural sensitivity only when the backing
+calculator does not already represent the candidate being evaluated.  There
+are two intelligible cases.  First, a named backing entry can carry the antenna
+count of an older configuration: for example, the calculator has a
+Rev-D-vintage core entry, not a separate Rev~C core entry, so a Rev~C request
+must replace the stored count by the Rev~C metadata count.  Second, some
+offered subarrays have no named backing entry at all; for these, the
+main-array natural sensitivity is used as a same-dish reference and rescaled
+to the candidate's antenna count.  Ordinary Rev~F and Rev~D named entries have
+matching stored and actual counts, so their correction factor is exactly one.
+If both a donor reference and a revision-specific count are involved, the
+intermediate count cancels algebraically, leaving one main-to-actual
+correction.  Finally, multiplying $t_i$ by $N_i$ converts elapsed time to the
+EOP resource unit; it does not alter the thermal noise.
+
+When no numerical sensitivity goal is supplied, the calculator defines the
+common fiducial goal
+\begin{equation}
+ g_{\rm fid}=\sigma_{{\rm nat},{\sc main}}(1~{\rm minute})
+\end{equation}
+at the requested frequency and spectral setup, and evaluates every subarray
+with the same absolute time equation above.  Thus natural, untapered MAIN
+takes one minute by construction, while other beams and subarrays have finite,
+interpretable costs.  This is still not simply a lowest-$\eta$ ordering: the
+natural-rms anchor includes $N_i(N_i-1)$, so a larger subarray can rank ahead
+despite a larger taper penalty.
+
+\section{Final ordering and current caveats}
+
+For imaging, feasible candidates are first partitioned into strict results
+that meet $s_0$ and relaxed results that do not.  Strict results are always
+listed first.  Within each group, the default sort is increasing antenna
+hours, with fewer antennas as a tie breaker; the alternative is increasing
+integration time.  If no feasible subarray meets $s_0$, the calculator emits
+a structured warning and retains the relaxed list.  Python callers can
+explicitly request a mixed-pool policy when a custom ranking needs to trade
+skirt compliance against cost.
+
+Sensitivity failures cannot enter a relative-cost fallback.  Failure to cost
+an explicit science goal excludes the affected candidate.  Failure of the
+implicit fiducial leaves the independently determined beam/LAS feasibility
+visible, but disables the entire recommendation ranking and returns a
+structured cost warning.  Excluded subarrays follow the feasible rows with
+their reasons.
+
+\section*{Implementation locations}
+
+The relevant implementation is in \path{sa_select/curves.py},
+\path{sa_select/envelope.py}, \path{sa_select/selector.py},
+\path{sa_select/heuristics.py}, and \path{sa_select/sensitivity.py}.  The
+browser implementation is in \path{curvegen/report_template.html}, with its
+data payload assembled by \path{curvegen/make_report.py}.
+
+\end{document}

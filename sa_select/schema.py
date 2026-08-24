@@ -60,7 +60,8 @@ CSV tables: data/revf_curves.csv, data/bootstrap_curves.csv
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, List
+import math
+from typing import Dict, Optional, List
 
 
 @dataclass
@@ -81,14 +82,39 @@ class ObservingRequest:
                                       # than excluding the subarray -- angular
                                       # resolution is the primary requirement
     optimize: str = "antenna_hours"   # built-in heuristic name, see heuristics.py
+    strict_first: bool = True          # imaging: rank skirt-met candidates before
+                                      # relaxed candidates; False lets a custom
+                                      # heuristic compare the mixed pool
     delta_v: Optional[float] = None   # channel width for line sensitivity (m/s);
                                       # None -> calculator's continuum default
+    normalization_warnings: List[str] = field(default_factory=list, init=False,
+                                               repr=False)
 
     def __post_init__(self):
         if self.sensitivity_unit not in ("Jy/beam", "K"):
             raise ValueError("sensitivity_unit must be 'Jy/beam' or 'K'")
-        if self.resolution <= 0 or self.frequency <= 0:
+        if (not math.isfinite(self.resolution)
+                or not math.isfinite(self.frequency)
+                or self.resolution <= 0 or self.frequency <= 0):
             raise ValueError("resolution and frequency must be positive")
+        if self.sensitivity is not None and (
+                not math.isfinite(self.sensitivity) or self.sensitivity <= 0):
+            raise ValueError("sensitivity must be positive when supplied")
+        if self.las is not None and (not math.isfinite(self.las) or self.las <= 0):
+            raise ValueError("las must be positive when supplied")
+        if not math.isfinite(self.skirt_threshold) or not 0 <= self.skirt_threshold <= 1:
+            raise ValueError("skirt_threshold must be between 0 and 1")
+        if not math.isfinite(self.beam_margin):
+            raise ValueError("beam_margin must be finite")
+        if self.beam_margin < 0:
+            self.normalization_warnings.append(
+                "negative beam_margin treated as exact (0)")
+            self.beam_margin = 0.0
+        if self.beam_margin >= 1:
+            raise ValueError("beam_margin must be less than 1")
+        if self.delta_v is not None and (
+                not math.isfinite(self.delta_v) or self.delta_v <= 0):
+            raise ValueError("delta_v must be positive when supplied")
 
 
 @dataclass
@@ -134,8 +160,8 @@ class Candidate:
 
     ``feasible`` is False when the subarray cannot satisfy the request;
     ``reasons`` then says why (there may be several).  Feasible candidates
-    carry the imaging parameters that achieve the requested beam and, when a
-    sensitivity goal was given, the required time.
+    carry the imaging parameters that achieve the requested beam and the
+    required time for either a user goal or the one-minute-MAIN fiducial.
     """
 
     subarray: SubarrayInfo
@@ -143,6 +169,11 @@ class Candidate:
     reasons: List[str] = field(default_factory=list)    # fatal exclusions
     warnings: List[str] = field(default_factory=list)   # non-fatal caveats
                                                         # (e.g. relaxed skirt)
+
+    # structured imaging-policy state (None for point-source/no curve answer)
+    skirt_required: Optional[float] = None
+    skirt_met: Optional[bool] = None
+    skirt_relaxed: bool = False
 
     # imaging solution (None until filled in)
     resolution: Optional[float] = None    # achieved beam FWHM (arcsec) at request freq
@@ -153,10 +184,13 @@ class Candidate:
     skirt: Optional[float] = None
     las: Optional[float] = None           # subarray LAS (arcsec) at request freq
 
-    # cost (None when no sensitivity goal was given)
+    # cost (user goal or one-minute-MAIN fiducial; None only if cost failed)
     sensitivity_jy: Optional[float] = None   # goal converted to Jy/beam
     integration_time_hr: Optional[float] = None
     antenna_hours: Optional[float] = None
+    cost_status: str = "pending"             # pending | available | unavailable | failed
+    cost_error: str = ""
+    goal_origin: Optional[str] = None         # user | main_natural_1min_fiducial
 
     source: str = ""                      # provenance of the curve sample used
 
@@ -168,3 +202,15 @@ class Candidate:
         if self.taper:
             pars["uvtaper"] = ["%.4garcsec" % self.taper]
         return pars
+
+
+@dataclass(frozen=True)
+class SelectionWarning:
+    """Structured result-level diagnostic safe for API/batch consumers."""
+
+    code: str
+    message: str
+    details: Dict[str, object] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return dict(code=self.code, message=self.message, details=dict(self.details))

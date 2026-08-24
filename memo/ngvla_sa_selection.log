@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.15)  21 JUL 2026 15:54
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.15)  18 AUG 2026 14:31
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -354,44 +354,15 @@ Package hyperref Info: Link coloring ON on input line 18.
 \openout3 = `ngvla_sa_selection.out'.
 
 
-Underfull \hbox (badness 1052) in paragraph at lines 42--56
-\OT1/cmr/m/n/10.95 core+spiral, spi-ral+mid, and main--plus the memo-121 cam-pa
-ign ad-
- []
-
-
-Underfull \hbox (badness 1043) in paragraph at lines 42--56
-\OT1/cmr/m/n/10.95 di-tions long, mid+long, spi-ral+mid+long, main+long, and th
-e three
- []
-
-
-Underfull \hbox (badness 1048) in paragraph at lines 42--56
-\OT1/cmr/m/n/10.95 outer-core com-bi-na-tions spiral+core-outer, mid+spiral+cor
-e-outer, and
- []
-
-
 
 [1
 
 {/scratch/projects/tacc/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.m
 ap}]
-Underfull \hbox (badness 1043) in paragraph at lines 57--64
-\OT1/cmtt/m/n/10.95 config[]registry.csv\OT1/cmr/m/n/10.95 ) routes each com-bi
--na-tion to its own subarray-
- []
-
-
-Underfull \hbox (badness 1242) in paragraph at lines 57--64
-\OT1/cmr/m/n/10.95 metadata and curve ta-bles, and Rev D and snapshot-mode (sin
-gle-
- []
-
 
 Package amsmath Warning: Foreign command \over;
 (amsmath)                \frac or \genfrac should be used instead
-(amsmath)                 on input line 79.
+(amsmath)                 on input line 86.
 
 
 
@@ -403,114 +374,148 @@ uper-ts1.enc}]
 [4]
 
 [5]
-<figs/taperability.pdf, id=105, 558.95703pt x 342.20848pt>
+
+[6]
+<figs/taperability.pdf, id=157, 558.95703pt x 342.20848pt>
 File: figs/taperability.pdf Graphic file (type pdf)
 <use figs/taperability.pdf>
-Package pdftex.def Info: figs/taperability.pdf  used on input line 264.
+Package pdftex.def Info: figs/taperability.pdf  used on input line 345.
 (pdftex.def)             Requested size: 360.0pt x 220.40685pt.
-<figs/imaging.pdf, id=106, 558.95703pt x 356.15659pt>
+<figs/imaging.pdf, id=160, 558.95703pt x 356.15659pt>
 File: figs/imaging.pdf Graphic file (type pdf)
 <use figs/imaging.pdf>
-Package pdftex.def Info: figs/imaging.pdf  used on input line 278.
+Package pdftex.def Info: figs/imaging.pdf  used on input line 360.
 (pdftex.def)             Requested size: 360.0pt x 229.39044pt.
 
 
-[6]
+[7]
 
-[7 <./figs/taperability.pdf>]
+[8 <./figs/taperability.pdf>]
 
-[8 <./figs/imaging.pdf>]
-<figs/heatmap.pdf, id=287, 512.08685pt x 332.46594pt>
+[9 <./figs/imaging.pdf>]
+<figs/heatmap.pdf, id=343, 512.08685pt x 332.46594pt>
 File: figs/heatmap.pdf Graphic file (type pdf)
 <use figs/heatmap.pdf>
-Package pdftex.def Info: figs/heatmap.pdf  used on input line 352.
+Package pdftex.def Info: figs/heatmap.pdf  used on input line 441.
 (pdftex.def)             Requested size: 341.9989pt x 222.04587pt.
 
 
-[9 <./figs/heatmap.pdf>]
-
 [10]
-Underfull \hbox (badness 1400) in paragraph at lines 470--472
+
+[11 <./figs/heatmap.pdf>]
+
+[12]
+Underfull \hbox (badness 1400) in paragraph at lines 566--568
 []\OT1/cmr/m/n/10 One row per mea-sured, skipped,
  []
 
 
-Underfull \hbox (badness 3635) in paragraph at lines 470--472
+Underfull \hbox (badness 3635) in paragraph at lines 566--568
 \OT1/cmr/m/n/10 default cam-paigns use \OT1/cmtt/m/n/10 results-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 472--472
+Underfull \hbox (badness 10000) in paragraph at lines 568--568
 []\OT1/cmtt/m/n/10 sa[]select/data/
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 473--473
+Underfull \hbox (badness 10000) in paragraph at lines 569--569
 []\OT1/cmr/m/n/10 Campaign
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 475--475
+Underfull \hbox (badness 10000) in paragraph at lines 571--571
 []\OT1/cmtt/m/n/10 sa[]select/data/
  []
 
 
-Underfull \hbox (badness 1852) in paragraph at lines 477--480
+Underfull \hbox (badness 1852) in paragraph at lines 573--576
 \OT1/cmr/m/n/10 paigns col-lect to their reg-is-tered
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 480--480
+Underfull \hbox (badness 10000) in paragraph at lines 576--576
 []\OT1/cmtt/m/n/10 sa[]select/data/
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 481--481
+Underfull \hbox (badness 10000) in paragraph at lines 577--577
 []\OT1/cmr/m/n/10 Subarray
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 482--484
+Underfull \hbox (badness 10000) in paragraph at lines 578--580
 []\OT1/cmr/m/n/10 Names, com-po-nents, an-tenna
  []
 
 
-Overfull \hbox (2.60631pt too wide) in paragraph at lines 501--501
+Overfull \hbox (2.60631pt too wide) in paragraph at lines 597--597
 []\OT1/cmtt/m/n/10 resolution[]arcsec[]30ghz| 
  []
 
 
-Underfull \hbox (badness 5592) in paragraph at lines 507--508
+Underfull \hbox (badness 5592) in paragraph at lines 603--604
 []\OT1/cmr/m/n/10 Simulation/reference fre-quency, cur-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 509--510
+Underfull \hbox (badness 10000) in paragraph at lines 605--606
 []\OT1/cmr/m/n/10 Free-form caveat, in-clud-ing
  []
 
 
 
-[11]
+[13]
+Overfull \hbox (13.6647pt too wide) in paragraph at lines 631--631
+[]\OT1/cmtt/m/n/10.95 bash curvegen/submit_campaign.sh <rev> <sim_mode> --time 
+47:00:00[] 
+ []
 
-[12]
 
-[13] (./ngvla_sa_selection.aux)
+
+[14]
+
+[15]
+Underfull \hbox (badness 10000) in paragraph at lines 701--706
+\OT1/cmtt/m/n/10.95 sensitivity[]unit, las, imaging, beam[]margin, skirt[]thres
+hold,
+ []
+
+
+
+[16]
+Underfull \hbox (badness 1571) in paragraph at lines 727--739
+\OT1/cmr/m/n/10.95 spi-ral+mid+long, main+long, and the three outer-core com-bi
+-na-tions
+ []
+
+
+Underfull \hbox (badness 2846) in paragraph at lines 727--739
+\OT1/cmr/m/n/10.95 spiral+core-outer, mid+spiral+core-outer, and long+mid+spira
+l+core-
+ []
+
+
+
+[17]
+
+[18] (./ngvla_sa_selection.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 1
 L3 programming layer <2024-12-25>
  ***********
 Package rerunfilecheck Info: File `ngvla_sa_selection.out' has not changed.
-(rerunfilecheck)             Checksum: 0A5B535C1D1C1AD86A062F5F7E69B160;1423.
+(rerunfilecheck)             Checksum: 9509E80F58EDFD7B5BF2B0D6AA38400A;3569.
  ) 
 Here is how much of TeX's memory you used:
- 9403 strings out of 473207
- 146530 string characters out of 5710030
- 556566 words of memory out of 5000000
- 32499 multiletter control sequences out of 15000+600000
- 567855 words of font info for 68 fonts, out of 8000000 for 9000
+ 9448 strings out of 473207
+ 147127 string characters out of 5710030
+ 557197 words of memory out of 5000000
+ 32523 multiletter control sequences out of 15000+600000
+ 568461 words of font info for 70 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,11n,79p,810b,558s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,11n,79p,803b,593s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </scratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/c
 m/cmbx10.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/public
 /amsfonts/cm/cmbx12.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/t
@@ -534,11 +539,12 @@ s/cm/cmsy8.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts/type1/publ
 ic/amsfonts/cm/cmti10.pfb></scratch/projects/tacc/texlive/2025/texmf-dist/fonts
 /type1/public/amsfonts/cm/cmtt10.pfb></scratch/projects/tacc/texlive/2025/texmf
 -dist/fonts/type1/public/cm-super/sfrm1000.pfb></scratch/projects/tacc/texlive/
-2025/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb>
-Output written on ngvla_sa_selection.pdf (13 pages, 350768 bytes).
+2025/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb></scratch/projects/tac
+c/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sftt1095.pfb>
+Output written on ngvla_sa_selection.pdf (18 pages, 378417 bytes).
 PDF statistics:
- 487 PDF objects out of 1000 (max. 8388607)
- 248 compressed objects within 3 object streams
- 45 named destinations out of 1000 (max. 500000)
- 88 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 582 PDF objects out of 1000 (max. 8388607)
+ 333 compressed objects within 4 object streams
+ 65 named destinations out of 1000 (max. 500000)
+ 168 words of extra memory for PDF output out of 10000 (max. 10000000)
 

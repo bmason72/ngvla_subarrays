@@ -21,10 +21,12 @@ sa_select/data/ is currently BOOTSTRAP data derived from memo 121 (pre-Rev-F
 simulations) -- a stand-in until the Rev F curves are generated.
 """
 
-from .schema import ObservingRequest, SubarrayInfo, CurveSample, Candidate
+from .schema import (ObservingRequest, SubarrayInfo, CurveSample, Candidate,
+                     SelectionWarning)
 from .curves import CurveLibrary
 from .selector import select_subarrays, SelectionResult
 from .heuristics import HEURISTICS
 
 __all__ = ["ObservingRequest", "SubarrayInfo", "CurveSample", "Candidate",
-           "CurveLibrary", "select_subarrays", "SelectionResult", "HEURISTICS"]
+           "SelectionWarning", "CurveLibrary", "select_subarrays",
+           "SelectionResult", "HEURISTICS"]
