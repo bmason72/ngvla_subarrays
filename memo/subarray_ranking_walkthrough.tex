@@ -96,6 +96,13 @@ The interpolated sensitivity cost and skirt are
                =\eta_a^{1-z}\eta_b^z,\label{eq:edge-eta}\\
  s(\theta)&=(1-z)s_a+zs_b.\label{eq:edge-skirt}
 \end{align}
+The logarithmic coordinates for $\theta$ and $\eta$ are deliberate: both are
+positive quantities that span large dynamic ranges, and their changes across
+weighting and taper are more naturally described by ratios (locally,
+power-law behavior) than by absolute differences.  Linear interpolation in
+their logarithms therefore treats equal fractional changes equally and
+preserves positivity; skirt is interpolated linearly because it can pass
+through zero or become slightly negative.
 On a fixed-robust taper-row edge, $r_a=r_b$ and
 \begin{equation}
  r(\theta)=r_a,\qquad
@@ -163,10 +170,10 @@ $(q,u)$; reported robust is linear in $q$, and reported taper is geometric in
 $u$ except in a cell touching the untapered column.  The implementation rounds
 the returned robust value to three decimal places.
 
-For a particular trial beam $\theta_*$, the cell points that make exactly that
+For a particular trial beam $\theta_{\rm trial}$, the cell points that make exactly that
 beam lie on the one-dimensional iso-resolution locus
 \begin{equation}
- x(q,u)=x_*,\qquad x_*=\ln\theta_*.
+ x(q,u)=x_{\rm trial},\qquad x_{\rm trial}=\ln\theta_{\rm trial}.
  \label{eq:iso-resolution}
 \end{equation}
 For example, define
@@ -176,10 +183,10 @@ For example, define
 \end{align*}
 Then $x(q,u)=A+Bq+Cu+Dqu$, and, away from the degenerate denominator,
 \begin{equation}
- u(q;x_*)=\frac{x_*-A-Bq}{C+Dq}.
+ u(q;x_{\rm trial})=\frac{x_{\rm trial}-A-Bq}{C+Dq}.
  \label{eq:cell-isolocus}
 \end{equation}
-Only values with $0\le q\le1$ and $0\le u(q;x_*)\le1$ are in the cell.
+Only values with $0\le q\le1$ and $0\le u(q;x_{\rm trial})\le1$ are in the cell.
 Substitution of equation~\eqref{eq:cell-isolocus} into
 equations~\eqref{eq:cell-eta}--\eqref{eq:cell-skirt} gives the corresponding
 $\eta(q)$ and $s(q)$ along that fixed-beam locus.  Once the optimizer chooses
@@ -188,7 +195,14 @@ returned robust $r_*$ and taper $t_*$, and
 $\eta_*=\eta(q_*,u_*)$, $s_*=s(q_*,u_*)$.  The implementation treats the
 degenerate case $C+Dq=0$ separately rather than dividing by zero.
 
-\subsection{How $I_\theta$ enters the point-source and imaging choices}
+\subsection{How the beam interval enters the point-source and imaging choices}
+
+For the point-source case, at a given trial resolution
+$\theta_{\rm trial}$ the engine finds the corresponding $(r_*,t_*)$ that
+minimize $\eta$ over all valid measured points, interpolated lattice edges,
+and four-corner Briggs cells.  Within a cell, this is the minimization of
+$\eta(q,u)$ along the iso-resolution locus
+$\ln\theta(q,u)=\ln\theta_{\rm trial}$ described above.
 
 Let $\mathcal P_i(\theta)$ denote all measured, edge-interpolated, and
 cell-interior operating points of subarray $i$ that produce beam $\theta$.
@@ -239,7 +253,7 @@ measured points inside $I_\theta$, crossings of $\theta_-$ and $\theta_+$,
 and, for strict imaging, crossings of $s=s_0$.  These contain every edge
 minimum because equations~\eqref{eq:edge-eta} and~\eqref{eq:edge-skirt} are
 linear in $\ln\theta$ after taking $\ln\eta$.  In a four-corner cell, for a
-fixed $\theta_*$ the engine substitutes equation~\eqref{eq:cell-isolocus} and
+fixed $\theta_{\rm trial}$ the engine substitutes equation~\eqref{eq:cell-isolocus} and
 evaluates interior stationary points of $\eta$, stationary points of $s$, and
 crossings of $s=s_0$; the cell edges are already covered by the edge search.
 For a nonzero-width $I_\theta$, the current implementation repeats this
@@ -322,7 +336,7 @@ EOP resource unit; it does not alter the thermal noise.
 When no numerical sensitivity goal is supplied, the calculator defines the
 common fiducial goal
 \begin{equation}
- g_{\rm fid}=\sigma_{{\rm nat},{\sc main}}(1~{\rm minute})
+ g_{\rm fid}=\sigma_{{\rm nat},\mathrm{MAIN}}(1~{\rm minute})
 \end{equation}
 at the requested frequency and spectral setup, and evaluates every subarray
 with the same absolute time equation above.  Thus natural, untapered MAIN

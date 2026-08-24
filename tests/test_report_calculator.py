@@ -19,13 +19,14 @@ class TestReportCalculatorControls(unittest.TestCase):
                            "calc-warning"]:
             with self.subTest(element_id=element_id):
                 self.assertIn('id="%s"' % element_id, self.text)
-        for value in ['value="0.01"', 'value="0.05"', 'value="0.10"',
+        for value in ['value="0.02"', 'value="0.05"', 'value="0.10"',
                       'value="0.15"', 'value="0.20"']:
             self.assertIn(value, self.text)
 
     def test_internal_fallback_and_exact_beam_are_not_selectable(self):
         self.assertNotIn('id="calc-goal-mode"', self.text)
         self.assertNotIn('<option value="0">exact</option>', self.text)
+        self.assertNotIn('<option value="0.01">1%</option>', self.text)
         self.assertIn("sensitivity === null ? 'fiducial' : 'explicit'", self.text)
 
     def test_sensitivity_accepts_any_positive_float(self):

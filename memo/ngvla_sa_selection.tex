@@ -359,7 +359,7 @@ interpolation.}
 \centering
 \includegraphics[width=\linewidth]{figs/imaging.pdf}
 \caption{Imaging (sculptability) envelopes for the same subarrays under the
-default threshold policy with $s_{\max}=0.10$ (panels as in
+default threshold policy with $s_0=0.10$ (panels as in
 Fig.~\ref{fig:taperability}).  Solid: strict ($s \le 0.10$ achieved).
 Dashed: relaxed points whose best achievable skirt is $\le 0.25$ (a
 display category only; see Appendix~\ref{sec:history}).  Dotted:
@@ -374,8 +374,8 @@ their offered range.}
 \section{Curve engine: query time}
 \label{sec:engine}
 
-The selector and the HTML report (\S\ref{sec:campaigns}) query the
-measured lattice through one shared interpolation engine.  Samples are
+The selector and the HTML report-building pipeline (\S\ref{sec:campaigns})
+use one shared interpolation engine.  Samples are
 grouped into rows (one weighting choice --- natural or one Briggs robust
 value --- with taper varying) and columns (one taper value, with robust
 varying across Briggs rows).  Two measured points adjacent
@@ -385,34 +385,58 @@ resolutions within a factor 1.6; along a column, a robust gap of at most
 0.45 and resolutions within a factor 2.  Any measured point between two
 others splits the pair, so segments always join nearest measured
 neighbors.  Within a segment the engine interpolates $\ln\eta$ and the
-taper $\ln T$ linearly in $\ln\theta$ ($\eta$ and $T$ are positive,
-multiplicative quantities; untapered samples, $T=0$, are interpolated
-linearly); the skirt $s$ can be near zero or negative and is interpolated
-linearly in $\ln\theta$.  Where four corner points are pairwise adjacent
-in both directions --- no other measured point on any edge --- they define
+taper $\ln T$ linearly in $\ln\theta$; untapered samples, $T=0$, use linear
+taper interpolation because $\ln0$ is undefined.  The logarithmic
+coordinates for $\theta$ and $\eta$ are deliberate: both are positive and
+span large dynamic ranges, while their changes across weighting and taper
+are more naturally fractional (locally power-law) than additive.  Linear
+interpolation in their logarithms treats equal ratios equally and preserves
+positivity.  The skirt $s$ can pass through zero or become slightly negative,
+so it is interpolated linearly rather than logarithmically.  Where four
+corner points are pairwise adjacent in both directions --- no other measured
+point on any edge --- they define
 a bilinear cell ($\ln\theta$, $\ln\eta$, and $s$ bilinear in normalized
 cell coordinates), so the engine always works with the smallest available
 cells and every cell edge coincides exactly with a row or column segment.
-The constrained optimum along a requested-resolution locus is enumerated
+The constrained optimum along a fixed requested-resolution locus is enumerated
 analytically, and the engine does not extrapolate outside measured
 segments or cells.  On the real Rev F
 curve table, the cell construction matches a brute-force scan of the same
 interpolated surfaces to within $6\times10^{-3}$ in both $\eta$ and
 skirt, with no strict/relaxed classification differences.
 
-For a request with fractional beam margin $m$, the engine works over the
-interval $[\theta(1-m),\theta(1+m)]$ at the 30 GHz reference scale,
-intersected with the subarray's beam cap.  The minimum is exact for the
-piecewise model.  The candidates are measured points in the interval,
-interval endpoints on covered segments, threshold crossings at
-$s=s_{\max}$, and the analytic critical points of the bilinear cell
-interiors.  The retired trade mode adds the trade-cap crossings and
-penalized-branch stationary points, all available in closed form for the
-piecewise-log-linear model.
+For the point-source case, for a given subarray and trial resolution
+$\theta_{\rm trial}$, the corresponding $(r_*,t_*)$ that minimize $\eta$ are
+found over all valid measured points, interpolated lattice edges, and
+four-corner Briggs cells.  Within each cell, $\ln\theta$, $\ln\eta$, and $s$
+are bilinearly interpolated in normalized robust and taper coordinates
+$(q,u)$.  The reported robust is linear in $q$, while taper is log-linear in
+$u$, except for cells adjoining the untapered column, where taper is linear.
+At fixed $\theta_{\rm trial}$, $\eta$ is minimized along the iso-resolution
+locus
+\begin{equation}
+  \ln\theta(q,u)=\ln\theta_{\rm trial}.
+\end{equation}
+
+For a request with fractional beam margin $m$, define the allowed 30-GHz
+reference-scale interval
+\begin{equation}
+ I_\theta=[\theta_-,\theta_+]
+          =[\theta_0(1-m),\theta_0(1+m)],
+\end{equation}
+intersected where necessary with the subarray's beam cap.  Lattice-edge
+solutions are minimized analytically over the full interval using measured
+points, covered interval endpoints, and threshold crossings.  For
+cell-interior solutions, the fixed-resolution calculation is repeated at 33
+values of $\theta_{\rm trial}$ spaced uniformly in $\ln\theta$ across
+$I_\theta$, and the lowest-$\eta$ candidate is selected.  Thus the edge
+minimum is exact for the piecewise model, while the additional cell-interior
+minimization over a nonzero beam interval is a deterministic 32-subinterval
+scan.  A zero-width request evaluates the one specified beam exactly.
 
 For imaging, the default policy (\emph{threshold} mode, adopted 8 July 2026)
 treats the requested resolution as the hard requirement and the skirt as a
-quality target.  If any candidate in the interval meets $s \le s_{\max}$
+quality target.  If any candidate in the interval meets $s \le s_0$
 ($0.10$ by default), the engine returns the minimum-$\eta$ candidate among
 them and labels it strict.  Otherwise it returns the candidate with the
 best achievable skirt in the interval, ties broken by $\eta$, flagged
@@ -421,13 +445,21 @@ imposed: the cost is reported and the caller judges.  A hard-threshold variant r
 instead of relaxing (used by the Memo 121 replays of \S\ref{sec:validation}).
 The earlier primary objective, the one-for-one eta-skirt trade
 \begin{equation}
-  J(\theta,p) = \eta(\theta,p) + \max[0,\,s(\theta,p)-s_{\max}],
-  \qquad s(\theta,p)\le s_{\max}+0.15 ,
+  J(\theta,p) = \eta(\theta,p) + \max[0,\,s(\theta,p)-s_0],
+  \qquad s(\theta,p)\le s_0+0.15 ,
 \end{equation}
-with $s_{\max}=0.10$ (so the trade extended to a skirt of 0.25), is retired
+with $s_0=0.10$ (so the trade extended to a skirt of 0.25), is retired
 but retained as a diagnostic/comparison mode; the $0.25$ trade cap survives
 in this memo only as a readability bucket in
 Figure~\ref{fig:imaging}.
+
+The interval solve above describes the Python selector.  At report-build time
+the same engine instead evaluates each subarray at beams spaced by 0.01 dex in
+$\log_{10}\theta$ (plus coverage endpoints) with zero beam margin and embeds
+those curve points in the standalone HTML report.  The in-page browser
+calculator restricts the stored points to $I_\theta$ and applies the same
+point-source or strict/relaxed imaging policy; it does not rerun the
+four-corner solve for each form submission.
 
 This shared engine replaced a hard per-window sample minimum.  The old rule
 converted lattice quantization into isolated pop-ups and drop-outs: a cheap
@@ -444,7 +476,7 @@ by $\eta$ (clamped at 5).  The untapered column and the natural-weighting
 row appear as labeled sentinel bands on the otherwise log-scaled taper axis.
 Black contours mark skirt $=0.10$ (solid) and $0.25$ (dashed); their
 blockiness is lattice quantization, not a smoothing artifact.  Red circles
-mark the lattice cells that anchor the default $s_{\max}=0.10$ imaging
+mark the lattice cells that anchor the default $s_0=0.10$ imaging
 curve.  This lattice is essentially complete: of its 259 sampled points,
 255 have status \texttt{ok} and 4 are beam-capped.}
 \label{fig:heatmap}
@@ -462,11 +494,13 @@ is active and no strict point exists.  Traded and relaxed skirt cases remain
 feasible but carry warnings.
 
 The ranking layer is deliberately pluggable.  Built-in choices are minimum
-antenna-hours and minimum integration time.  If no sensitivity goal is given,
-the same ordering is approximated by radiometer scalings,
-$t \propto \eta^2/[N(N-1)]$ and $N t \propto \eta^2/(N-1)$.  Valid requests
-are assumed to have positive frequency, resolution, sensitivity, and LAS, with
-$0\le m<1$ for the beam margin and physically meaningful skirt thresholds.
+antenna-hours and minimum integration time.  If no numerical sensitivity goal
+is given, the calculator uses the natural, untapered MAIN sensitivity in one
+minute at the requested frequency and spectral setup as a common fiducial
+goal, then computes absolute time and antenna-hour costs for every candidate.
+It does not fall back to a relative score.  Valid requests are assumed to have
+positive frequency and resolution, positive sensitivity and LAS when supplied,
+$0\le m<1$ for the beam margin, and physically meaningful skirt thresholds.
 
 Sensitivity calculations use the Memo 96 calculator only for the natural-rms
 anchor \cite{memo96}.  The calculator's internal $\eta_w(\theta)$ is a
@@ -477,7 +511,8 @@ engine's $\eta$:
   \sigma_{\rm req} = \eta_{\rm curve}\,\sigma_{\rm nat}.
 \end{equation}
 Flux-density goals are handled directly.  Brightness-temperature goals are
-converted to Jy per beam using the requested beam and frequency.  The
+converted to Jy per beam separately for each candidate, using its achieved
+beam and the requested frequency.  The
 calculator lacks a core+mid entry, so core+mid is donor-rescaled from main by
 the exact 18-m thermal-noise factor
 \[
@@ -509,7 +544,7 @@ cross-check, not a complete external validation.
 
 The engine also has envelope-consistency and spike-census QA.  Named
 post-mortem anomalies are regression-tested on the real Rev F curve table, and
-the report uses the same engine as the selector to avoid policy divergence.
+the report build uses the same engine as the selector to avoid policy divergence.
 Stair-step behavior from robust-direction quantization was subsequently
 removed by the column-segment densification; residual curve steps on the real
 data are below $\sim$0.16 in $\eta$ away from the $\eta$-cap fringe and are
@@ -526,7 +561,7 @@ recovery on the Rev F table shows median interpolation errors of
 (\S\ref{sec:refinement}) has run one wave over all four completed
 campaigns; several Rev F and Rev D track maps stopped at the per-map audit
 cap, so further waves to full certification remain queued.  Targeted
-contour sampling near the $s=s_{\max}$ surface is the next refinement if
+contour sampling near the $s=s_0$ surface is the next refinement if
 needed.
 
 The physical limitations are separate.  Current curves use one noise
