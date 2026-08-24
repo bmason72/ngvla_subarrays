@@ -197,12 +197,23 @@ degenerate case $C+Dq=0$ separately rather than dividing by zero.
 
 \subsection{How the beam interval enters the point-source and imaging choices}
 
-For the point-source case, at a given trial resolution
-$\theta_{\rm trial}$ the engine finds the corresponding $(r_*,t_*)$ that
-minimize $\eta$ over all valid measured points, interpolated lattice edges,
-and four-corner Briggs cells.  Within a cell, this is the minimization of
-$\eta(q,u)$ along the iso-resolution locus
-$\ln\theta(q,u)=\ln\theta_{\rm trial}$ described above.
+For point-source selection, for a given subarray and trial resolution
+$\theta_{\rm trial}$, the corresponding $(r_*,t_*)$ that minimize $\eta$ are
+computed over the grid of simulation results, including valid interpolated
+edges and four-corner cells.  Within a cell, $\ln\theta$, $\ln\eta$, and $s$
+are bilinearly interpolated in the normalized robust and taper coordinates
+$(q,u)$, yielding the corresponding $(\eta_*,s_*)$ and robust--taper setting.
+If a range of resolutions is allowed, the cell-interior calculation is run at
+33 values of $\theta_{\rm trial}$ spaced uniformly in $\ln\theta$ within
+$[\theta_-,\theta_+]$, and the candidate that minimizes $\eta$ is selected.
+For imaging, whenever possible this $\eta$ minimization is subject to the
+additional criterion $s\le s_0$.  If all candidate PSFs have $s>s_0$, then
+$s$ is minimized instead of $\eta$ (with $\eta$ breaking skirt ties), the
+so-called relaxed mode.
+
+In a four-corner cell, the fixed-resolution calculation just described is the
+minimization of $\eta(q,u)$ along the iso-resolution locus
+$\ln\theta(q,u)=\ln\theta_{\rm trial}$ derived above.
 
 Let $\mathcal P_i(\theta)$ denote all measured, edge-interpolated, and
 cell-interior operating points of subarray $i$ that produce beam $\theta$.

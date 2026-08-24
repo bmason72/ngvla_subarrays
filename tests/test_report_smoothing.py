@@ -214,7 +214,15 @@ class TestPayloadWiring(unittest.TestCase):
         self.assertTrue(before <= set(self.data.keys()))
         self.assertEqual(set(self.data.keys()) - before,
                          {"imaging_smooth", "pointsource_smooth",
-                          "psf_exported"})
+                          "psf_exported", "validation_counts"})
+
+    def test_validation_counts_partition_displayed_samples(self):
+        for name, points in self.data["samples"].items():
+            counts = self.data["validation_counts"][name]
+            self.assertEqual(sum(counts.values()), len(points))
+            self.assertEqual(
+                sum(p["validation"] == "residual-validated" for p in points),
+                counts["residual_validated"])
 
     def test_smooth_arrays_aligned_for_every_curve(self):
         imaging, imaging_smooth = self.data["imaging"], self.data["imaging_smooth"]

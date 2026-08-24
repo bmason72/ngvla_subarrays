@@ -56,6 +56,7 @@ from config import (SUBARRAYS, IMSIZE, OVERSAMPLE, WORK_DIR, RESULTS_DIR,
 from simulate import make_ms
 from measure import (beam_arcsec, image_rms, psf_skirt, psf_radial_profile,
                     psf_axis_cuts_from_psf, CAPTURE_RMAX_FWHM)
+from adaptive_support import point_key
 
 FIELDS = ["subarray", "weighting", "robust", "taper_mas", "imsize",
           "cell_arcsec", "bmaj_arcsec", "bmin_arcsec", "bpa_deg",
@@ -64,22 +65,6 @@ FIELDS = ["subarray", "weighting", "robust", "taper_mas", "imsize",
 
 TCLEAN_EXTS = [".psf", ".image", ".residual", ".pb", ".sumwt", ".model",
                ".mask", ".weight"]
-
-
-def point_key(weighting, robust, taper_mas):
-    # "%.2f" % -0.0 -> "-0.00", which would spawn a DUPLICATE lattice row for
-    # the same coordinate (this is the class of gotcha export_psf_data.
-    # normalize_key patches after the fact).  Coerce any value that ROUNDS to
-    # zero to +0.0 before formatting: byte-identical to the old spelling for
-    # every non-zero value, and folds a -0.00 robust/taper into 0.00 here at
-    # the source.  Keys are derived at load time, not stored, so existing data
-    # is unaffected (and a grep found no -0.00 keys in the current results).
-    robust, taper_mas = float(robust), float(taper_mas)
-    if round(robust, 2) == 0.0:
-        robust = 0.0
-    if round(taper_mas, 3) == 0.0:
-        taper_mas = 0.0
-    return "%s_%.2f_%.3f" % (weighting, robust, taper_mas)
 
 
 def _sig5(v):

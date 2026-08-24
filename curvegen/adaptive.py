@@ -76,12 +76,14 @@ if REPO not in sys.path:
 
 from config import (ROBUST_LIST, TAPER_LO_X, TAPER_HI_X, BEAM_CAP_ARCSEC,
                     RESULTS_DIR, REV, SIM_MODE, SUBARRAYS, grid_rows)
-from sweep import point_key, Sweep
+from adaptive_support import (point_key, progressive_log_midpoints, GAP_RATIO,
+                              RIM_DEX, SKIRT_MAX)
 from make_report import build_curve, sample_from_row
 from sa_select.envelope import ETA_CAP
-# reused verbatim from the refinement escalation ladder (shared semantics; see
-# the attribution notes at each call site).  These are pure, stateless helpers.
-from refine import progressive_log_midpoints, GAP_RATIO, RIM_DEX, SKIRT_MAX
+
+# Kept as an injectable module attribute for CASA-free tests.  The real Sweep
+# class is imported lazily only when the measuring driver is actually used.
+Sweep = None
 
 
 # --------------------------------------------------------------------------- #
@@ -140,6 +142,11 @@ CONVERGED = "converged"          # retired-by-residual (certified)
 DOMINATED = "dominated-retired"
 FROZEN = "frozen"
 BUDGET_STOPPED = "budget-stopped"
+
+# Conservative point-level projection of the cell states for report display.
+RESIDUAL_VALIDATED = "residual-validated"
+NOT_RESIDUAL_VALIDATED = "not-residual-validated"
+NOT_ASSESSED = "not-assessed"
 
 # feature classes (finding #8)
 SMOOTH = "smooth"
@@ -1110,6 +1117,34 @@ class Sampler:
             counts[leaf.state] = counts.get(leaf.state, 0) + 1
         return counts
 
+    def point_validation_state(self, weighting, robust, taper):
+        """Project cell convergence conservatively onto one measured point.
+
+        A positive-taper Briggs point is residual-validated only when every
+        terminal adaptive cell touching it is CONVERGED.  Requiring every
+        incident cell prevents a shared boundary point from hiding an active,
+        dominated, frozen, or otherwise non-residual-retired neighbor.  The
+        natural row, untapered seam, and points outside the quadtree domain are
+        not assessed by this sampler and are reported separately.
+        """
+        try:
+            robust, taper = float(robust), float(taper)
+        except (TypeError, ValueError):
+            return NOT_ASSESSED
+        if weighting != "briggs" or taper <= 0:
+            return NOT_ASSESSED
+        # Coordinates are stored at 0.01 robust / 0.001 mas taper precision,
+        # while dyadic bounds are retained at full precision.
+        rtol, ttol = 0.0050001, 0.0005001
+        touching = [leaf for leaf in self.tree.terminal_leaves()
+                    if leaf.r0 - rtol <= robust <= leaf.r1 + rtol
+                    and leaf.t0 - ttol <= taper <= leaf.t1 + ttol]
+        if not touching:
+            return NOT_ASSESSED
+        if all(leaf.state == CONVERGED for leaf in touching):
+            return RESIDUAL_VALIDATED
+        return NOT_RESIDUAL_VALIDATED
+
     def feature_cells(self):
         """Refined cells flagged step/ridge/unresolved (where residual evidence
         lives), sorted by resolution -- the annotations the CLI reports."""
@@ -1491,7 +1526,10 @@ def run_wave_loop(subarray, sweep=None, mode=None, budget=None, waves=None,
     the final rebuilt Sampler."""
     p = lambda *a: print(*a, file=out)
     if sweep is None:
-        sweep = Sweep(subarray)
+        sweep_cls = Sweep
+        if sweep_cls is None:
+            from sweep import Sweep as sweep_cls
+        sweep = sweep_cls(subarray)
     cap_mas = beam_cap_mas
     if cap_mas is None and subarray in BEAM_CAP_ARCSEC:
         cap_mas = BEAM_CAP_ARCSEC[subarray] * 1e3

@@ -332,6 +332,10 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   <p class="note" id="samples-parameters-note" style="display:none">These plots show the same
   simulation results in uv-taper and robust space. Each dot is one result. The natural row shows
   natural weighting. The taper axis is linear so that concentrations and gaps are easy to see.
+  Filled colored dots are residual-validated: every adaptive cell touching the point passed the
+  convergence test. Hollow colored dots touch at least one cell that did not pass that test;
+  audit-limited, wave-limited, and non-residual retirements do not count as validated. Small gray
+  dots are on the natural row, the untapered seam, or outside the quadtree and were not assessed.
   Gaps show regions that have few results or no results. Point to a dot to see its parameters.</p>
   <div class="grid3" id="multiples"></div>
 </div>
@@ -1227,6 +1231,13 @@ function curveChart(el, curves, opts) {
   return svg;
 }
 
+function validationLabel(p) {
+  if (p.validation === 'residual-validated') return 'residual-validated';
+  if (p.validation === 'not-residual-validated') return 'not residual-validated';
+  if (p.validation === 'not-assessed') return 'outside adaptive assessment';
+  return 'adaptive status unavailable';
+}
+
 function ttHtml(name, p) {
   const pars = p.weighting === 'natural'
     ? 'natural' + (p.taper ? `, taper ${fmtRes(p.taper)}` : ', no taper')
@@ -1235,7 +1246,7 @@ function ttHtml(name, p) {
          `<br>skirt ${p.skirt === null ? '—' : (100*p.skirt).toFixed(1) + '%'}` +
          (p.relaxed ? ' <b>(No beam at this resolution meets the skirt limit '
           + `(s0=${fmtS0(currentS0)}). This result has the lowest available skirt.)</b>` : '') +
-         `<br>${pars}`;
+         `<br>${pars}<br>${validationLabel(p)}`;
 }
 
 const XT = [{v:0.3,l:'0.3 mas'},{v:1,l:'1 mas'},{v:10,l:'10 mas'},
@@ -1322,10 +1333,14 @@ function renderPsChart() {
 // stat tiles ------------------------------------------------------------------
 function renderTiles() {
   const nPts = ACTIVE.reduce((a, n) => a + DATA.counts[n], 0);
+  const nValidated = ACTIVE.reduce((a, n) => a +
+    ((DATA.validation_counts && DATA.validation_counts[n])
+      ? DATA.validation_counts[n].residual_validated : 0), 0);
   const tiles = [
     {v: ACTIVE.length + '<span class="unit"> / ' + DATA.order.length + '</span>',
      l: 'subarrays with curve data'},
     {v: String(nPts), l: 'valid simulation results shown'},
+    {v: String(nValidated), l: 'residual-validated results'},
     {v: '0', l: 'failed simulations', cls: 'ok'},
   ];
   document.getElementById('tiles').innerHTML = tiles.map(t =>
@@ -1335,7 +1350,9 @@ function renderTiles() {
 // simulation-result small multiples ---------------------------------------------
 function samplePanel(name) {
   const card = document.createElement('div');
-  card.innerHTML = `<p class="eyebrow" style="margin:0 0 4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${css(name)};vertical-align:-1px"></span> ${name} &middot; ${DATA.counts[name]} results</p>`;
+  const validated = DATA.validation_counts && DATA.validation_counts[name]
+    ? DATA.validation_counts[name].residual_validated : 0;
+  card.innerHTML = `<p class="eyebrow" style="margin:0 0 4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${css(name)};vertical-align:-1px"></span> ${name} &middot; ${DATA.counts[name]} results (${validated} residual-validated)</p>`;
   return card;
 }
 
@@ -1458,7 +1475,13 @@ function parameterMultiple(el, name) {
     const y = p.weighting === 'natural' ? naturalY : Number(p.robust);
     if (!Number.isFinite(y)) continue;
     const x = X(p.taper), cy = Y(y);
-    const dot = svgEl('circle', {cx: x, cy, r: 2.6, fill: css(name),
+    const validated = p.validation === 'residual-validated';
+    const assessed = p.validation !== 'not-assessed';
+    const dot = svgEl('circle', {cx: x, cy,
+      r: validated ? 2.6 : (assessed ? 3.0 : 2.0),
+      fill: validated ? css(name) : (assessed ? 'var(--surface)' : 'var(--muted)'),
+      stroke: assessed && !validated ? css(name) : 'none',
+      'stroke-width': assessed && !validated ? 1.2 : 0,
       'class': 'mark', 'pointer-events': 'none'});
     svg.append(dot);
     const hit = svgEl('circle', {cx: x, cy, r: 7, fill: 'transparent'});
@@ -1978,9 +2001,10 @@ function renderDataTable() {
       rows.push(`<tr><td>${name}</td><td>${p.weighting}</td>` +
         `<td>${p.robust === null ? '' : p.robust.toFixed(2)}</td>` +
         `<td>${p.taper ? fmtRes(p.taper) : ''}</td><td>${fmtRes(p.res)}</td>` +
-        `<td>${p.eta.toFixed(3)}</td><td>${p.skirt === null ? '' : (100*p.skirt).toFixed(1) + '%'}</td></tr>`);
+        `<td>${p.eta.toFixed(3)}</td><td>${p.skirt === null ? '' : (100*p.skirt).toFixed(1) + '%'}</td>` +
+        `<td>${validationLabel(p)}</td></tr>`);
   t.innerHTML = '<tr><th>subarray</th><th>weighting</th><th>robust</th><th>taper</th>' +
-    '<th>beam</th><th>&eta;</th><th>skirt</th></tr>' + rows.join('');
+    '<th>beam</th><th>&eta;</th><th>skirt</th><th>adaptive validation</th></tr>' + rows.join('');
 }
 
 // campaign dropdown + full-page render ------------------------------------------

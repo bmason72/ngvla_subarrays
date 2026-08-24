@@ -59,21 +59,18 @@ Run (from curvegen/, CASA's python3):
 
 import argparse
 import math
-from collections import deque
 
 from config import SUBARRAYS, BEAM_CAP_ARCSEC
 from sweep import Sweep, point_key
 from make_report import build_curve, sample_from_row
 from sa_select.envelope import ETA_CAP
-
-SKIRT_MAX = 0.10
-GAP_RATIO = 1.35          # res jumps beyond this are resolution holes ("gaps")
+from adaptive_support import (GAP_RATIO, RIM_DEX, SKIRT_MAX,
+                              progressive_log_midpoints)
 
 # escalation tuning ---------------------------------------------------------- #
 DEFAULT_MAX_STEP = 0.25       # eta jump size a refined curve should stay under
 DEFAULT_SCAN_POINTS = 8       # K: taper levels an E2 scan may add per interval
 DEFAULT_BUMP_MIN = 0.05       # floor of the eta-scaled bump trigger
-RIM_DEX = 0.01                # a probe within this of a rim res is "on the rim"
 MAX_PAIRS_PER_DEFECT = 4      # E2 taper pairs one defect may get per round
 MAX_BUMPS_PER_CURVE = 2       # bump regions chased per curve per run
 BUMP_BUDGET_FRACTION = 0.25   # bumps get at most this share of the budget
@@ -410,35 +407,6 @@ def secant_target(a, b, samples):
         return ("briggs", val, fixed) if axis == "robust" \
             else ("briggs", fixed, val)
     return None
-
-
-# --------------------------------------------------------------------------- #
-# E2: staged dense taper scan
-
-def progressive_log_midpoints(lo, hi, k, exclude=()):
-    """Up to `k` unique taper levels strictly inside (lo, hi), in progressive
-    log-midpoint (breadth-first bisection) order: the bracket midpoint first,
-    then the midpoints of the two sub-brackets, and so on.  Each is rounded to
-    point_key precision (3 dp) FIRST, then deduped against `exclude` and within
-    the list, so re-runs are deterministic and already-measured levels are
-    skipped."""
-    if not (lo > 0 and hi > lo):
-        return []
-    xlo, xhi = math.log10(lo), math.log10(hi)
-    seen = {round(float(t), 3) for t in exclude}
-    out, queue, guard = [], deque([(xlo, xhi)]), 0
-    while queue and len(out) < k and guard < 4000:
-        guard += 1
-        alo, ahi = queue.popleft()
-        mid = 0.5 * (alo + ahi)
-        t = round(10 ** mid, 3)
-        if t not in seen and lo < t < hi:
-            seen.add(t)
-            out.append(t)
-        if ahi - alo > 1e-6:                          # keep subdividing
-            queue.append((alo, mid))
-            queue.append((mid, ahi))
-    return out
 
 
 def _trace_of(point):

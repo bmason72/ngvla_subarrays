@@ -47,6 +47,14 @@ class TestReportCalculatorControls(unittest.TestCase):
         self.assertGreater(self.text.index('id="tiles"'),
                            self.text.index('id="data-table"'))
 
+    def test_adaptive_validation_is_explained_and_drawn(self):
+        self.assertIn("every adaptive cell touching the point passed", self.text)
+        self.assertIn("residual-validated)</p>", self.text)
+        self.assertIn("p.validation === 'residual-validated'", self.text)
+        self.assertIn("p.validation !== 'not-assessed'", self.text)
+        self.assertIn("l: 'residual-validated results'", self.text)
+        self.assertIn("<th>adaptive validation</th>", self.text)
+
     def test_beam_margin_is_request_driven(self):
         self.assertNotIn("CALC_BEAM_MARGIN", self.text)
         self.assertIn("request.beamMargin", self.text)

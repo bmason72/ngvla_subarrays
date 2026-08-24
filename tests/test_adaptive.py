@@ -35,7 +35,7 @@ def _load_adaptive():
 
 A = _load_adaptive()
 from config import grid_rows, ROBUST_LIST            # noqa: E402
-from sweep import point_key                          # noqa: E402
+from adaptive_support import point_key                # noqa: E402
 
 
 # --------------------------------------------------------------------------- #
@@ -280,6 +280,30 @@ class TestSeam(unittest.TestCase):
         s = sampler(model_gap)
         plan = s.plan_wave()
         self.assertTrue(all(p[0] == "briggs" for p in plan.proposals))
+
+    def test_point_validation_keeps_seam_and_natural_outside_assessment(self):
+        s = sampler(model_smooth)
+        self.assertEqual(s.point_validation_state("natural", 2.0, 1.0),
+                         A.NOT_ASSESSED)
+        self.assertEqual(s.point_validation_state("briggs", 0.0, 0.0),
+                         A.NOT_ASSESSED)
+
+    def test_point_validation_requires_residual_convergence(self):
+        smooth = sampler(model_smooth)
+        converged = next(leaf for leaf in smooth.tree.terminal_leaves()
+                         if leaf.state == A.CONVERGED)
+        self.assertEqual(smooth.point_validation_state(
+            "briggs", (converged.r0 + converged.r1) / 2.0,
+            A._mid_taper(converged.t0, converged.t1)),
+            A.RESIDUAL_VALIDATED)
+
+        unfinished = sampler(model_gap)
+        active = next(leaf for leaf in unfinished.tree.terminal_leaves()
+                      if leaf.state == A.ACTIVE)
+        self.assertEqual(unfinished.point_validation_state(
+            "briggs", (active.r0 + active.r1) / 2.0,
+            A._mid_taper(active.t0, active.t1)),
+            A.NOT_RESIDUAL_VALIDATED)
 
 
 # --------------------------------------------------------------------------- #

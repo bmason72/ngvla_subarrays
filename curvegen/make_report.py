@@ -28,7 +28,8 @@ import sys
 
 import numpy as np
 
-from config import REPO, RESULTS_DIR, ROBUST_LIST, grid_rows, REV, SIM_MODE
+from config import (REPO, RESULTS_DIR, ROBUST_LIST, BEAM_CAP_ARCSEC, grid_rows,
+                    REV, SIM_MODE)
 
 sys.path.insert(0, REPO)                    # for the shared curve engine
 from sa_select.envelope import Envelope, ETA_CAP   # noqa: E402
@@ -553,6 +554,46 @@ def build_sens_table(las):
     return out
 
 
+def annotate_adaptive_validation(display_by):
+    """Attach conservative residual-validation states to displayed samples.
+
+    Adaptive convergence belongs to cells, not points.  For the report, a
+    point is called residual-validated only when every terminal quadtree cell
+    touching it passed the residual convergence test.  Natural weighting,
+    taper=0, and coordinates outside the positive-taper Briggs quadtree are
+    explicitly ``not-assessed``.  Dominance retirement and unfinished active
+    cells do not count as convergence.
+    """
+    from adaptive import (PointTable, Sampler, results_csv_path,
+                          RESIDUAL_VALIDATED, NOT_RESIDUAL_VALIDATED,
+                          NOT_ASSESSED)
+
+    counts = {}
+    for name, points in display_by.items():
+        path = results_csv_path(name)
+        sampler = None
+        if os.path.isfile(path):
+            cap = BEAM_CAP_ARCSEC.get(name)
+            table = PointTable.from_csv(
+                path, subarray=name,
+                beam_cap_mas=(float(cap) * 1e3 if cap is not None else None))
+            if table.has_anchors:
+                sampler = Sampler(name, table=table, mode="retrofit")
+        tally = {RESIDUAL_VALIDATED: 0, NOT_RESIDUAL_VALIDATED: 0,
+                 NOT_ASSESSED: 0}
+        for point in points:
+            state = (sampler.point_validation_state(
+                point["weighting"], point["robust"], point["taper"])
+                if sampler is not None else NOT_ASSESSED)
+            point["validation"] = state
+            tally[state] += 1
+        counts[name] = dict(
+            residual_validated=tally[RESIDUAL_VALIDATED],
+            not_residual_validated=tally[NOT_RESIDUAL_VALIDATED],
+            not_assessed=tally[NOT_ASSESSED])
+    return counts
+
+
 def build_payload():
     """The report's full data payload (the JSON injected as __DATA__) for the
     ACTIVE (rev, sim_mode) routing.  Factored out of main() so the combined
@@ -647,6 +688,8 @@ def build_payload():
         for p in curve:
             p.pop("env_keys", None)
 
+    validation_counts = annotate_adaptive_validation(display_by)
+
     # Display-only smoothing (see smooth_curve above): a PARALLEL eta array
     # per curve, keyed identically to `imaging`/`pointsource` so neither of
     # those (nor their point dicts, nor any downstream consumer -- notably
@@ -676,6 +719,7 @@ def build_payload():
                 pointsource=pointsource,
                 pointsource_smooth=pointsource_smooth,
                 counts={n: len(display_by[n]) for n in ACTIVE_ORDER},
+                validation_counts=validation_counts,
                 heatmaps=heatmaps)
 
     # core+spiral natural-PSF radial profile measured 5 Jul 2026 (subsampled

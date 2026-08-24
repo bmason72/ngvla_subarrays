@@ -311,20 +311,52 @@ feature and left as a measured step in the display, never interpolated
 across.
 
 The second pass is an adaptive sampler (\texttt{curvegen/adaptive.py}).
-It organizes the (robust, taper) plane as a quadtree --- rectangles
-recursively split into four quadrants --- built over the existing point
-table.  A cell is converged when a bilinear prediction from its corners
-matches its interior measurements within the display and query tolerances:
-resolution within 5\%, $\eta$ within 0.1 (a permissive bound relative to
-the $\eta^2$ dependence of observing time), and skirt within 0.02
-absolute.  Converged regions are certified
-without new measurements.  Unconverged cells are classified from their
-residuals and interior probes as smooth (bilinear within tolerance after
-refinement), step (a resolution discontinuity localized to an interval
-between measured points), ridge (interior points above the chord of the
-cell rim), or unresolved.  New measurements go at cell centers and edge
-midpoints, queued in batches sized to a per-map limit on the total number
-of measured points.  Run in retrofit mode over all four completed
+In retrofit mode it starts with a coarser version of the existing Briggs
+lattice, taking every other robust value and every other canonical
+positive-taper value as cell corners.  Thus the five points omitted from each
+coarse rectangle --- its center and four edge midpoints --- are generally
+already present in the completed sweep.  Their measured $(\ln\theta,\eta,s)$
+are compared with bilinear predictions from the four coarse corners.  If all
+five agree within the display and query tolerances (resolution within 5\%,
+$\eta$ within 0.1, and skirt within 0.02 absolute), the rectangle's four
+quadrants are certified without further simulation.  If they do not, those
+quadrants become active cells and the same corner-versus-five-point test is
+applied recursively; any required center or edge-midpoint measurement that is
+not already in the table is queued for simulation.  More concretely, the
+parent's four corners plus its first five probes supply the corners of the four
+children, but each child's own center and edge midpoints lie at half the
+previous spacing.  Once the native sweep spacing is reached, those finer
+probes are normally absent and require a new simulation wave.  A fresh
+campaign begins instead with a prescribed coarse $6\times7$ Briggs grid and
+then follows the same procedure.  The untapered seam and natural-weighting row
+remain one-dimensional families outside the quadtree.
+
+Unconverged cells are classified from their residuals and interior probes as
+smooth (bilinear within tolerance after refinement), step (a resolution
+discontinuity localized to an interval between measured points), ridge
+(interior points above the chord of the cell rim), or unresolved.  New
+measurements are queued in batches sized to a per-map limit on the total
+number of measured points.  Thus the stopping rule is explicit rather than a
+visual judgment: a region stops by the residual test above, or when its most
+optimistic sensitivity cannot improve the deliverable envelope; an entire run
+stops when no admissible work remains, the audit cap is reached, or an explicit
+wave limit is reached.  This is distinct from the earlier staged
+\texttt{refine.py} cycles.  Their measurements remain in the same point table
+and can provide warm-start evidence, but the adaptive sampler recomputes its
+own certification state from that table on every invocation.
+
+Certification is a refinement-scheduling state, not an acceptance test for
+scientific data.  Every valid measured row is available to the shared curve
+engine whether or not its surrounding adaptive cell has certified.  A row
+affects the continuous curve when it anchors a valid adjacent segment or
+four-corner cell; an isolated measurement that completes neither is invisible
+to the interpolated curve for that topological reason, not because it lacks
+certification.  For display, the HTML report conservatively calls a measured
+point residual-validated only when every terminal adaptive cell touching it
+passed the residual test.  Natural-weighting points, the untapered seam, and
+points outside the positive-taper Briggs quadtree are labeled not assessed;
+dominance retirement and unfinished cells do not count as residual
+convergence.  Run in retrofit mode over all four completed
 campaigns (July 2026), this pass removed the known lattice artifacts (for
 example, reducing a sawtooth discontinuity on the Rev D track spiral+mid
 imaging curve from $\Delta\eta = 1.16$ to $0.18$) and confirmed the
@@ -405,15 +437,24 @@ curve table, the cell construction matches a brute-force scan of the same
 interpolated surfaces to within $6\times10^{-3}$ in both $\eta$ and
 skirt, with no strict/relaxed classification differences.
 
-For the point-source case, for a given subarray and trial resolution
+For point-source selection, for a given subarray and trial resolution
 $\theta_{\rm trial}$, the corresponding $(r_*,t_*)$ that minimize $\eta$ are
-found over all valid measured points, interpolated lattice edges, and
-four-corner Briggs cells.  Within each cell, $\ln\theta$, $\ln\eta$, and $s$
-are bilinearly interpolated in normalized robust and taper coordinates
-$(q,u)$.  The reported robust is linear in $q$, while taper is log-linear in
-$u$, except for cells adjoining the untapered column, where taper is linear.
-At fixed $\theta_{\rm trial}$, $\eta$ is minimized along the iso-resolution
-locus
+computed over the grid of simulation results, including valid interpolated
+edges and four-corner cells.  Within a cell, $\ln\theta$, $\ln\eta$, and $s$
+are bilinearly interpolated in the normalized robust and taper coordinates
+$(q,u)$, yielding the corresponding $(\eta_*,s_*)$ and robust--taper setting.
+If a range of resolutions is allowed, the cell-interior calculation is run at
+33 values of $\theta_{\rm trial}$ spaced uniformly in $\ln\theta$ within
+$[\theta_-,\theta_+]$, and the candidate that minimizes $\eta$ is selected.
+For imaging, whenever possible this $\eta$ minimization is subject to the
+additional criterion $s\le s_0$.  If all candidate PSFs have $s>s_0$, then
+$s$ is minimized instead of $\eta$ (with $\eta$ breaking skirt ties), the
+so-called relaxed mode.
+
+More explicitly, the reported robust is linear in $q$, while taper is
+log-linear in $u$, except for cells adjoining the untapered column, where
+taper is linear.  At fixed $\theta_{\rm trial}$, $\eta$ is minimized along the
+iso-resolution locus
 \begin{equation}
   \ln\theta(q,u)=\ln\theta_{\rm trial}.
 \end{equation}
