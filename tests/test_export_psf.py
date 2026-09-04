@@ -4,6 +4,7 @@ import json
 import unittest
 
 from curvegen.export_psf_data import (parse_profile_line,
+                                      derive_psf_metrics,
                                       transform_profile_lines,
                                       PROFILE_LINE_ERRORS)
 
@@ -62,6 +63,59 @@ class TestTransformProfileLines(unittest.TestCase):
         self.assertEqual(len(payloads), 2)
         self.assertEqual(len(warnings), 1)
         self.assertIn("line 2:", warnings[0])
+
+
+class TestDerivedPsfMetrics(unittest.TestCase):
+    def test_gaussian_core_fit_and_first_null_volume(self):
+        # Unit Gaussian with FWHM 1 arcsec, followed by an artificial first
+        # null at 2 FWHM.  The enclosed volume is effectively the full
+        # Gaussian volume at that radius.
+        radii = [i * 0.05 for i in range(41)] + [2.05]
+        values = [2.0 ** (-4.0 * radius * radius) for radius in radii[:-1]]
+        values.append(-0.01)
+        metrics = derive_psf_metrics({"r_arcsec": radii, "psf": values})
+        self.assertAlmostEqual(metrics["measured_fwhm_arcsec"], 1.0,
+                               delta=0.01)
+        self.assertAlmostEqual(metrics["gaussian_fit_fwhm_arcsec"], 1.0,
+                               delta=0.01)
+        self.assertAlmostEqual(metrics["first_null_arcsec"], 2.0,
+                               delta=0.06)
+        self.assertAlmostEqual(metrics["psf_to_gaussian_volume_ratio"], 1.0,
+                               delta=0.02)
+        self.assertAlmostEqual(
+            metrics["psf_to_gaussian_squared_volume_ratio"], 1.0,
+            delta=0.03)
+        self.assertAlmostEqual(
+            metrics["confusion_beam_sqrt_sr"] ** 2,
+            metrics["psf_squared_volume_first_null_sr"])
+
+    def test_huber_fit_resists_one_bad_core_bin(self):
+        radii = [i * 0.05 for i in range(13)]
+        values = [2.0 ** (-4.0 * radius * radius) for radius in radii]
+        values[7] = 0.9
+        metrics = derive_psf_metrics({"r_arcsec": radii, "psf": values})
+        self.assertAlmostEqual(metrics["gaussian_fit_fwhm_arcsec"], 1.0,
+                               delta=0.08)
+
+    def test_capture_edge_is_not_treated_as_a_null(self):
+        metrics = derive_psf_metrics({
+            "r_arcsec": [0.0, 0.25, 0.5, 0.75],
+            "psf": [1.0, 0.84, 0.5, 0.21],
+        })
+        self.assertNotIn("first_null_arcsec", metrics)
+        self.assertNotIn("psf_volume_first_null_sr", metrics)
+        self.assertNotIn("confusion_beam_sqrt_sr", metrics)
+
+    def test_positive_composite_pedestal_uses_first_radial_minimum(self):
+        metrics = derive_psf_metrics({
+            "r_arcsec": [0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5,
+                         1.75, 2.0, 2.25],
+            "psf": [1.0, 0.82, 0.48, 0.30, 0.22, 0.24, 0.28,
+                    0.35, 0.40, 0.42],
+        })
+        self.assertEqual(metrics["first_null_method"], "radial_minimum")
+        self.assertGreater(metrics["first_null_value"], 0)
+        self.assertIn("psf_squared_volume_first_null_sr", metrics)
 
     def test_nan_line_is_skipped_previous_valid_line_wins(self):
         """A line whose psf array contains a NaN reads back fine under

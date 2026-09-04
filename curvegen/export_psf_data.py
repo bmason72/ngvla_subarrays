@@ -16,6 +16,7 @@ Run (from the curvegen/ directory, system or CASA python3):
 import argparse
 import csv
 import json
+import math
 import os
 import subprocess
 import sys
@@ -30,6 +31,184 @@ PROFILE_FIELDS = ("res_geo_arcsec", "r_arcsec", "psf")
 OPTIONAL_FIELDS = ("bmaj_arcsec", "bmin_arcsec", "bpa_deg",
                    "cut_r_arcsec", "cut_maj", "cut_min", "cut_rmax_fwhm")
 CUT_FIELDS = ("cut_r_arcsec", "cut_maj", "cut_min")
+ARCSEC_TO_RAD = math.pi / (180.0 * 3600.0)
+
+
+def _profile_points(record):
+    """Finite radial-profile samples sorted by non-negative radius."""
+    points = []
+    for radius, value in zip(record.get("r_arcsec", []),
+                             record.get("psf", [])):
+        try:
+            radius, value = float(radius), float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(radius) and math.isfinite(value) and radius >= 0:
+            points.append((radius, value))
+    points.sort()
+    # A radial bin normally starts slightly off-axis and is diluted relative
+    # to the raw peak used to normalize the profile.  The PSF origin is known
+    # exactly, so supply it when the capture does not.
+    if not points or points[0][0] > 0:
+        points.insert(0, (0.0, 1.0))
+    else:
+        points[0] = (0.0, 1.0)
+    return points
+
+
+def _level_crossing(points, level, start_radius=0.0):
+    """First downward crossing of ``level`` at/after ``start_radius``."""
+    previous = None
+    for radius, value in points:
+        if radius < start_radius:
+            previous = (radius, value)
+            continue
+        if previous is not None:
+            r0, y0 = previous
+            if y0 > level and value <= level and value != y0:
+                return r0 + (radius - r0) * (y0 - level) / (y0 - value)
+        previous = (radius, value)
+    return None
+
+
+def _first_null_or_radial_minimum(points, start_radius):
+    """Locate a zero crossing, or the first resolved radial minimum.
+
+    Composite-array radial averages can sit on a broad positive pedestal and
+    therefore never cross zero even though the core has ended.  In that case
+    the first sustained local minimum is the profile-equivalent null.  The
+    returned method makes this fallback explicit in the payload.
+    """
+    smoothed = []
+    for index in range(len(points)):
+        lo, hi = max(0, index - 2), min(len(points), index + 3)
+        smoothed.append(sum(value for _radius, value in points[lo:hi]) /
+                        (hi - lo))
+    for index in range(1, len(points)):
+        r0, y0 = points[index - 1]
+        radius, value = points[index]
+        if radius < start_radius:
+            continue
+        if y0 > 0 and value <= 0 and value != y0:
+            crossing = r0 + (radius - r0) * y0 / (y0 - value)
+            return crossing, 0.0, "zero_crossing"
+        if index + 2 >= len(points):
+            continue
+        if (smoothed[index] <= smoothed[index - 1]
+                and smoothed[index] < smoothed[index + 1]
+                and smoothed[index + 2] > smoothed[index]
+                and value < 0.5):
+            return radius, max(0.0, value), "radial_minimum"
+    return None
+
+
+def _robust_gaussian_fwhm(points, hwhm):
+    """Huber-IRLS fit of a unit-peak Gaussian inside the measured HWHM.
+
+    With a peak-normalized PSF, ``log(PSF) = slope * r**2``.  Keeping the
+    intercept fixed at zero preserves the beam solid-angle convention while
+    the Huber weights stop a bad radial bin from controlling the core width.
+    """
+    xy = [(radius * radius, math.log(value))
+          for radius, value in points
+          if 0 < radius <= hwhm and 0 < value <= 1.25]
+    if len(xy) < 3:
+        return None
+    slopes = sorted(y / x for x, y in xy if x > 0)
+    slope = slopes[len(slopes) // 2]
+    for _iteration in range(20):
+        residuals = [y - slope * x for x, y in xy]
+        centre = sorted(residuals)[len(residuals) // 2]
+        deviations = sorted(abs(value - centre) for value in residuals)
+        scale = 1.4826 * deviations[len(deviations) // 2]
+        cutoff = 1.345 * scale
+        weights = ([1.0] * len(xy) if cutoff <= 1e-14 else
+                   [1.0 if abs(value - centre) <= cutoff
+                    else cutoff / abs(value - centre)
+                    for value in residuals])
+        denominator = sum(weight * x * x
+                          for weight, (x, _y) in zip(weights, xy))
+        if denominator <= 0:
+            return None
+        updated = sum(weight * x * y
+                      for weight, (x, y) in zip(weights, xy)) / denominator
+        if abs(updated - slope) <= 1e-10 * max(1.0, abs(slope)):
+            slope = updated
+            break
+        slope = updated
+    if not math.isfinite(slope) or slope >= 0:
+        return None
+    return math.sqrt(-4.0 * math.log(2.0) / slope)
+
+
+def derive_psf_metrics(record):
+    """Measure core width, first-null volume, and Gaussian-volume ratio.
+
+    All angular radii in the returned mapping are arcsec and volumes are sr.
+    Missing crossings are represented by absent fields, rather than treating
+    a profile's capture boundary as a physical null. A resolved positive
+    minimum in a composite-array profile is retained and explicitly flagged
+    as a null proxy.
+    """
+    points = _profile_points(record)
+    if len(points) < 2:
+        return {}
+    hwhm = _level_crossing(points, 0.5)
+    if hwhm is None or not math.isfinite(hwhm) or hwhm <= 0:
+        return {}
+    measured_fwhm = 2.0 * hwhm
+    fit_fwhm = _robust_gaussian_fwhm(points, hwhm)
+    metrics = {
+        "hwhm_arcsec": hwhm,
+        "measured_fwhm_arcsec": measured_fwhm,
+        "double_measured_fwhm_arcsec": 2.0 * measured_fwhm,
+    }
+    if fit_fwhm is not None:
+        metrics["gaussian_fit_fwhm_arcsec"] = fit_fwhm
+        fit_rad = fit_fwhm * ARCSEC_TO_RAD
+        metrics["gaussian_volume_sr"] = (
+            math.pi * fit_rad * fit_rad / (4.0 * math.log(2.0)))
+
+    null_result = _first_null_or_radial_minimum(points, hwhm)
+    if null_result is None:
+        return metrics
+    first_null, null_value, null_method = null_result
+    if first_null <= hwhm:
+        return metrics
+    integration_points = [(0.0, 1.0)]
+    integration_points.extend((radius, value)
+                              for radius, value in points
+                              if 0 < radius < first_null)
+    integration_points.append((first_null, null_value))
+    radial_integral = 0.0
+    squared_radial_integral = 0.0
+    for (r0, y0), (r1, y1) in zip(integration_points,
+                                  integration_points[1:]):
+        radial_integral += 0.5 * (y0 * r0 + y1 * r1) * (r1 - r0)
+        squared_radial_integral += (
+            0.5 * (y0 * y0 * r0 + y1 * y1 * r1) * (r1 - r0))
+    volume_sr = 2.0 * math.pi * radial_integral * ARCSEC_TO_RAD ** 2
+    squared_volume_sr = (2.0 * math.pi * squared_radial_integral
+                         * ARCSEC_TO_RAD ** 2)
+    if math.isfinite(volume_sr) and volume_sr > 0:
+        metrics["first_null_arcsec"] = first_null
+        metrics["first_null_value"] = null_value
+        metrics["first_null_method"] = null_method
+        metrics["first_null_is_proxy"] = null_method != "zero_crossing"
+        metrics["psf_volume_first_null_sr"] = volume_sr
+        gaussian_volume = metrics.get("gaussian_volume_sr")
+        if gaussian_volume:
+            metrics["psf_to_gaussian_volume_ratio"] = (
+                volume_sr / gaussian_volume)
+    if math.isfinite(squared_volume_sr) and squared_volume_sr > 0:
+        metrics["psf_squared_volume_first_null_sr"] = squared_volume_sr
+        metrics["confusion_beam_sqrt_sr"] = math.sqrt(squared_volume_sr)
+        gaussian_volume = metrics.get("gaussian_volume_sr")
+        if gaussian_volume:
+            # For a unit-peak Gaussian, integral(B^2) = Omega_G / 2.
+            metrics["psf_to_gaussian_squared_volume_ratio"] = (
+                squared_volume_sr / (0.5 * gaussian_volume))
+    return metrics
 
 
 def normalize_key(key):
@@ -94,6 +273,7 @@ def transform_profile_lines(lines):
             continue
         payload = {field: record[field] for field in allowed
                    if field in record}
+        payload.update(derive_psf_metrics(record))
         profiles[key] = payload
     return profiles, warnings
 

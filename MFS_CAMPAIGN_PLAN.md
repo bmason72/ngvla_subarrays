@@ -71,8 +71,9 @@ combos.
 - **A4 — MFS curves are fixed-window native curves.**  They are NOT ∝1/f
   self-similar and must not be written into `*_30ghz` schema fields or
   auto-scaled.  Band 6 (tunable 20 GHz within 70–116) would need its own
-  tuning axis later.  v1 deliverable = per-combo curve CSVs + reports;
-  selector exposure beyond `CurveLibrary.for_config` is out of scope.
+  tuning axis later.  v1 deliverable = per-combo curve CSVs + reports. The
+  report's fixed-window calculator is band-aware; exposure through the public
+  Python `CurveLibrary.for_config` API remains out of scope.
 - **A5 — noise convention (OPEN DECISION).**  v1 default = equal 1-Jy
   per-channel noise (pure *geometric* uv-filling convention, explicitly
   labeled).  The pilot A/Bs this against per-channel inverse-variance

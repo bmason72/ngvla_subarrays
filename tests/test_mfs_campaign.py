@@ -154,15 +154,19 @@ assert 'taper_arcsec_30ghz' not in collect.OUT_FIELDS
         proc = run_config(code, NGVLA_NCHAN="32")
         self.assertEqual(proc.returncode, 0, proc.stderr)
 
-    def test_mfs_report_routes_native_schema_and_disables_mono_calculator(self):
+    def test_mfs_report_routes_native_schema_and_enables_fixed_calculator(self):
         code = """
 import make_report as mr
 assert mr.registry_paths('revF', 'track', 'band4')[1].endswith(
     'revf_track_band4_curves.csv')
 combo = mr.combo_entry('revF', 'track', 'band4')
 assert combo['key'] == 'revF_track_band4'
-assert combo['imaging_omitted'] and combo['calculator_omitted']
+assert combo['imaging_omitted'] and not combo['calculator_omitted']
 assert '30/f-scaled' in combo['sub_html']
+mr.ACTIVE_ORDER = ['main']
+sens = mr.build_mfs_sens_table()['main']
+assert sens['freq_ghz'] == [27.0]
+assert sens['sigma_nat_ujy'][0] > 0
 """
         proc = run_config(code, NGVLA_NCHAN="32")
         self.assertEqual(proc.returncode, 0, proc.stderr)

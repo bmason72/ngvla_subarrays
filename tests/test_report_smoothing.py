@@ -214,7 +214,8 @@ class TestPayloadWiring(unittest.TestCase):
         self.assertTrue(before <= set(self.data.keys()))
         self.assertEqual(set(self.data.keys()) - before,
                          {"imaging_smooth", "pointsource_smooth",
-                          "psf_exported", "validation_counts"})
+                          "psf_exported", "validation_counts",
+                          "psf_metrics", "confusion_model"})
 
     def test_validation_counts_partition_displayed_samples(self):
         for name, points in self.data["samples"].items():

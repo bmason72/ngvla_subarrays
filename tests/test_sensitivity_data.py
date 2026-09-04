@@ -51,9 +51,36 @@ class TestSensitivityDataExport(unittest.TestCase):
                         t_int=3600.0, theta=-1, delta_v=dv_arg,
                         verbose=False)[0][1] * 1e-6
                 actual = sensitivity.natural_rms(
-                    name, frequency, t_obs_hr=1.0, delta_v=delta_v)
+                    name, frequency, t_obs_hr=1.0, delta_v=delta_v,
+                    include_confusion=True)
                 self.assertAlmostEqual(actual, expected,
                                        delta=1e-12 * expected)
+
+    def test_confusion_is_separate_from_default_thermal_rms(self):
+        parameters = sensitivity._SUBARRAY_TABLE["core"]
+        theta_arcsec = float(parameters["theta_nat_30_GHz"]) / 1000.0
+        omega2 = 0.5 * sensitivity._beam_solid_angle_sr(theta_arcsec)
+        confusion = sensitivity.confusion_rms(30.0, theta_arcsec, omega2)
+        thermal = sensitivity.natural_rms("core", 30.0)
+        upstream_total = sensitivity.natural_rms(
+            "core", 30.0, include_confusion=True)
+        self.assertGreater(confusion, 0)
+        self.assertAlmostEqual(upstream_total ** 2,
+                               thermal ** 2 + confusion ** 2,
+                               delta=1e-20)
+
+    def test_confusion_scales_with_sqrt_integral_beam_squared(self):
+        base = sensitivity.confusion_rms(1.4, 10.0)
+        gaussian_omega2 = 0.5 * sensitivity._beam_solid_angle_sr(10.0)
+        doubled_variance_area = sensitivity.confusion_rms(
+            1.4, 10.0, 2.0 * gaussian_omega2)
+        self.assertAlmostEqual(doubled_variance_area / base, 2.0 ** 0.5)
+
+    def test_confusion_model_is_serializable_and_sorted(self):
+        model = sensitivity.confusion_model()
+        json.dumps(model)
+        theta = model["theta_fwhm_arcsec"]
+        self.assertEqual(theta, sorted(theta))
 
 
 if __name__ == "__main__":

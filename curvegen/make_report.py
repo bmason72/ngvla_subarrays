@@ -22,6 +22,7 @@ import base64
 import csv
 import gzip
 import json
+import math
 import os
 import re
 import sys
@@ -30,7 +31,7 @@ import numpy as np
 
 from config import (REPO, RESULTS_DIR, ROBUST_LIST, BEAM_CAP_ARCSEC, grid_rows,
                     REV, SIM_MODE, BAND, MFS, REF_FREQ_GHZ, FREQ_LO_GHZ,
-                    FREQ_HI_GHZ, CURVE_TYPES)
+                    FREQ_HI_GHZ, CURVE_TYPES, PROFILE_DIR)
 
 sys.path.insert(0, REPO)                    # for the shared curve engine
 from sa_select.envelope import Envelope, ETA_CAP   # noqa: E402
@@ -522,7 +523,8 @@ def build_sens_table(las):
     0.02-dex grid over the ngVLA receiver ranges (1.2-50.5, 70-116 GHz).
     Uses the line-mode calculator path (no continuum band re-centering) via
     sa_select.sensitivity, incl. donor rescaling for subarrays the memo-96
-    calculator lacks."""
+    calculator lacks. Confusion is deliberately excluded and reported as a
+    separate PSF-volume-derived quantity."""
     import csv as _csv
     import math
     from sa_select import sensitivity as sens
@@ -549,11 +551,78 @@ def build_sens_table(las):
             try:
                 delta_v = C_M_S * 1e6 / (f_ghz * 1e9)     # 1 MHz channel
                 s = sens.natural_rms(calc, f_ghz, t_obs_hr=1.0,
-                                     delta_v=delta_v)
+                                     delta_v=delta_v,
+                                     include_confusion=False)
                 sig.append(round(s * 1e6, 4))             # uJy/beam
             except ValueError:
                 sig.append(None)                          # outside a band edge
         out[name] = dict(freq_ghz=freqs, sigma_nat_ujy=sig)
+    return out
+
+
+def build_mfs_sens_table():
+    """Thermal continuum rms expressed in the report's 1-MHz basis.
+
+    The browser keeps one common time formula.  Multiplying the fixed-window
+    continuum rms by sqrt(window_MHz) produces the equivalent 1-MHz reference;
+    dividing by that same fixed bandwidth in the browser recovers the exact
+    continuum value.  The controls are pinned to this campaign window.
+    """
+    from sa_select import sensitivity as sens
+
+    calc_names = {}
+    with open(SUBARRAYS_CSV) as handle:
+        for row in csv.DictReader(handle):
+            calc_names[row["name"]] = row["calc_name"].strip() or row["name"]
+    bandwidth_mhz = (FREQ_HI_GHZ - FREQ_LO_GHZ) * 1000.0
+    out = {}
+    for name in ACTIVE_ORDER:
+        sigma = sens.natural_rms(
+            calc_names.get(name, name), REF_FREQ_GHZ, t_obs_hr=1.0,
+            delta_v=None, include_confusion=False)
+        out[name] = {
+            "freq_ghz": [REF_FREQ_GHZ],
+            "sigma_nat_ujy": [sigma * 1e6 * math.sqrt(bandwidth_mhz)],
+        }
+    return out
+
+
+def build_psf_metric_summary(profile_dir=None):
+    """Small per-lattice-point PSF metric map embedded in the main payload.
+
+    Full profiles remain lazy-loaded.  Embedding only these scalars lets the
+    calculator show confusion synchronously and lets a future MFS selector
+    enforce its confusion floor without loading megabytes of profile arrays.
+    """
+    from export_psf_data import transform_profile_lines
+
+    profile_dir = PROFILE_DIR if profile_dir is None else profile_dir
+    out = {}
+    for name in ACTIVE_ORDER:
+        stem = name.replace("+", "_").replace("-", "_")
+        path = os.path.join(profile_dir, stem + ".jsonl")
+        if not os.path.isfile(path):
+            continue
+        with open(path) as handle:
+            profiles, _warnings = transform_profile_lines(handle)
+        compact = []
+        for key, profile in profiles.items():
+            required = ("res_geo_arcsec", "gaussian_fit_fwhm_arcsec",
+                        "psf_squared_volume_first_null_sr")
+            if not all(field in profile for field in required):
+                continue
+            # Compact positional schema used only by report_template.html:
+            # key, resolution, fitted FWHM, integral(B^2), volume ratio,
+            # whether the radial-minimum fallback supplied the null.
+            compact.append([
+                key, profile["res_geo_arcsec"],
+                profile["gaussian_fit_fwhm_arcsec"],
+                profile["psf_squared_volume_first_null_sr"],
+                profile.get("psf_to_gaussian_volume_ratio"),
+                bool(profile.get("first_null_is_proxy")),
+            ])
+        if compact:
+            out[name] = compact
     return out
 
 
@@ -778,7 +847,10 @@ def build_payload():
     # sigma_nat (Jy/beam) for 1 h on-source in a 1 MHz channel, on a log
     # frequency grid over the receiver bands.  Scales exactly as
     # 1/sqrt(bandwidth * time); the page applies the curve engine's eta.
-    data["sens"] = {} if MFS else build_sens_table(las)
+    data["sens"] = build_mfs_sens_table() if MFS else build_sens_table(las)
+    from sa_select import sensitivity as _sensitivity
+    data["confusion_model"] = _sensitivity.confusion_model()
+    data["psf_metrics"] = build_psf_metric_summary()
 
     # QA cross-check vs the sensitivity calculator's native beams
     data["qa"] = [
@@ -901,7 +973,7 @@ def combo_entry(rev, sim_mode, band="", ref_freq_ghz=None,
                                              _SIM_LABEL.get(sim_mode, sim_mode),
                                              band.upper()),
                     h1_html=h1, sub_html=sub, note_html="",
-                    imaging_omitted=True, calculator_omitted=True)
+                    imaging_omitted=True, calculator_omitted=False)
     h1 = "%s %staperability &amp; sculptability curves" % (
         rev_html, "snapshot " if snap else "")
     sub = ("These plots show sensitivity cost (&eta;) against angular "

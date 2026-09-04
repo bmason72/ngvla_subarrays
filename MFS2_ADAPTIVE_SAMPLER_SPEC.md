@@ -52,7 +52,10 @@ working mono-campaign adaptive retrofit foundation:
 - **MFS-5 foundation built 4 Sep:** collection uses an incompatible native
   fixed-window schema, standalone reports reconstruct adaptive topology from
   result rows, and internal combined-report keys include `band`. MFS reports
-  are point-source only and hide the mono calculator.
+  are point-source only. The report calculator now pins the registered MFS
+  window, keeps native angles unscaled, uses thermal-only observing-time
+  arithmetic, and applies measured-PSF confusion only as an MFS feasibility
+  floor. It remains dormant until collected MFS curves/profiles exist.
 - **Not built:** MFS-2d/V1 retrospective replay and the MFS-4 PyLauncher wave
   runner. The unresolved MFS-2b/2c deltas below remain deployment blockers.
 

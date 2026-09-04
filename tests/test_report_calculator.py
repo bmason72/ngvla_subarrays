@@ -78,6 +78,19 @@ class TestReportCalculatorControls(unittest.TestCase):
         self.assertIn("main_natural_1min_fiducial", self.text)
         self.assertIn("kelvinToMicroJy", self.text)
 
+    def test_confusion_is_separate_and_blocks_only_mfs(self):
+        self.assertIn("psf_squared_volume_first_null_sr", self.text)
+        self.assertIn("Math.sqrt(omega2AtFreq / gaussianOmega2)", self.text)
+        self.assertIn("if (DATA.fixed_window)", self.text)
+        self.assertIn("goalMicroJy < confusionMicroJy", self.text)
+        self.assertIn("never added", self.text)
+
+    def test_psf_gaussians_and_volume_ratio_are_reported(self):
+        self.assertIn("gaussian_fit_fwhm_arcsec", self.text)
+        self.assertIn("double_measured_fwhm_arcsec", self.text)
+        self.assertIn("psf_to_gaussian_volume_ratio", self.text)
+        self.assertIn("robust core Gaussian", self.text)
+
     def test_skirt_controls_are_synchronized_both_directions(self):
         self.assertIn("plotS0.value = currentS0", self.text)
         self.assertIn("calcSelect.value = currentS0", self.text)

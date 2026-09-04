@@ -3,8 +3,9 @@
 This is the small, explicitly used kernel of V. Rosero's ngVLA Memo-96
 sensitivity calculator.  Runtime data are inert JSON package resources, so the
 module neither imports a sibling checkout nor changes the process working
-directory.  Only native, natural-weight rms is calculated here; taper/robust
-loss is supplied by this project's measured eta curves.
+directory.  Native, natural-weight thermal rms is used for observing-time
+estimates; taper/robust loss is supplied by this project's measured eta curves.
+Source confusion is exposed separately and is not added to thermal noise.
 
 Units are GHz, hours, arcsec, Jy/beam, K, and (for ``delta_v``) m/s.
 """
@@ -37,8 +38,9 @@ _N_ANT_TABLE = {name: int(info["N_ant"]) for name, info in _SUBARRAY_TABLE.items
 #: Subarrays absent from the calculator's tables are synthesized by donor rescaling
 #: from `main`: for same-band 18-m arrays the per-antenna parameters are band-keyed,
 #: so thermal sigma scales exactly as 1/sqrt(N(N-1)) (verified in the self-test).
-#: The value is the subarray's nominal target N_ant.  The donor also carries
-#: MAIN's native-beam confusion term; it is negligible at these resolutions.
+#: The value is the subarray's nominal target N_ant. Confusion is not part of
+#: this donor scaling; it is evaluated separately
+#: from each measured PSF's integral(B**2).
 _DONOR = "main"
 _DONOR_N_ANT = {
     "core+mid": 160,                    # measured but dropped from the offered set
@@ -105,7 +107,8 @@ def _band_for(freq_ghz):
     return valid[-1]
 
 
-def _confusion_ujy(freq_ghz, theta_arcsec):
+def _confusion_curve():
+    """Equivalent Gaussian FWHM and 5-sigma confusion at 1.4 GHz."""
     counts = _DATA["confusion_counts"]
     log_s_jy = np.asarray(counts["log_s_jy"], dtype=float)
     n_total_sr = np.asarray(counts["n_total_sr"], dtype=float)
@@ -114,13 +117,23 @@ def _confusion_ujy(freq_ghz, theta_arcsec):
         np.sqrt(4.0 * np.log(2.0) * omega / np.pi)
         * np.rad2deg(1.0) * 3600.0
     )
-    confusion = 1e6 * (10.0 ** log_s_jy) / 5.0
-    scaled = confusion * (freq_ghz / 1.4) ** -0.7
+    confusion_ujy = 1e6 * (10.0 ** log_s_jy) / 5.0
+    order = np.argsort(theta_fwhm)
+    theta_fwhm, confusion_ujy = theta_fwhm[order], confusion_ujy[order]
+    if np.any(np.diff(theta_fwhm) <= 0):
+        raise RuntimeError("confusion beam-size grid is not strictly increasing")
+    return theta_fwhm, confusion_ujy
+
+
+def _confusion_ujy(freq_ghz, theta_arcsec):
+    theta_fwhm, confusion_1p4 = _confusion_curve()
+    scaled = confusion_1p4 * (freq_ghz / 1.4) ** -0.7
     fn = interp1d(theta_fwhm, scaled, bounds_error=False, fill_value=0)
     return float(fn(theta_arcsec))
 
 
-def _native_rms_ujy(subarray, freq_ghz, t_obs_hr, delta_v):
+def _native_rms_ujy(subarray, freq_ghz, t_obs_hr, delta_v,
+                    include_confusion=False):
     """Memo-96 native-beam result, kept separate for parity testing."""
     if subarray not in _SUBARRAY_TABLE:
         raise ValueError("unknown backing subarray %r" % subarray)
@@ -166,9 +179,11 @@ def _native_rms_ujy(subarray, freq_ghz, t_obs_hr, delta_v):
         0.98 * np.sqrt(2.0 * bandwidth_hz * t_obs_hr * 3600.0
                        * n_ant * (n_ant - 1))
     ) / 1e-6
-    theta_arcsec = float(parameters["theta_nat_30_GHz"]) * 30.0 / nu / 1e3
-    confusion_ujy = _confusion_ujy(nu, theta_arcsec)
-    return float(np.hypot(thermal_ujy, confusion_ujy))
+    if include_confusion:
+        theta_arcsec = float(parameters["theta_nat_30_GHz"]) * 30.0 / nu / 1e3
+        confusion_ujy = _confusion_ujy(nu, theta_arcsec)
+        return float(np.hypot(thermal_ujy, confusion_ujy))
+    return float(thermal_ujy)
 
 
 # ---------------------------------------------------------------------------
@@ -176,7 +191,49 @@ def _native_rms_ujy(subarray, freq_ghz, t_obs_hr, delta_v):
 # ---------------------------------------------------------------------------
 
 
-def natural_rms(calc_name, freq_ghz, t_obs_hr=1.0, delta_v=None):
+def confusion_model():
+    """Return the serializable Memo-96 source-count curve used by reports."""
+    theta_fwhm, confusion_1p4 = _confusion_curve()
+    return {
+        "theta_fwhm_arcsec": theta_fwhm.tolist(),
+        "confusion_ujy_1p4ghz": confusion_1p4.tolist(),
+        "beams_per_source": 25.0,
+        "detection_sigma": 5.0,
+        "spectral_index": -0.7,
+        "small_beam_policy": "smallest-grid-value-upper-limit",
+    }
+
+
+def confusion_rms(freq_ghz, gaussian_fwhm_arcsec,
+                  psf_squared_volume_sr=None):
+    """Classical source-confusion level in Jy/beam, kept separate from noise.
+
+    Memo-96 supplies the Gaussian-beam source-density prescription.  When a
+    measured ``integral(B**2)`` is supplied, its amplitude is adjusted by
+    ``sqrt(Omega2_psf / Omega2_gaussian)``.  For a unit-peak Gaussian,
+    ``Omega2_gaussian`` is half its usual beam solid angle.
+    """
+    if not np.isfinite(freq_ghz) or freq_ghz <= 0:
+        raise ValueError("frequency must be positive")
+    if not np.isfinite(gaussian_fwhm_arcsec) or gaussian_fwhm_arcsec <= 0:
+        raise ValueError("gaussian_fwhm_arcsec must be positive")
+    scale = 1.0
+    if psf_squared_volume_sr is not None:
+        if (not np.isfinite(psf_squared_volume_sr)
+                or psf_squared_volume_sr <= 0):
+            raise ValueError("psf_squared_volume_sr must be positive")
+        gaussian_omega2 = 0.5 * _beam_solid_angle_sr(gaussian_fwhm_arcsec)
+        scale = np.sqrt(psf_squared_volume_sr / gaussian_omega2)
+    theta_grid, confusion_1p4 = _confusion_curve()
+    if gaussian_fwhm_arcsec < theta_grid[0]:
+        base_ujy = confusion_1p4[0] * (float(freq_ghz) / 1.4) ** -0.7
+    else:
+        base_ujy = _confusion_ujy(float(freq_ghz), gaussian_fwhm_arcsec)
+    return base_ujy * scale * 1e-6
+
+
+def natural_rms(calc_name, freq_ghz, t_obs_hr=1.0, delta_v=None,
+                include_confusion=False):
     """Point-source rms (Jy/beam) at NATURAL weighting (eta == 1) for one subarray.
 
     Parameters
@@ -194,6 +251,9 @@ def natural_rms(calc_name, freq_ghz, t_obs_hr=1.0, delta_v=None):
         Channel width, m/s, for a spectral-line rms. None (default) means continuum,
         using the full receiver bandwidth (``max_bw`` in the packaged receiver table, e.g. 13.5 GHz
         for Band 4, 20 GHz for Band 5) rather than a narrow channel.
+    include_confusion : bool
+        Compatibility switch for reproducing the upstream Memo-96 total.
+        False by default so observing-time calculations remain thermal-only.
 
     Returns
     -------
@@ -202,7 +262,8 @@ def natural_rms(calc_name, freq_ghz, t_obs_hr=1.0, delta_v=None):
     """
     query_name, n_target = _resolve_calc_name(calc_name)
     sigma_rms_ujy = _native_rms_ujy(
-        query_name, freq_ghz, t_obs_hr=t_obs_hr, delta_v=delta_v)
+        query_name, freq_ghz, t_obs_hr=t_obs_hr, delta_v=delta_v,
+        include_confusion=include_confusion)
 
     if n_target is not None:
         n_donor = _N_ANT_TABLE[query_name]
@@ -246,7 +307,8 @@ def integration_time(calc_name, freq_ghz, eta, goal_jy_per_beam, delta_v=None, n
         raise ValueError("eta must be positive")
 
     t_ref_hr = 1.0
-    sigma_ref = natural_rms(calc_name, freq_ghz, t_obs_hr=t_ref_hr, delta_v=delta_v)
+    sigma_ref = natural_rms(calc_name, freq_ghz, t_obs_hr=t_ref_hr,
+                            delta_v=delta_v, include_confusion=False)
 
     if n_ant_actual is not None:
         if not isinstance(n_ant_actual, (int, np.integer)) or n_ant_actual < 2:

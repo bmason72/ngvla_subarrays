@@ -209,13 +209,13 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   <p class="note">Use the same tabulated curves as the plots below. The calculation runs in this
   page.</p>
   <form class="calc-form" id="calc-form">
-    <label class="calc-field"><span>Frequency [GHz]</span>
+    <label class="calc-field"><span id="calc-freq-label">Frequency [GHz]</span>
       <input id="calc-freq" name="freq" type="number" min="1.2" max="116" step="0.01" value="30" inputmode="decimal">
     </label>
     <label class="calc-field"><span>Resolution [&Prime;]</span>
       <input id="calc-res" name="resolution" type="number" min="0" step="any" value="0.01" inputmode="decimal">
     </label>
-    <label class="calc-field"><span>Bandwidth [MHz]</span>
+    <label class="calc-field"><span id="calc-bandwidth-label">Bandwidth [MHz]</span>
       <input id="calc-bandwidth" name="bandwidth" type="number" min="0" step="any" value="1000" inputmode="decimal">
     </label>
     <label class="calc-field"><span>LAS [&Prime;]</span>
@@ -268,8 +268,11 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   <details id="calc-infeasible"><summary>Subarrays that do not meet the requirements</summary>
     <ul class="calc-reasons" id="calc-reasons"></ul>
   </details>
-  <p class="note calc-caveat">The times use the memo-96 sensitivity model. The model multiplies
-  the natural-weighting reference value by &eta;. The table uses a 1&thinsp;h, 1&thinsp;MHz reference
+  <p class="note calc-caveat">The times use the thermal-noise part of the memo-96 sensitivity
+  model and multiply the natural-weighting reference value by &eta;. Confusion is calculated from
+  the measured sqrt(&int;B<sup>2</sup>d&Omega;) to the first null, shown separately, and never added
+  to the thermal rms. For MFS selection only, it is a feasibility floor. The table uses a
+  1&thinsp;h, 1&thinsp;MHz reference
   value and one pointing. If desired sensitivity is blank, the calculator internally uses the
   natural, untapered MAIN sensitivity in one minute at the selected frequency and bandwidth as a
   ranking scale. Kelvin goals are converted separately using each candidate's achieved beam. The
@@ -370,7 +373,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 </div>
 
 <div class="card">
-  <h2>Native-beam checks</h2>
+  <h2>Subarray summary and native-beam checks</h2>
   <p class="note">This table compares the simulated native beam with the value in the sensitivity
   calculator file <code>subarray_data.pkl</code>. The values for component subarrays agree within
   2%. Composite subarrays can have larger differences because a single Gaussian does not fit a
@@ -579,6 +582,66 @@ function nearestPsfKey(data, point) {
   return best ? best.key : null;
 }
 
+function psfMetricForPoint(saName, point) {
+  const rows = DATA.psf_metrics && DATA.psf_metrics[saName];
+  if (!Array.isArray(rows)) return null;
+  const byKey = {};
+  rows.forEach(row => {
+    if (Array.isArray(row) && row.length >= 6)
+      byKey[row[0]] = {res_geo_arcsec: row[1]};
+  });
+  const key = nearestPsfKey(byKey, point);
+  const row = key ? rows.find(candidate => candidate[0] === key) : null;
+  return row ? {
+    gaussian_fit_fwhm_arcsec: row[2],
+    psf_squared_volume_first_null_sr: row[3],
+    psf_to_gaussian_volume_ratio: row[4],
+    first_null_is_proxy: Boolean(row[5]),
+  } : null;
+}
+
+function interpolateConfusionModel(thetaArcsec) {
+  const model = DATA.confusion_model || {};
+  const xs = Array.isArray(model.theta_fwhm_arcsec)
+    ? model.theta_fwhm_arcsec.map(Number) : [];
+  const ys = Array.isArray(model.confusion_ujy_1p4ghz)
+    ? model.confusion_ujy_1p4ghz.map(Number) : [];
+  if (!(thetaArcsec > 0) || xs.length < 2 || xs.length !== ys.length) return null;
+  // Linear interpolation on the packaged Memo-96 grid; below its smallest
+  // beam, retain that endpoint as a conservative upper limit.
+  if (thetaArcsec < xs[0]) return ys[0]; // conservative small-beam upper limit
+  if (thetaArcsec > xs[xs.length - 1]) return null;
+  let hi = 1;
+  while (hi < xs.length && xs[hi] < thetaArcsec) hi += 1;
+  const lo = hi - 1;
+  if (!(xs[hi] > xs[lo])) return ys[lo];
+  const fraction = (thetaArcsec - xs[lo]) / (xs[hi] - xs[lo]);
+  return ys[lo] + fraction * (ys[hi] - ys[lo]);
+}
+
+function confusionForMetric(metric, freqGhz) {
+  if (!metric || !finitePositive(freqGhz)) return null;
+  const fitFwhm = Number(metric.gaussian_fit_fwhm_arcsec);
+  const omega2 = Number(metric.psf_squared_volume_first_null_sr);
+  if (!finitePositive(fitFwhm) || !finitePositive(omega2)) return null;
+  // Mono profiles are measured in their 30-GHz reference frame.  A fixed
+  // MFS profile is already native to the registered spectral window.
+  const refFreq = finitePositive(Number(DATA.ref_freq_ghz))
+    ? Number(DATA.ref_freq_ghz) : 30;
+  const angularScale = DATA.fixed_window ? 1 : refFreq / freqGhz;
+  const theta = fitFwhm * angularScale;
+  const omega2AtFreq = omega2 * angularScale * angularScale;
+  const thetaRad = theta * Math.PI / (180 * 3600);
+  const gaussianOmega2 = 0.5 * Math.PI * thetaRad * thetaRad / (4 * Math.log(2));
+  if (!finitePositive(gaussianOmega2)) return null;
+  const base = interpolateConfusionModel(theta);
+  if (base === null) return null;
+  const spectralIndex = Number(DATA.confusion_model.spectral_index);
+  const spectralScale = Math.pow(freqGhz / 1.4,
+    Number.isFinite(spectralIndex) ? spectralIndex : -0.7);
+  return base * spectralScale * Math.sqrt(omega2AtFreq / gaussianOmega2);
+}
+
 function psfMissingMessage(comboKey, saName) {
   // A standalone (release) build embeds its PSF data as data-psf-id blocks
   // instead of loading a sibling psf/ file, so a null cache entry there can
@@ -678,6 +741,18 @@ function fmtSig(x, digits=3) {
   return sign + trimZeros(rounded0.toFixed(decimals));
 }
 
+function fmtConfusion(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return '—';
+  const microJy = Number(value);
+  if (microJy === 0) return '< model range';
+  if (microJy < 0.01) return fmtSig(microJy * 1000) + ' nJy/beam';
+  return fmtSig(microJy) + ' µJy/beam';
+}
+
+function fmtVolumeSr(value) {
+  return finitePositive(Number(value)) ? Number(value).toExponential(3) + ' sr' : '—';
+}
+
 function fmtDuration(hours) {
   if (!Number.isFinite(hours)) return '—';
   const seconds = hours * 3600;
@@ -723,6 +798,32 @@ function imagingOmitted() {
 
 function inReceiverBand(freq) {
   return CALC_RECEIVER_BANDS.some(([lo, hi]) => freq >= lo && freq <= hi);
+}
+
+function fixedMfsWindow() {
+  return DATA && DATA.fixed_window ? DATA.fixed_window : null;
+}
+
+function syncCalcSpectralWindow() {
+  const fixed = fixedMfsWindow();
+  const freq = document.getElementById('calc-freq');
+  const bandwidth = document.getElementById('calc-bandwidth');
+  const freqLabel = document.getElementById('calc-freq-label');
+  const bandwidthLabel = document.getElementById('calc-bandwidth-label');
+  if (!freq || !bandwidth) return;
+  if (fixed) {
+    freq.value = String(DATA.ref_freq_ghz);
+    bandwidth.value = String((Number(fixed.hi_ghz) - Number(fixed.lo_ghz)) * 1000);
+    freq.disabled = true;
+    bandwidth.disabled = true;
+    if (freqLabel) freqLabel.textContent = 'MFS reference frequency [GHz]';
+    if (bandwidthLabel) bandwidthLabel.textContent = 'Fixed MFS window [MHz]';
+  } else {
+    freq.disabled = false;
+    bandwidth.disabled = false;
+    if (freqLabel) freqLabel.textContent = 'Frequency [GHz]';
+    if (bandwidthLabel) bandwidthLabel.textContent = 'Bandwidth [MHz]';
+  }
 }
 
 function readCalcNumber(id, label, errors, optional=false) {
@@ -829,7 +930,8 @@ function tcleanText(p, freq) {
   const parts = [p.weighting || 'unknown'];
   if (p.weighting === 'briggs' && Number.isFinite(Number(p.robust)))
     parts.push('robust ' + Number(p.robust).toFixed(2));
-  const taperMas = finitePositive(Number(p.taper)) ? Number(p.taper) * 30 / freq : 0;
+  const taperMas = finitePositive(Number(p.taper))
+    ? Number(p.taper) * (fixedMfsWindow() ? 1 : 30 / freq) : 0;
   parts.push(taperMas > 0 ? 'taper ' + fmtRes(taperMas) : 'no taper');
   return parts.join('; ');
 }
@@ -851,7 +953,7 @@ function capInfeasibleReason(name, request, resRefMas) {
   const capRefMas = Number(cap);
   if (!finitePositive(capRefMas)) return null;
   if (resRefMas * (1 - request.beamMargin) <= capRefMas) return null;
-  const capAtFreqMas = capRefMas * 30 / request.freq;
+  const capAtFreqMas = capRefMas * (fixedMfsWindow() ? 1 : 30 / request.freq);
   return "requested beam is coarser than this subarray's beam cap (" +
     fmtRes(capAtFreqMas) + ") — beams this coarse are better made with its " +
     "coarsest component";
@@ -859,7 +961,8 @@ function capInfeasibleReason(name, request, resRefMas) {
 
 function evaluateSubarray(name, request, order) {
   const reasons = [];
-  const resRefMas = request.resolution * 1000 * (request.freq / 30);
+  const resRefMas = request.resolution * 1000 *
+    (fixedMfsWindow() ? 1 : request.freq / 30);
   const las = DATA.las && DATA.las[name];
   const nAnt = las ? Number(las.n_ant) : NaN;
   if (!finitePositive(nAnt)) reasons.push('missing antenna metadata');
@@ -872,7 +975,8 @@ function evaluateSubarray(name, request, order) {
     if (!las || !finitePositive(Number(las.mas))) {
       reasons.push('missing LAS metadata');
     } else {
-      const lasAtFreqMas = Number(las.mas) * 30 / request.freq;
+      const lasAtFreqMas = Number(las.mas) *
+        (fixedMfsWindow() ? 1 : 30 / request.freq);
       const wantMas = request.las * 1000;
       if (lasAtFreqMas < wantMas)
         reasons.push('LAS too small (' + fmtArcsecFromMas(lasAtFreqMas) +
@@ -897,15 +1001,31 @@ function evaluateSubarray(name, request, order) {
   } else if (request.sensUnit === 'mJy') {
     goalMicroJy = request.sensitivity * 1000;
   } else if (request.sensUnit === 'K') {
-    const achievedArcsec = Number(curve.point.res) * 30 / request.freq / 1000;
+    const achievedArcsec = Number(curve.point.res) *
+      (fixedMfsWindow() ? 1 : 30 / request.freq) / 1000;
     goalMicroJy = kelvinToMicroJy(request.sensitivity, achievedArcsec, request.freq);
+  }
+  const psfMetric = psfMetricForPoint(name, curve.point);
+  const confusionMicroJy = confusionForMetric(psfMetric, request.freq);
+  // Broadband MFS selection treats confusion as an independent feasibility
+  // floor.  Mono/spectral-cube selection reports it but deliberately ignores
+  // it, because narrow-channel extragalactic continuum confusion is not a
+  // useful blocker for that use case.
+  if (DATA.fixed_window) {
+    if (!Number.isFinite(confusionMicroJy))
+      return {name, feasible: false,
+        reasons: ['confusion unavailable for the selected PSF'], order};
+    if (goalMicroJy < confusionMicroJy)
+      return {name, feasible: false,
+        reasons: ['requested sensitivity is below the MFS confusion floor (' +
+          fmtConfusion(confusionMicroJy) + ')'], order};
   }
   const tHours = Math.pow(eta * sens.sigma / goalMicroJy, 2) / request.bandwidth;
   const antennaHours = tHours * nAnt;
   if (!finitePositive(tHours) || !finitePositive(antennaHours))
     return {name, feasible: false, reasons: ['sensitivity calculation failed'], order};
   return {name, feasible: true, point: curve.point, tHours, antennaHours,
-    nAnt, order, goalMicroJy, goalOrigin,
+    nAnt, order, goalMicroJy, goalOrigin, psfMetric, confusionMicroJy,
     skirtMet: request.obs !== 'imaging' ? null : !curve.point.relaxed};
 }
 
@@ -940,6 +1060,9 @@ function renderCalcSummary(summaryEl, winner, request) {
   name.textContent = winner.name;
   summaryEl.append('Best: ', name, ' — ', fmtDuration(winner.tHours),
     ' observing time, ', fmtSig(winner.antennaHours), ' antenna h.');
+  if (Number.isFinite(winner.confusionMicroJy))
+    summaryEl.append(' Confusion: ', fmtConfusion(winner.confusionMicroJy),
+      ' (reported separately).');
   if (request.goalMode === 'fiducial')
     summaryEl.append(' Costs use the natural, untapered MAIN sensitivity in one minute as the common goal.');
 }
@@ -947,7 +1070,8 @@ function renderCalcSummary(summaryEl, winner, request) {
 function renderCalcTable(table, feasible, request) {
   clearNode(table);
   const header = document.createElement('tr');
-  ['rank', 'subarray', 'observing time', 'antenna hours', 'eta', 'skirt',
+  ['rank', 'subarray', 'observing time', 'antenna hours',
+   'confusion', 'ΩPSF / ΩGaussian', 'eta', 'skirt',
    'tclean parameters', 'flags', 'PSF'].forEach(label => {
     const th = document.createElement('th');
     th.textContent = label;
@@ -957,7 +1081,7 @@ function renderCalcTable(table, feasible, request) {
   if (!feasible.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 9;
+    td.colSpan = 11;
     td.style.textAlign = 'left';
     td.textContent = 'No subarray meets the requirements.';
     tr.append(td);
@@ -971,6 +1095,18 @@ function renderCalcTable(table, feasible, request) {
     addSubarrayCell(tr, row.name);
     addCell(tr, fmtDuration(row.tHours));
     addCell(tr, fmtSig(row.antennaHours) + ' h');
+    addCell(tr, fmtConfusion(row.confusionMicroJy),
+      'Classical source confusion from sqrt(∫B² dΩ) to the first ' +
+      (row.psfMetric && row.psfMetric.first_null_is_proxy
+        ? 'radial-minimum null proxy; ' : 'null; ') +
+      'kept separate from thermal sensitivity');
+    const volumeRatio = row.psfMetric
+      ? Number(row.psfMetric.psf_to_gaussian_volume_ratio) : NaN;
+    addCell(tr, Number.isFinite(volumeRatio) ? fmtSig(volumeRatio) : '—',
+      'Signed PSF volume to the first ' +
+      (row.psfMetric && row.psfMetric.first_null_is_proxy
+        ? 'radial-minimum null proxy' : 'null') + ' divided by the fitted ' +
+      'unit-peak Gaussian total volume');
     addCell(tr, fmtSig(Number(p.eta)));
     addCell(tr, Number.isFinite(Number(p.skirt)) ? fmtSig(100 * Number(p.skirt)) + '%' : '—');
     addCell(tr, tcleanText(p, request.freq));
@@ -1765,6 +1901,20 @@ function renderPsfParams(saName, point, entry, sample, el) {
       ? (100 * Number(sample.skirt)).toFixed(1) + '%' : '—';
     parts.push('eta ' + Number(sample.eta).toFixed(2) + ', skirt ' + skirt);
   }
+  const fitFwhm = Number(entry.gaussian_fit_fwhm_arcsec);
+  if (finitePositive(fitFwhm))
+    parts.push('robust core Gaussian FWHM ' + fmtRes(fitFwhm * 1e3));
+  const firstNull = Number(entry.first_null_arcsec);
+  if (finitePositive(firstNull))
+    parts.push((entry.first_null_is_proxy ? 'first radial minimum (null proxy) '
+      : 'first null ') + fmtRes(firstNull * 1e3));
+  const volumeRatio = Number(entry.psf_to_gaussian_volume_ratio);
+  if (Number.isFinite(volumeRatio))
+    parts.push('ΩPSF(<null) ' + fmtVolumeSr(entry.psf_volume_first_null_sr) +
+      ', ΩPSF/ΩGaussian ' + fmtSig(volumeRatio));
+  if (finitePositive(Number(entry.confusion_beam_sqrt_sr)))
+    parts.push('sqrt(∫B²dΩ) ' + Number(entry.confusion_beam_sqrt_sr).toExponential(3) +
+      ' sr^1/2');
   (el || document.getElementById('psf-params')).textContent = parts.join('; ');
 }
 
@@ -1797,10 +1947,11 @@ function renderPsfChart(chart, saName, entry, sample) {
   const legend = document.createElement('p');
   legend.className = 'note';
   legend.style.marginBottom = '2px';
-  legend.textContent = hasCuts
+  legend.textContent = (hasCuts
     ? 'azimuthal profile: solid 2 px; major-axis cuts: solid light; ' +
-      'minor-axis cuts: dashed light'
-    : 'azimuthal profile: solid 2 px';
+      'minor-axis cuts: dashed light; '
+    : 'azimuthal profile: solid 2 px; ') +
+    'robust core Gaussian: black dashed; 2× measured-FWHM Gaussian: gray dotted';
   chart.append(legend);
 
   const svg = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img',
@@ -1858,6 +2009,35 @@ function renderPsfChart(chart, saName, entry, sample) {
     X(p.radius / fwhm).toFixed(1) + ' ' + Y(p.value).toFixed(1)).join('');
   svg.append(svgEl('path', {d: radialPath, fill: 'none', stroke: css(saName),
     'stroke-width': 2, 'stroke-linejoin': 'round'}));
+
+  const drawGaussian = (gaussianFwhm, stroke, dash, width) => {
+    if (!finitePositive(gaussianFwhm) || !finitePositive(fwhm)) return;
+    const points = [];
+    for (let i = 0; i <= 120; i += 1) {
+      const radius = maxRadiusArcsec * i / 120;
+      const value = Math.exp(-4 * Math.log(2) *
+        Math.pow(radius / gaussianFwhm, 2));
+      points.push([radius / fwhm, value]);
+    }
+    const path = points.map((p, i) => (i ? 'L' : 'M') +
+      X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1)).join('');
+    svg.append(svgEl('path', {d: path, fill: 'none', stroke,
+      'stroke-width': width, 'stroke-dasharray': dash,
+      'stroke-linejoin': 'round'}));
+  };
+  drawGaussian(Number(entry.gaussian_fit_fwhm_arcsec), 'var(--ink)', '7 4', 1.6);
+  drawGaussian(Number(entry.double_measured_fwhm_arcsec), 'var(--muted)', '2 4', 1.5);
+
+  const firstNull = Number(entry.first_null_arcsec);
+  if (finitePositive(firstNull) && finitePositive(fwhm) && firstNull / fwhm <= rmax) {
+    const nullX = X(firstNull / fwhm);
+    svg.append(svgEl('line', {x1: nullX, x2: nullX, y1: M.t, y2: H - M.b,
+      stroke: 'var(--muted)', 'stroke-width': 1, 'stroke-dasharray': '2 3'}));
+    const nullLabel = svgEl('text', {x: nullX + 4, y: M.t + 26});
+    nullLabel.textContent = entry.first_null_is_proxy
+      ? 'first radial minimum' : 'first null';
+    svg.append(nullLabel);
+  }
 
   if (hasCuts && fwhm > 0) {
     const drawCuts = (cutValues, dash) => {
@@ -1980,9 +2160,14 @@ function renderPsfPanel() {
 function renderQaTable() {
   const t = document.getElementById('qa-table');
   t.innerHTML = '<tr><th>subarray</th><th>N ant</th><th>native beam, sim (mas)</th>' +
-    '<th>native beam, calc pkl (mas)</th><th>diff</th><th>natural skirt</th><th>LAS @30 GHz</th></tr>' +
+    '<th>native beam, calc pkl (mas)</th><th>diff</th><th>natural skirt</th>' +
+    '<th>ΩPSF / ΩGaussian</th><th>LAS @30 GHz</th></tr>' +
     DATA.qa.map(r => {
       const las = DATA.las[r.sa];
+      const naturalRows = DATA.psf_metrics && DATA.psf_metrics[r.sa];
+      const natural = Array.isArray(naturalRows)
+        ? naturalRows.find(row => row[0] === 'natural_2.00_0.000') : null;
+      const volumeRatio = natural ? Number(natural[4]) : NaN;
       const diff = (r.nat_sim && r.nat_calc)
         ? ((r.nat_sim / r.nat_calc - 1) * 100).toFixed(1) + '%' : '—';
       const flag = r.nat_sim && r.nat_calc && Math.abs(r.nat_sim/r.nat_calc - 1) > 0.1;
@@ -1992,9 +2177,10 @@ function renderQaTable() {
         `<td>${r.nat_calc === null ? 'not in pkl' : r.nat_calc.toFixed(2)}</td>` +
         `<td class="${flag ? 'flag' : 'ok'}">${diff}${flag ? ' ⚠' : ''}</td>` +
         `<td>${r.skirt_nat === null ? '—' : (100*r.skirt_nat).toFixed(1) + '%'}</td>` +
+        `<td>${Number.isFinite(volumeRatio) ? fmtSig(volumeRatio) : '—'}</td>` +
         `<td>${las ? fmtRes(las.mas) + (las.provisional ? ' †' : '') : ''}</td></tr>`;
     }).join('') +
-    `<tr><td colspan="7" style="text-align:left;color:var(--muted);font-size:12px">LAS = 0.80 λ/b<sub>min</sub> uniformly for the 18-m subarrays (memo-67 core value); per-subarray disk-sim measurements pending</td></tr>`;
+    `<tr><td colspan="8" style="text-align:left;color:var(--muted);font-size:12px">ΩPSF is the signed radial-profile volume to the first zero; where a composite-array radial average stays positive, the first sustained radial minimum is explicitly used as a null proxy. ΩGaussian is the total volume of the robust core fit. LAS = 0.80 λ/b<sub>min</sub> uniformly for the 18-m subarrays (memo-67 core value); per-subarray disk-sim measurements pending</td></tr>`;
 }
 
 // full data table -----------------------------------------------------------------
@@ -2049,6 +2235,7 @@ function renderAll() {
   bindData();
   hideTT();
   updateComboHeader();
+  syncCalcSpectralWindow();
   syncS0Selector();
   syncCalcObs();
   renderTiles();

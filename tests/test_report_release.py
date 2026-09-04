@@ -78,7 +78,7 @@ class TestCombinedComboPlan(unittest.TestCase):
         self.assertIn("revF_track", keys)
         self.assertIn("revF_track_band4", keys)
         self.assertEqual(len(keys), len(set(keys)))
-        self.assertTrue(plan[-1][1]["calculator_omitted"])
+        self.assertFalse(plan[-1][1]["calculator_omitted"])
 
     def test_release_flags_exactly_the_ptsrc_only_combos(self):
         plan = mr.combined_combo_plan(ROWS, release=True)
