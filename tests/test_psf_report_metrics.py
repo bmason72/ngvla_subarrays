@@ -46,13 +46,20 @@ class TestBrowserPsfContract(unittest.TestCase):
         with open(os.path.join(CURVEGEN, "report_template.html")) as handle:
             cls.html = handle.read()
 
-    def test_psf_plot_contract_has_both_gaussian_overlays(self):
+    def test_psf_plot_contract_has_only_robust_core_gaussian_overlay(self):
         self.assertIn("gaussian_fit_fwhm_arcsec", self.html)
-        self.assertIn("double_measured_fwhm_arcsec", self.html)
         self.assertIn("drawGaussian(Number(entry.gaussian_fit_fwhm_arcsec)",
                       self.html)
-        self.assertIn("drawGaussian(Number(entry.double_measured_fwhm_arcsec)",
-                      self.html)
+        self.assertNotIn("double_measured_fwhm_arcsec", self.html)
+
+    def test_psf_plot_uses_piecewise_radius_scale_and_svg_legend(self):
+        self.assertIn("const rKnee = 3, rmax = 10", self.html)
+        self.assertIn("0.5 * plotWidth * v / rKnee", self.html)
+        self.assertIn("piecewise linear; scale changes at 3", self.html)
+        self.assertIn("r=1 FWHM", self.html)
+        self.assertIn("const legendRows = [", self.html)
+        self.assertIn("legendX = W - M.r - legendWidth", self.html)
+        self.assertNotIn("2× measured-FWHM Gaussian", self.html)
 
     def test_summary_and_confusion_are_separate(self):
         self.assertIn("psf_squared_volume_first_null_sr", self.html)

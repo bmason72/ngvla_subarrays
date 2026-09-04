@@ -277,7 +277,9 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   natural, untapered MAIN sensitivity in one minute at the selected frequency and bandwidth as a
   ranking scale. Kelvin goals are converted separately using each candidate's achieved beam. The
   times do not include overheads. The model does not include the difference in band averaging
-  between spectral-line and continuum observations.</p>
+  between spectral-line and continuum observations. The visibility count is the number of
+  cross-correlation samples in the observation. It assumes one channel, no autocorrelations,
+  and one correlator dump every 5&thinsp;s.</p>
 </div>
 
 <div class="card">
@@ -717,6 +719,8 @@ function togglePsfInline(anchorTr, saName, point) {
 
 // in-page subarray calculator -------------------------------------------------
 const CALC_RECEIVER_BANDS = [[1.2, 50.5], [70.0, 116.0]];
+const CALC_CORRELATOR_DUMP_SECONDS = 5;
+const CALC_VISIBILITY_CHANNELS = 1;
 
 function finitePositive(x) {
   return Number.isFinite(x) && x > 0;
@@ -761,6 +765,15 @@ function fmtDuration(hours) {
   if (minutes < 60) return fmtSig(minutes) + ' min';
   if (hours < 48) return fmtSig(hours) + ' h';
   return fmtSig(hours / 24) + ' d';
+}
+
+function fmtVisibilityCount(n) {
+  if (!finitePositive(n)) return '—';
+  for (const [scale, unit] of [[1e12, 'TVis'], [1e9, 'GVis'],
+                               [1e6, 'MVis'], [1e3, 'kVis']]) {
+    if (n >= scale) return fmtSig(n / scale) + ' ' + unit;
+  }
+  return fmtSig(n) + ' Vis';
 }
 
 function fmtArcsecFromMas(mas) {
@@ -1022,9 +1035,13 @@ function evaluateSubarray(name, request, order) {
   }
   const tHours = Math.pow(eta * sens.sigma / goalMicroJy, 2) / request.bandwidth;
   const antennaHours = tHours * nAnt;
-  if (!finitePositive(tHours) || !finitePositive(antennaHours))
+  const nVisibilities = nAnt * (nAnt - 1) / 2
+    * tHours * 3600 / CALC_CORRELATOR_DUMP_SECONDS * CALC_VISIBILITY_CHANNELS;
+  if (!finitePositive(tHours) || !finitePositive(antennaHours)
+      || !finitePositive(nVisibilities))
     return {name, feasible: false, reasons: ['sensitivity calculation failed'], order};
   return {name, feasible: true, point: curve.point, tHours, antennaHours,
+    nVisibilities,
     nAnt, order, goalMicroJy, goalOrigin, psfMetric, confusionMicroJy,
     skirtMet: request.obs !== 'imaging' ? null : !curve.point.relaxed};
 }
@@ -1059,7 +1076,8 @@ function renderCalcSummary(summaryEl, winner, request) {
   const name = document.createElement('strong');
   name.textContent = winner.name;
   summaryEl.append('Best: ', name, ' — ', fmtDuration(winner.tHours),
-    ' observing time, ', fmtSig(winner.antennaHours), ' antenna h.');
+    ' observing time, ', fmtSig(winner.antennaHours), ' antenna h, ',
+    fmtVisibilityCount(winner.nVisibilities), '.');
   if (Number.isFinite(winner.confusionMicroJy))
     summaryEl.append(' Confusion: ', fmtConfusion(winner.confusionMicroJy),
       ' (reported separately).');
@@ -1070,7 +1088,7 @@ function renderCalcSummary(summaryEl, winner, request) {
 function renderCalcTable(table, feasible, request) {
   clearNode(table);
   const header = document.createElement('tr');
-  ['rank', 'subarray', 'observing time', 'antenna hours',
+  ['rank', 'subarray', 'observing time', 'antenna hours', 'visibilities',
    'confusion', 'ΩPSF / ΩGaussian', 'eta', 'skirt',
    'tclean parameters', 'flags', 'PSF'].forEach(label => {
     const th = document.createElement('th');
@@ -1081,7 +1099,7 @@ function renderCalcTable(table, feasible, request) {
   if (!feasible.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 11;
+    td.colSpan = 12;
     td.style.textAlign = 'left';
     td.textContent = 'No subarray meets the requirements.';
     tr.append(td);
@@ -1095,6 +1113,7 @@ function renderCalcTable(table, feasible, request) {
     addSubarrayCell(tr, row.name);
     addCell(tr, fmtDuration(row.tHours));
     addCell(tr, fmtSig(row.antennaHours) + ' h');
+    addCell(tr, fmtVisibilityCount(row.nVisibilities));
     addCell(tr, fmtConfusion(row.confusionMicroJy),
       'Classical source confusion from sqrt(∫B² dΩ) to the first ' +
       (row.psfMetric && row.psfMetric.first_null_is_proxy
@@ -1939,20 +1958,19 @@ function renderPsfChart(chart, saName, entry, sample) {
   if (hasCuts) radiiArcsec.push(...entry.cut_r_arcsec.map(r => Math.abs(Number(r)))
     .filter(Number.isFinite));
   const maxRadiusArcsec = radiiArcsec.length ? Math.max(...radiiArcsec) : 0;
-  const rmax = fwhm > 0 ? Math.max(3, Math.ceil(maxRadiusArcsec / fwhm - 0.01)) : 3;
-  // sqrt-r x scale keeps the beam core legible even as rmax grows to 10 FWHM
-  const X = v => M.l + Math.sqrt(Math.max(v, 0) / rmax) * (W - M.l - M.r);
+  // Two joined linear scales keep both the core and outer PSF readable:
+  // 0--3 FWHM uses the left half and 3--10 FWHM uses the right half.  Always
+  // retain the full 10-FWHM domain so legacy 3-FWHM captures honestly stop at
+  // the midpoint instead of being stretched to look like full-range data.
+  const rKnee = 3, rmax = 10;
+  const plotWidth = W - M.l - M.r;
+  const X = value => {
+    const v = Math.max(0, Math.min(rmax, value));
+    if (v <= rKnee) return M.l + 0.5 * plotWidth * v / rKnee;
+    return M.l + 0.5 * plotWidth + 0.5 * plotWidth *
+      (v - rKnee) / (rmax - rKnee);
+  };
   const Y = v => H - M.b - (v - ymin) / (1 - ymin) * (H - M.t - M.b);
-
-  const legend = document.createElement('p');
-  legend.className = 'note';
-  legend.style.marginBottom = '2px';
-  legend.textContent = (hasCuts
-    ? 'azimuthal profile: solid 2 px; major-axis cuts: solid light; ' +
-      'minor-axis cuts: dashed light; '
-    : 'azimuthal profile: solid 2 px; ') +
-    'robust core Gaussian: black dashed; 2× measured-FWHM Gaussian: gray dotted';
-  chart.append(legend);
 
   const svg = svgEl('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img',
     'aria-label': saName + ' PSF profile at the selected lattice point'});
@@ -1965,7 +1983,7 @@ function renderPsfChart(chart, saName, entry, sample) {
     label.textContent = i === 0 && tick < 0 ? tick.toFixed(3) : tick.toFixed(2);
     svg.append(label);
   });
-  [0, 0.5, 1, 2, 3, 5, 7, 10].filter(tick => tick <= rmax).forEach(tick => {
+  [0, 0.5, 1, 2, 3, 5, 7, 10].forEach(tick => {
     const label = svgEl('text', {x: X(tick), y: H - M.b + 16,
       'text-anchor': 'middle', 'class': 'tick-num'});
     label.textContent = Number.isInteger(tick) ? String(tick) : tick.toFixed(1);
@@ -1975,7 +1993,7 @@ function renderPsfChart(chart, saName, entry, sample) {
     stroke: 'var(--axis)', 'stroke-width': 1}));
   const xTitle = svgEl('text', {x: (M.l + W - M.r) / 2, y: H - 6,
     'text-anchor': 'middle'});
-  xTitle.textContent = 'r / FWHM (sqrt scale)';
+  xTitle.textContent = 'r / FWHM (piecewise linear; scale changes at 3)';
   svg.append(xTitle);
   const yTitle = svgEl('text', {x: 12, y: (H - M.b + M.t) / 2,
     'text-anchor': 'middle',
@@ -1987,7 +2005,7 @@ function renderPsfChart(chart, saName, entry, sample) {
   svg.append(svgEl('line', {x1: fwhmX, x2: fwhmX, y1: M.t, y2: H - M.b,
     stroke: 'var(--muted)', 'stroke-width': 1.2, 'stroke-dasharray': '4 3'}));
   const fwhmLabel = svgEl('text', {x: fwhmX + 4, y: M.t + 12});
-  fwhmLabel.textContent = '1 FWHM';
+  fwhmLabel.textContent = 'r=1 FWHM';
   svg.append(fwhmLabel);
   // the s0 reference line is an imaging setpoint; skip it on campaigns whose
   // imaging curves are omitted (the measured-skirt dot below stays: it's data)
@@ -2026,7 +2044,6 @@ function renderPsfChart(chart, saName, entry, sample) {
       'stroke-linejoin': 'round'}));
   };
   drawGaussian(Number(entry.gaussian_fit_fwhm_arcsec), 'var(--ink)', '7 4', 1.6);
-  drawGaussian(Number(entry.double_measured_fwhm_arcsec), 'var(--muted)', '2 4', 1.5);
 
   const firstNull = Number(entry.first_null_arcsec);
   if (finitePositive(firstNull) && finitePositive(fwhm) && firstNull / fwhm <= rmax) {
@@ -2082,6 +2099,47 @@ function renderPsfChart(chart, saName, entry, sample) {
     dot.addEventListener('mouseleave', hideTT);
     svg.append(dot);
   }
+
+  // Draw the legend last so profiles cannot obscure it.  The translucent
+  // surface-backed box remains legible in both the standalone inspector and
+  // the calculator's narrower inline PSF panel.
+  const legendRows = [
+    {label: 'azimuthal profile', stroke: css(saName), width: 2},
+  ];
+  if (hasCuts) {
+    legendRows.push({label: 'major-axis cuts', stroke: css(saName), width: 1.2,
+      opacity: 0.55});
+    legendRows.push({label: 'minor-axis cuts', stroke: css(saName), width: 1.2,
+      opacity: 0.55, dash: '4 3'});
+  }
+  legendRows.push({label: 'robust core Gaussian', stroke: 'var(--ink)',
+    width: 1.6, dash: '7 4'});
+  if (sample && Number.isFinite(Number(sample.skirt)))
+    legendRows.push({label: 'measured skirt at r=1 FWHM', stroke: css(saName), dot: true});
+
+  const legendWidth = 235, legendRowHeight = 19, legendPad = 9;
+  const legendHeight = 2 * legendPad + legendRows.length * legendRowHeight;
+  const legendX = W - M.r - legendWidth, legendY = M.t + 4;
+  svg.append(svgEl('rect', {x: legendX, y: legendY, width: legendWidth,
+    height: legendHeight, rx: 4, fill: 'var(--surface)', opacity: 0.92,
+    stroke: 'var(--grid)', 'stroke-width': 1}));
+  legendRows.forEach((row, i) => {
+    const y = legendY + legendPad + i * legendRowHeight + legendRowHeight / 2;
+    if (row.dot) {
+      svg.append(svgEl('circle', {cx: legendX + 20, cy: y, r: 3.5,
+        fill: row.stroke, stroke: 'var(--surface)', 'stroke-width': 1}));
+    } else {
+      const attrs = {x1: legendX + 8, x2: legendX + 32, y1: y, y2: y,
+        stroke: row.stroke, 'stroke-width': row.width || 1.2,
+        opacity: row.opacity || 1};
+      if (row.dash) attrs['stroke-dasharray'] = row.dash;
+      svg.append(svgEl('line', attrs));
+    }
+    const label = svgEl('text', {x: legendX + 39, y: y + 4,
+      'class': 'tick-num'});
+    label.textContent = row.label;
+    svg.append(label);
+  });
   chart.append(svg);
 }
 

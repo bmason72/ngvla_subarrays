@@ -8,8 +8,10 @@ gpt-5.6-sol design consult (question + full critique) is in
 required-nchan checks, immutable manifest, multi-channel simulation setup, and
 pinned MFS tclean setup are implemented. MFS-2b is substantially hardened;
 the MFS-2c leaf/segmented-edge foundation and band-native collect/report routing
-are built and CASA-free tested. Nothing has been launched. Full limiting
-envelopes, MFS-2d replay, pilots, and the wave runner remain.**
+are built and CASA-free tested. Nothing has been launched. A simulation-only,
+snapshot nchan/RSS pilot launcher is now ready; full limiting envelopes,
+MFS-2d replay, imaging convergence/noise pilots, and the production wave runner
+remain.**
 
 ## What is being built
 
@@ -142,13 +144,29 @@ combos.
 3. **Noise A/B** (equal vs receiver-weighted channels) at band 2.
    → **bmason checkpoint** on nchan rule + noise policy before the wave.
 
+The first, simulation-only half of items 1–2 is launchable without pinning the
+production manifest:
+
+```bash
+bash curvegen/submit_mfs_snapshot_sim_pilot.sh
+```
+
+It uses one Slurm queue slot and runs core/main snapshot MS creation for
+`nchan=16,32,64,128`, recording `/usr/bin/time -v` in per-run logs. Every
+nchan is isolated by `NGVLA_CAMPAIGN_VARIANT`, so the runs cannot collide with
+one another or with production artifacts. Inspect the 64/128 MaxRSS results
+before explicitly continuing with
+`--nchan-list 256:512`. This launcher does not run tclean or determine
+convergence; the imaging half of the pilot and the bmason checkpoint still
+gate production.
+
 ## Task breakdown & sequencing
 
 | # | Task | Who/effort |
 |---|------|------------|
 | MFS-1 | Retrospective reduced-lattice validation (envelope replay, no CASA) | Sonnet 5 / GPT-5, medium |
 | MFS-2 | Band axis: config/simulate/sweep + manifest + schema/registry | Fable 5 spec, codex gpt-5.6-sol build, high |
-| MFS-3 | Benchmarks + pilots + analysis (bmason checkpoint after) | Sonnet driver, Fable analysis, med/high |
+| MFS-3 | Benchmarks + pilots + analysis (bmason checkpoint after); isolated snapshot simulation/RSS launcher built 4 Sep | Sonnet driver, Fable analysis, med/high |
 | MFS-4 | PyLauncher wave runner (in-job prep→caps→sweep→collect) | Fable spec, codex build, high |
 | MFS-5 | collect/report/registry band routing + combined-report keys | initial native point-source path built 4 Sep; review/QA remains |
 | MFS-6 | Docs (RUN_CAMPAIGNS wave sheet, README, memo) + QA | small model, low |

@@ -85,11 +85,19 @@ class TestReportCalculatorControls(unittest.TestCase):
         self.assertIn("goalMicroJy < confusionMicroJy", self.text)
         self.assertIn("never added", self.text)
 
-    def test_psf_gaussians_and_volume_ratio_are_reported(self):
+    def test_psf_gaussian_and_volume_ratio_are_reported(self):
         self.assertIn("gaussian_fit_fwhm_arcsec", self.text)
-        self.assertIn("double_measured_fwhm_arcsec", self.text)
+        self.assertNotIn("double_measured_fwhm_arcsec", self.text)
         self.assertIn("psf_to_gaussian_volume_ratio", self.text)
         self.assertIn("robust core Gaussian", self.text)
+
+    def test_single_channel_visibility_estimate_is_in_ranked_listing(self):
+        self.assertIn("const CALC_CORRELATOR_DUMP_SECONDS = 5", self.text)
+        self.assertIn("const CALC_VISIBILITY_CHANNELS = 1", self.text)
+        self.assertIn("nAnt * (nAnt - 1) / 2", self.text)
+        self.assertIn("fmtVisibilityCount(row.nVisibilities)", self.text)
+        self.assertIn("'visibilities'", self.text)
+        self.assertIn("no autocorrelations", self.text)
 
     def test_skirt_controls_are_synchronized_both_directions(self):
         self.assertIn("plotS0.value = currentS0", self.text)

@@ -1030,7 +1030,11 @@ point, nearest measured anchor), (b) CLICK any heatmap cell or
 small-multiple mark, (c) default = natural point.  Plot: azimuthal profile
 + both cut arms (major/minor) vs radius; annotate r=1 FWHM vertical, the s0
 threshold horizontal, the measured skirt dot; text line with bmaj x bmin @
-bpa, axis ratio, eta, skirt.  Lazy-load via injected <script> per
+bpa, axis ratio, eta, skirt.  The current plot uses an in-SVG legend at upper
+right and a continuous piecewise-linear radius scale: 0--3 FWHM occupies the
+left half and 3--10 FWHM the right half.  Only the robust core Gaussian is
+overlaid; the incorrect 2x-measured-FWHM Gaussian was removed.  Lazy-load via
+injected <script> per
 (combo, subarray), cached; graceful states: "cuts pending backfill"
 (azimuthal-only line) and "no PSF captured for this point" (revF/track
 non-anchors until backfill/full pass).  Re-render-safe like every other
@@ -1047,7 +1051,17 @@ also switches the panel's subarray.  Optional follow-on if anchor coverage
 feels sparse on revF/track: full-lattice backfill for that combo only
 (~3.2k tcleans, hours on one node).
 
-### MFS broadband continuum campaigns (16 Jul 2026 — PLANNED, not yet built)
+### MFS broadband continuum campaigns (16 Jul 2026 — IMPLEMENTATION IN PROGRESS)
+
+**4 Sep 2026 status:** Ka/band4 routing, channelized RR/LL simulation and MS
+validation, immutable manifests, pinned MFS tclean settings, fresh adaptive
+sampler foundations, native-schema collect/report routing, and CASA-free tests
+are built. A one-slot, simulation-only snapshot nchan/RSS pilot launcher is
+ready (`curvegen/submit_mfs_snapshot_sim_pilot.sh`); its per-nchan campaign
+variants keep pilot artifacts separate from production. Production remains
+gated on the full V1 replay/limiting-envelope checks, tclean convergence and
+noise-policy pilots, bmason's nchan/noise checkpoint, and the MFS-4 adaptive
+wave runner. The legacy `submit_campaign.sh` is not an MFS launch path.
 
 New campaign kind: per-BAND broad-band MFS continuum taperability curves
 (bmason directive).  Design consulted with codex gpt-5.6-sol xhigh

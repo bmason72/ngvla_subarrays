@@ -1,0 +1,56 @@
+{
+  "schema": "ngvla.sa-select.ranking-transition-audit",
+  "schema_version": 1,
+  "frequency_ghz": 30.0,
+  "beam_margin": 0.05,
+  "imaging": false,
+  "grid_size_per_metric": 80,
+  "note": "Old order uses eta^2/[N(N-1)] or eta^2/(N-1); fiducial order uses packaged exact natural-rms anchors and one-minute MAIN goal.",
+  "campaigns": [
+    {
+      "rev": "revC",
+      "sim_mode": "track",
+      "status": "compared",
+      "subarrays_sha256": "e6e51fc9de752a29cef5addb7dd7fd32602841b2f200d1fab86df2df076401b7",
+      "samples_sha256": "f8598e9d7221e17b82c212cbb75a456b4928a7bf3cda629e55b7e48c9013f6c8",
+      "cases_compared": 160,
+      "ordering_differences": []
+    },
+    {
+      "rev": "revD",
+      "sim_mode": "snapshot",
+      "status": "compared",
+      "subarrays_sha256": "bc5e04cdabd2099af4c3e898f60c2f58222067162084dda4891183b75fbfeb05",
+      "samples_sha256": "8981dd5159f8d0d28928879454581bbdc9e31d2392a1aa2442fab4e147f1d130",
+      "cases_compared": 158,
+      "ordering_differences": []
+    },
+    {
+      "rev": "revD",
+      "sim_mode": "track",
+      "status": "compared",
+      "subarrays_sha256": "e7280607d4d5edd3090b9f4c14a82f0860fccf1ed1165f7d1e53ad9829c80aa2",
+      "samples_sha256": "069f2461c7b95a1a8ae1a841466030086a5bf87574da879091e34160c589a723",
+      "cases_compared": 160,
+      "ordering_differences": []
+    },
+    {
+      "rev": "revF",
+      "sim_mode": "snapshot",
+      "status": "compared",
+      "subarrays_sha256": "eec8598c96afee2b5718d79d2249f0b138ef18c87aa618542e369fcb9c293dfc",
+      "samples_sha256": "d52c38b73bb7c006fedbb9cd10eaa23d27f0c158e3078166ed57ea4279666ec1",
+      "cases_compared": 160,
+      "ordering_differences": []
+    },
+    {
+      "rev": "revF",
+      "sim_mode": "track",
+      "status": "compared",
+      "subarrays_sha256": "02318f0e3d24561c2d8e90fcd8bf1e5cc16700fd9fac59c2f7dcf8902c781d20",
+      "samples_sha256": "51d76b252332ed4a89eed7e7c0301ee80896df285656c63fcf1d385c5f95b174",
+      "cases_compared": 160,
+      "ordering_differences": []
+    }
+  ]
+}

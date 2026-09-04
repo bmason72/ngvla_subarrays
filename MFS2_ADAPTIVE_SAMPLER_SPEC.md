@@ -58,6 +58,12 @@ working mono-campaign adaptive retrofit foundation:
   floor. It remains dormant until collected MFS curves/profiles exist.
 - **Not built:** MFS-2d/V1 retrospective replay and the MFS-4 PyLauncher wave
   runner. The unresolved MFS-2b/2c deltas below remain deployment blockers.
+- **Pilot staging built 4 Sep:** `submit_mfs_snapshot_sim_pilot.sh` uses one
+  queue slot to create isolated core/main Band-4 snapshot MSes at selected
+  nchan values and records MaxRSS. `NGVLA_CAMPAIGN_VARIANT` keeps every pilot
+  manifest/MS/result namespace separate from production. This is deliberately
+  simulation-only and does not waive V1, imaging convergence, or the production
+  runner gate.
 
 The worktree audit also found that tracked modules import
 `curvegen/adaptive_support.py` while that helper is currently **untracked**.

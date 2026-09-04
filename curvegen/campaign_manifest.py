@@ -8,7 +8,7 @@ resumable run could silently mix channelization or sampler conventions.
 import json
 import os
 
-from config import (BAND, MFS, REV, SIM_MODE, NCHAN, REF_FREQ_GHZ,
+from config import (BAND, CAMPAIGN_VARIANT, MFS, REV, SIM_MODE, NCHAN, REF_FREQ_GHZ,
                     FREQ_LO_GHZ, FREQ_HI_GHZ, CHANNEL_WIDTH_GHZ,
                     FIRST_CHANNEL_CENTER_GHZ, CURVE_TYPES, NOISE_POLICY,
                     RESULTS_DIR, OVERSAMPLE, MFS_SUBARRAYS)
@@ -42,6 +42,7 @@ def expected_manifest(casa_version=None):
         "schema": MANIFEST_SCHEMA,
         "campaign": {
             "rev": REV, "sim_mode": SIM_MODE, "band": BAND,
+            "variant": CAMPAIGN_VARIANT,
             "subarrays": list(MFS_SUBARRAYS), "curve_types": CURVE_TYPES,
             "run_mode": "fresh",
         },

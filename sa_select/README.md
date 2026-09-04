@@ -5,7 +5,9 @@ returns a **ranked list of NGVLA subarrays** with the `tclean` parameters
 (Briggs `robust` + UV `taper`) to reach the beam, the sensitivity-loss factor
 `eta`, the PSF skirt, the LAS, and — using an explicit or fiducial goal — the
 **integration time** and **antenna-hours**. It reads pre-tabulated curve data;
-**it does not need CASA** and runs anywhere with Python + numpy + scipy.
+it also estimates raw data volume as the number of visibilities in the
+observation. **It does not need CASA** and runs anywhere with Python + numpy +
+scipy.
 
 **Campaigns** (routed via `data/config_registry.csv`; select with
 `--rev/--sim-mode` or `CurveLibrary.for_config`): Rev F track is the default;
@@ -77,8 +79,12 @@ summary = result.to_summary()  # structured warnings/ranking status
 
 Each `Candidate` carries: `subarray`, `n_ant`, `eta`, `weighting/robust/taper`,
 `skirt`, `las`, `integration_time_hr`, `antenna_hours`, `feasible`, `reasons`
-(why excluded), `warnings`, structured skirt status, cost status, and goal
-origin. For imaging, skirt-met candidates rank ahead of relaxed candidates;
+(why excluded), `warnings`, structured skirt status, cost status, goal origin,
+and `n_visibilities`. The visibility estimate is
+`n_ant * (n_ant - 1) / 2 * integration_time / 5 s`; it assumes one channel and
+no autocorrelations. The human-readable table reports SI units such as MVis and
+GVis. `to_rows()` also returns the dump time and channel-count assumptions. For
+imaging, skirt-met candidates rank ahead of relaxed candidates;
 each group is ordered by the requested cost metric. A structured
 `NO_SUBARRAY_MEETS_SKIRT` warning is returned if the strict group is empty.
 

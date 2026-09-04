@@ -75,7 +75,7 @@ if REPO not in sys.path:
     sys.path.insert(0, REPO)
 
 from config import (ROBUST_LIST, TAPER_LO_X, TAPER_HI_X, BEAM_CAP_ARCSEC,
-                    RESULTS_DIR, REV, SIM_MODE, BAND, MFS, NCHAN,
+                    RESULTS_DIR, REV, SIM_MODE, BAND, CAMPAIGN_VARIANT, MFS, NCHAN,
                     REF_FREQ_GHZ, FREQ_LO_GHZ, FREQ_HI_GHZ, CURVE_TYPES,
                     NOISE_POLICY, SUBARRAYS, grid_rows)
 from adaptive_support import (point_key, progressive_log_midpoints, GAP_RATIO,
@@ -179,7 +179,8 @@ def manifest():
         topology_key_floor="distinct-3x3-point-key-grid",
         balance_closure="full coarser-neighbor stencil (budget-accounted fallback)",
         tie_break="lexicographic point_key",
-        campaign=(dict(band=BAND, nchan=NCHAN, ref_freq_ghz=REF_FREQ_GHZ,
+        campaign=(dict(band=BAND, variant=CAMPAIGN_VARIANT, nchan=NCHAN,
+                       ref_freq_ghz=REF_FREQ_GHZ,
                        freq_lo_ghz=FREQ_LO_GHZ, freq_hi_ghz=FREQ_HI_GHZ,
                        curve_types=CURVE_TYPES, noise_policy=NOISE_POLICY)
                   if MFS else dict(band="", nchan=1, ref_freq_ghz=30.0)))

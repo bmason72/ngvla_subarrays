@@ -84,6 +84,33 @@ assert sorted(config.SUBARRAYS) == sorted(config.MFS_SUBARRAYS)
         proc = run_config(code, NGVLA_NCHAN="32")
         self.assertEqual(proc.returncode, 0, proc.stderr)
 
+    def test_mfs_variant_isolates_artifacts_but_reuses_geometry(self):
+        code = """
+import config
+assert config.CAMPAIGN_VARIANT == 'pilot-nchan032'
+assert config.CFG_DIR.endswith('configs-revF_track_band4')
+assert config.RESULTS_DIR.endswith('results-revF_track_band4_pilot-nchan032')
+assert config.MS_DIR.endswith('ms-revF_track_band4_pilot-nchan032')
+assert config.WORK_DIR.endswith('work-revF_track_band4_pilot-nchan032')
+"""
+        proc = run_config(code, NGVLA_NCHAN="32",
+                          NGVLA_CAMPAIGN_VARIANT="pilot-nchan032")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_mfs_variant_rejects_unsafe_or_mono_values(self):
+        proc = run_config("import config", NGVLA_NCHAN="32",
+                          NGVLA_CAMPAIGN_VARIANT="../escape")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("safe slug", proc.stderr)
+
+        env = dict(os.environ, NGVLA_REV="revF", NGVLA_SIM_MODE="snapshot",
+                   NGVLA_BAND="", NGVLA_CAMPAIGN_VARIANT="pilot")
+        proc = subprocess.run([sys.executable, "-c", "import config"],
+                              cwd=str(CURVEGEN), env=env, text=True,
+                              capture_output=True)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("only valid for MFS", proc.stderr)
+
     def test_mfs_sampler_mode_stays_fresh_after_table_is_populated(self):
         code = """
 from adaptive import PointTable, Sampler
@@ -117,6 +144,7 @@ assert first == second and first['spectral_window']['nchan'] == 32
 path = cm.manifest_path()
 data = json.load(open(path))
 assert data['campaign']['run_mode'] == 'fresh'
+assert data['campaign']['variant'] == ''
 data['spectral_window']['nchan'] = 64
 json.dump(data, open(path, 'w'))
 try:
@@ -170,6 +198,20 @@ assert sens['sigma_nat_ujy'][0] > 0
 """
         proc = run_config(code, NGVLA_NCHAN="32")
         self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_snapshot_sim_pilot_is_isolated_and_simulation_only(self):
+        batch = (CURVEGEN / "mfs_snapshot_sim_pilot.sbatch").read_text()
+        submit = (CURVEGEN / "submit_mfs_snapshot_sim_pilot.sh").read_text()
+        self.assertIn("NGVLA_SIM_MODE=snapshot", batch)
+        self.assertIn("NGVLA_BAND=band4", batch)
+        self.assertIn("pilot-nchan%03d-equal", batch)
+        self.assertIn('"$CG/simulate.py" "$SA"', batch)
+        self.assertIn("/usr/bin/time -v", batch)
+        self.assertNotIn("fill_grid.py", batch)
+        self.assertNotIn("adaptive.py", batch)
+        self.assertNotIn("collect.py", batch)
+        self.assertIn('NCHAN_LIST="16:32:64:128"', submit)
+        self.assertIn("NGVLA_MFS_MS_BASE", submit)
 
 
 if __name__ == "__main__":

@@ -29,6 +29,9 @@ from sa_select import ObservingRequest, select_subarrays, CurveLibrary
 from sa_select.schema import SubarrayInfo, CurveSample
 from sa_select import heuristics
 from sa_select import sensitivity as sens
+from sa_select.visibility import (CORRELATOR_DUMP_TIME_S,
+                                  estimate_visibility_count,
+                                  format_visibility_count)
 
 REF_FREQ_GHZ = 30.0
 
@@ -411,6 +414,12 @@ class TestObservingRequestValidation(unittest.TestCase):
 
 class TestSensitivity(unittest.TestCase):
 
+    def test_visibility_count_formula_and_units(self):
+        # 10 antennas -> 45 baselines; 1 h / 5 s -> 720 dumps.
+        self.assertEqual(CORRELATOR_DUMP_TIME_S, 5.0)
+        self.assertEqual(estimate_visibility_count(10, 1.0), 45 * 720)
+        self.assertEqual(format_visibility_count(1.25e9), "1.25 GVis")
+
     def test_integration_time_round_trip(self):
         eta, x_hr = 1.35, 3.7
         goal = eta * sens.natural_rms("spiral", 15.0, t_obs_hr=x_hr)
@@ -505,12 +514,21 @@ class TestRankingPolicies(SyntheticLibraryTestCase):
             library=lib)
         self.assertTrue(result.ranking_available)
         self.assertAlmostEqual(result.best.integration_time_hr, 1 / 60, places=12)
+        expected_vis = (214 * 213 / 2) * ((1 / 60) * 3600 / 5)
+        self.assertAlmostEqual(result.best.n_visibilities, expected_vis)
         self.assertEqual(result.best.goal_origin, "main_natural_1min_fiducial")
+        row = result.to_rows()[0]
+        self.assertEqual(row["n_visibilities"], result.best.n_visibilities)
+        self.assertEqual(row["correlator_dump_time_s"], 5.0)
+        self.assertEqual(row["visibility_channels"], 1)
+        self.assertIn("kVis", result.table())
         summary = result.to_summary()
         self.assertEqual(summary["goal_origins"],
                          ["main_natural_1min_fiducial"])
         self.assertAlmostEqual(summary["fiducial_goal_jy"],
                                sens.natural_rms("main", 30.0, 1 / 60))
+        self.assertEqual(summary["correlator_dump_time_s"], 5.0)
+        self.assertEqual(summary["visibility_channels"], 1)
 
     def test_kelvin_goal_uses_achieved_candidate_beam(self):
         lib = self.make_library(
@@ -547,6 +565,7 @@ class TestRankingPolicies(SyntheticLibraryTestCase):
         self.assertIsNone(result.best)
         self.assertIn("COST_UNAVAILABLE", [w.code for w in result.warnings])
         self.assertTrue(all(c.integration_time_hr is None for c in result.feasible))
+        self.assertTrue(all(c.n_visibilities is None for c in result.feasible))
 
 
 # =============================================================================

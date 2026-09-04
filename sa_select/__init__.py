@@ -26,7 +26,10 @@ from .schema import (ObservingRequest, SubarrayInfo, CurveSample, Candidate,
 from .curves import CurveLibrary
 from .selector import select_subarrays, SelectionResult
 from .heuristics import HEURISTICS
+from .visibility import (CORRELATOR_DUMP_TIME_S, VISIBILITY_CHANNELS,
+                         estimate_visibility_count)
 
 __all__ = ["ObservingRequest", "SubarrayInfo", "CurveSample", "Candidate",
            "SelectionWarning", "CurveLibrary", "select_subarrays",
-           "SelectionResult", "HEURISTICS"]
+           "SelectionResult", "HEURISTICS", "CORRELATOR_DUMP_TIME_S",
+           "VISIBILITY_CHANNELS", "estimate_visibility_count"]

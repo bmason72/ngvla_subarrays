@@ -24,6 +24,7 @@ Grid design (v2, after bmason's 5 Jul 2026 review of the v1 curves):
 
 import csv
 import os
+import re
 import numpy as np
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -37,6 +38,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REV = os.environ.get("NGVLA_REV", "revF")
 SIM_MODE = os.environ.get("NGVLA_SIM_MODE", "track")
 BAND = os.environ.get("NGVLA_BAND", "").strip().lower()
+CAMPAIGN_VARIANT = os.environ.get("NGVLA_CAMPAIGN_VARIANT", "").strip().lower()
 
 # MFS-2a intentionally exposes only the bmason-approved first MFS window.
 # Frequencies are GHz; channels uniformly tile [lo, hi], and CASA receives
@@ -52,6 +54,12 @@ if BAND and REV != "revF":
     raise ValueError("NGVLA_BAND=%r is currently supported only for revF"
                      % BAND)
 MFS = bool(BAND)
+if CAMPAIGN_VARIANT and not MFS:
+    raise ValueError("NGVLA_CAMPAIGN_VARIANT is only valid for MFS campaigns")
+if CAMPAIGN_VARIANT and not re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,47}",
+                                         CAMPAIGN_VARIANT):
+    raise ValueError("NGVLA_CAMPAIGN_VARIANT must be a 1-48 character safe "
+                     "slug (lowercase letters, digits, '.', '_' or '-')")
 
 
 def _active_registry_row():
@@ -497,11 +505,26 @@ def config_suffix():
     return "-" + "_".join(parts)
 
 
-_SUFFIX = config_suffix()
+def artifact_suffix():
+    """Combo suffix plus an optional isolated MFS pilot/run variant.
+
+    Variants deliberately do not affect ``CFG_DIR`` because antenna geometry
+    is independent of channelization.  They do isolate every mutable or large
+    artifact (manifest, result table, profile, MS, and tclean work directory),
+    allowing nchan pilots to coexist without weakening manifest validation.
+    """
+    suffix = config_suffix()
+    if CAMPAIGN_VARIANT:
+        suffix += "_" + CAMPAIGN_VARIANT
+    return suffix
+
+
+_CONFIG_SUFFIX = config_suffix()
+_SUFFIX = artifact_suffix()
 
 # configs and results are small (cfg files + CSVs) and live in the repo;
 # per-combo they get the suffix (default -> unchanged repo dirs).
-CFG_DIR = os.path.join(REPO, "curvegen", "configs" + _SUFFIX)
+CFG_DIR = os.path.join(REPO, "curvegen", "configs" + _CONFIG_SUFFIX)
 RESULTS_DIR = os.path.join(REPO, "curvegen", "results" + _SUFFIX)
 
 

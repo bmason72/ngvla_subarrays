@@ -21,6 +21,8 @@ from typing import List, Optional, Union
 
 from .schema import ObservingRequest, Candidate, SelectionWarning
 from .curves import CurveLibrary
+from .visibility import (CORRELATOR_DUMP_TIME_S, VISIBILITY_CHANNELS,
+                         estimate_visibility_count, format_visibility_count)
 from . import heuristics
 
 
@@ -80,7 +82,11 @@ class SelectionResult:
                 taper_arcsec=c.taper, skirt=c.skirt, las_arcsec=c.las,
                 sensitivity_jy=c.sensitivity_jy,
                 integration_time_hr=c.integration_time_hr,
-                antenna_hours=c.antenna_hours, cost_status=c.cost_status,
+                antenna_hours=c.antenna_hours,
+                n_visibilities=c.n_visibilities,
+                correlator_dump_time_s=CORRELATOR_DUMP_TIME_S,
+                visibility_channels=VISIBILITY_CHANNELS,
+                cost_status=c.cost_status,
                 cost_error=c.cost_error, goal_origin=c.goal_origin,
                 ranking_available=self.ranking_available,
                 result_warning_codes=";".join(w.code for w in self.warnings),
@@ -106,6 +112,8 @@ class SelectionResult:
                               if len(fiducial_values) == 1 else None),
             frequency_ghz=self.request.frequency,
             delta_v_m_per_s=self.request.delta_v,
+            correlator_dump_time_s=CORRELATOR_DUMP_TIME_S,
+            visibility_channels=VISIBILITY_CHANNELS,
         )
 
     def table(self) -> str:
@@ -113,21 +121,23 @@ class SelectionResult:
         def fmt(x, spec="%.3g"):
             return "-" if x is None else spec % x
 
-        hdr = ("%-12s %5s %9s %5s %8s %6s %8s %6s %9s %8s %8s"
+        hdr = ("%-12s %5s %9s %5s %8s %6s %8s %6s %9s %8s %8s %12s"
                % ("subarray", "N_ant", "beam(\")", "eta", "weight",
-                  "robust", "taper(\")", "skirt", "LAS(\")", "t_int(h)", "antHrs"))
+                  "robust", "taper(\")", "skirt", "LAS(\")", "t_int(h)",
+                  "antHrs", "visibilities"))
         lines = [hdr, "-" * len(hdr)]
         if not self.ranking_available and self.feasible:
             lines.append("(cost ranking unavailable; feasible rows are not recommendations)")
         for c in self.feasible:
-            lines.append("%-12s %5d %9s %5s %8s %6s %8s %6s %9s %8s %8s"
+            lines.append("%-12s %5d %9s %5s %8s %6s %8s %6s %9s %8s %8s %12s"
                          % (c.subarray.name, c.subarray.n_ant,
                             fmt(c.resolution, "%.4g"), fmt(c.eta),
                             c.weighting or "-", fmt(c.robust, "%.2f"),
                             fmt(c.taper, "%.3g"), fmt(c.skirt, "%.2f"),
                             fmt(c.las, "%.4g"),
                             fmt(c.integration_time_hr),
-                            fmt(c.antenna_hours)))
+                            fmt(c.antenna_hours),
+                            format_visibility_count(c.n_visibilities)))
         if not self.feasible:
             lines.append("(no feasible subarray)")
         for c in self.feasible:
@@ -256,6 +266,8 @@ def select_subarrays(request: ObservingRequest,
                     delta_v=request.delta_v,
                     n_ant_actual=c.subarray.n_ant)
                 c.antenna_hours = c.integration_time_hr * c.subarray.n_ant
+                c.n_visibilities = estimate_visibility_count(
+                    c.subarray.n_ant, c.integration_time_hr)
                 c.cost_status = "available"
             except Exception as e:
                 message = "sensitivity calculation failed: %s" % e
@@ -274,6 +286,7 @@ def select_subarrays(request: ObservingRequest,
                 if c.feasible:
                     c.integration_time_hr = None
                     c.antenna_hours = None
+                    c.n_visibilities = None
                     if c.cost_status == "available":
                         c.cost_status = "unavailable"
                         c.cost_error = "implicit cost ranking disabled because another candidate failed"

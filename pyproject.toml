@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ngvla-sa-select"
+version = "0.1.0"
+description = "Rank ngVLA subarrays by beam, PSF, sensitivity, time, and antenna-hours"
+readme = "sa_select/README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "numpy>=1.23",
+  "scipy>=1.9",
+]
+
+[project.scripts]
+sa-select = "sa_select.cli:main"
+
+[tool.setuptools]
+packages = ["sa_select"]
+include-package-data = false
+
+[tool.setuptools.package-data]
+sa_select = ["data/*.csv", "data/*.json", "data/*.py"]

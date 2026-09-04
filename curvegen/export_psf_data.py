@@ -161,7 +161,6 @@ def derive_psf_metrics(record):
     metrics = {
         "hwhm_arcsec": hwhm,
         "measured_fwhm_arcsec": measured_fwhm,
-        "double_measured_fwhm_arcsec": 2.0 * measured_fwhm,
     }
     if fit_fwhm is not None:
         metrics["gaussian_fit_fwhm_arcsec"] = fit_fwhm

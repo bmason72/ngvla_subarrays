@@ -1,5 +1,38 @@
 # Campaign run sheet (copy-paste, one command per step)
 
+## 4 Sep MFS snapshot simulation pilot — READY TO LAUNCH (production is not)
+
+The Band-4 snapshot simulator path is ready for the safe first half of the
+nchan/RSS pilot. It creates **only** core and main measurement sets, does not
+run tclean or mutate production result tables, and consumes one Slurm queue
+slot. Each nchan has an isolated manifest and scratch MS directory.
+
+```bash
+# Stage 1: nchan 16--128, then inspect simulator MaxRSS before going higher.
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_mfs_snapshot_sim_pilot.sh
+
+# Monitor the umbrella job and inspect the per-run resource logs.
+squeue -u bmason72 -o "%.18i %.22j %.10T %.12M %.6D %R"
+grep -E "created |reusing existing|Maximum resident set size|Elapsed \(wall clock\)" \
+  /work2/10240/bmason72/stampede3/mfs_snapshot_sim_<JOBID>_*.log
+
+# Stage 2 only after the 64/128 memory results are safe:
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_mfs_snapshot_sim_pilot.sh \
+  --nchan-list 256:512 --max-procs 2
+```
+
+Success means every per-run log reports `created` or validated `reusing
+existing`, the umbrella job exits 0, snapshot validation finds exactly one
+integration, and MaxRSS leaves comfortable node headroom. Re-running either
+command is safe and revalidates/reuses its own MS.
+
+This is **not** the production MFS snapshot campaign. Do not use
+`submit_campaign.sh` for MFS: its full-grid/fill path violates the adaptive
+MFS contract. Before production, finish MFS-2d/V1 replay, run the tclean
+convergence and noise-policy pilots, record bmason's nchan/noise decision, and
+land the MFS-4 fresh adaptive wave runner. The current registry therefore
+keeps production `nchan` blank.
+
 ## 17 Aug release wave — COMPLETE (harvested 18 Aug; see PLAN.md 18-Aug delta)
 
 Outcome (all 11 jobs exit 0): retrofit wave 2 tracks (3415615_{0,2}) +

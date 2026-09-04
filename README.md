@@ -4,7 +4,9 @@ A stand-alone Python tool that, given a desired resolution, frequency, sensitivi
 and largest angular scale (LAS), returns a ranked list of NGVLA subarrays with
 the `tclean` weighting parameters (Briggs robust / uv taper) that achieve the
 requested beam — minimizing integration time or antenna-hours — plus the CASA
-pipeline that generates the underlying taperability/sculptability curves.
+pipeline that generates the underlying taperability/sculptability curves. The
+ranked results also estimate the number of raw visibilities for one channel and
+a 5 s correlator dump time.
 
 **Release scope (Aug 2026, see `WRAPUP.md` + `RELEASE_PLAN.md`):** the released
 products are the web page (`make_report.py --combined --release`) and the
@@ -24,7 +26,7 @@ documents the method, the runbook, and the Python interface.
 | `sa_select/` | The selection tool (pure Python + numpy at query time, no CASA). `schema.py` documents units and data-table columns. `stroh.py` reads M. Stroh's delivery formats (.cfg subarrays + subarray_data.json curves). |
 | `sa_select/data/` | Per-campaign curve + metadata tables, routed by `config_registry.csv` on `(rev, sim_mode, band)`; an empty band is a legacy mono campaign and `band4` is the in-progress Ka MFS campaign. |
 | `curvegen/` | Curve generation under CASA: `config.py` (grids + campaign axes), `simulate.py` (mono/MFS MS creation and validation), `campaign_manifest.py` (immutable MFS provenance), `sweep.py` (resumable imaging), `refine.py` and `adaptive.py` (refinement/sampling), plus collect/report tooling. `results*/` CSVs are tracked; `ms/`, `work/`, `reports/` are regenerable. |
-| `tests/` | 253 stdlib-unittest tests incl. memo-121 replay validation. |
+| `tests/` | Stdlib-unittest regression suite, including memo-121 replay and CASA-free MFS contracts. |
 | `memo/` | The LaTeX memo (`make pdf`). |
 | `ngvla-configurations/`, `ngvla-sensitivity-calculator/`, `ngvla-taperability-pipeline/`, `memos/`, `memo*/`, `artifacts/` | Upstream raw materials (see CLAUDE.md). |
 
@@ -65,7 +67,16 @@ python3 make_report.py --combined --release \
 # campaigns on TACC (Slurm; see RUN_CAMPAIGNS.md for the full sheet)
 bash curvegen/submit_campaign.sh revC track --time 47:00:00
 sbatch --array=0,2 curvegen/adaptive_retrofit.sbatch  # retrofit tracks
+# isolated, simulation-only Ka snapshot nchan/RSS pilot (one queue slot)
+bash curvegen/submit_mfs_snapshot_sim_pilot.sh
 ```
+
+The MFS snapshot pilot creates only the core/main measurement sets for
+`nchan=16,32,64,128`, with an isolated manifest and scratch path per channel
+count. It is safe to launch before production nchan is chosen. It does **not**
+authorize or run the production adaptive snapshot campaign; inspect its memory
+logs, finish the imaging convergence/replay gates, and record the nchan/noise
+decision first (see `RUN_CAMPAIGNS.md` and `MFS_CAMPAIGN_PLAN.md`).
 
 ## Picking up on a new machine
 

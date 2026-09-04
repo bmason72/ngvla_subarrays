@@ -10,6 +10,8 @@ Units convention (used everywhere in this package):
   * flux density                        : Jy/beam
   * brightness temperature              : K
   * time                                : hours
+  * correlator dump time                : seconds
+  * raw data volume                     : number of visibilities
   * baseline lengths                    : meters
 
 Reference frequency: selector-facing mono curve tables are tabulated at 30 GHz.
@@ -212,6 +214,7 @@ class Candidate:
     sensitivity_jy: Optional[float] = None   # goal converted to Jy/beam
     integration_time_hr: Optional[float] = None
     antenna_hours: Optional[float] = None
+    n_visibilities: Optional[float] = None  # one channel; fixed release dump time
     cost_status: str = "pending"             # pending | available | unavailable | failed
     cost_error: str = ""
     goal_origin: Optional[str] = None         # user | main_natural_1min_fiducial
