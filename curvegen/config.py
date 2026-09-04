@@ -29,14 +29,116 @@ import numpy as np
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ---------------------------------------------------------------------------
-# (rev, sim_mode) axis (tranche component D).  Everything below selects the
-# active configuration revision and simulation mode from the environment; the
-# DEFAULT (revF, track) reproduces the original hardcoded Rev F / 4-h-track
-# behaviour byte-for-byte (same dicts, same paths).  A campaign for another
-# combination just exports NGVLA_REV / NGVLA_SIM_MODE (see the sbatch scripts).
+# (rev, sim_mode, band) axis.  An empty band is the legacy monochromatic
+# 30-GHz campaign; band4 is the first broadband MFS campaign.
+# The active axes come from the environment. The default (revF, track, mono)
+# retains the original 30-GHz setup and paths.
 # ---------------------------------------------------------------------------
 REV = os.environ.get("NGVLA_REV", "revF")
 SIM_MODE = os.environ.get("NGVLA_SIM_MODE", "track")
+BAND = os.environ.get("NGVLA_BAND", "").strip().lower()
+
+# MFS-2a intentionally exposes only the bmason-approved first MFS window.
+# Frequencies are GHz; channels uniformly tile [lo, hi], and CASA receives
+# the first channel centre rather than the band centre.
+BANDS = {
+    "band4": dict(ref_freq_ghz=27.0, freq_lo_ghz=20.25,
+                  freq_hi_ghz=33.75),
+}
+if BAND and BAND not in BANDS:
+    raise ValueError("unknown NGVLA_BAND=%r; MFS scope currently supports: %s"
+                     % (BAND, sorted(BANDS)))
+if BAND and REV != "revF":
+    raise ValueError("NGVLA_BAND=%r is currently supported only for revF"
+                     % BAND)
+MFS = bool(BAND)
+
+
+def _active_registry_row():
+    """Registry row for the exact (rev, sim_mode, band), or None.
+
+    Older registries have no band column; those rows remain mono entries.
+    """
+    path = os.path.join(REPO, "sa_select", "data", "config_registry.csv")
+    try:
+        with open(path, newline="") as f:
+            for row in csv.DictReader(f):
+                if (row["rev"].strip() == REV
+                        and row["sim_mode"].strip() == SIM_MODE
+                        and (row.get("band") or "").strip().lower() == BAND):
+                    return row
+    except FileNotFoundError:
+        return None
+    return None
+
+
+REGISTRY_ROW = _active_registry_row()
+if MFS and REGISTRY_ROW is None:
+    raise ValueError("no config_registry.csv row for (rev=%r, sim_mode=%r, "
+                     "band=%r)" % (REV, SIM_MODE, BAND))
+
+
+def _positive_int(value, source):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        raise ValueError("%s must be a positive integer, got %r"
+                         % (source, value))
+    if parsed <= 0 or str(parsed) != str(value).strip():
+        raise ValueError("%s must be a positive integer, got %r"
+                         % (source, value))
+    return parsed
+
+
+if MFS:
+    _env_nchan = os.environ.get("NGVLA_NCHAN", "").strip()
+    _reg_nchan = (REGISTRY_ROW.get("nchan") or "").strip()
+    if not _env_nchan and not _reg_nchan:
+        raise ValueError("MFS campaign %s/%s/%s requires nchan: set "
+                         "NGVLA_NCHAN or populate config_registry.csv nchan"
+                         % (REV, SIM_MODE, BAND))
+    NCHAN = _positive_int(_env_nchan or _reg_nchan,
+                          "NGVLA_NCHAN" if _env_nchan else "registry nchan")
+    if _env_nchan and _reg_nchan:
+        registered = _positive_int(_reg_nchan, "registry nchan")
+        if NCHAN != registered:
+            raise ValueError("NGVLA_NCHAN=%d disagrees with registry nchan=%d "
+                             "for %s/%s/%s"
+                             % (NCHAN, registered, REV, SIM_MODE, BAND))
+    _band = BANDS[BAND]
+    REF_FREQ_GHZ = _band["ref_freq_ghz"]
+    FREQ_LO_GHZ = _band["freq_lo_ghz"]
+    FREQ_HI_GHZ = _band["freq_hi_ghz"]
+    for _field, _expected in (("ref_freq_ghz", REF_FREQ_GHZ),
+                              ("freq_lo_ghz", FREQ_LO_GHZ),
+                              ("freq_hi_ghz", FREQ_HI_GHZ)):
+        try:
+            _registered = float((REGISTRY_ROW.get(_field) or "").strip())
+        except ValueError:
+            raise ValueError("registry %s is required and numeric for %s/%s/%s"
+                             % (_field, REV, SIM_MODE, BAND))
+        if abs(_registered - _expected) > 1e-12:
+            raise ValueError("registry %s=%g disagrees with band definition %g"
+                             % (_field, _registered, _expected))
+    CHANNEL_WIDTH_GHZ = (FREQ_HI_GHZ - FREQ_LO_GHZ) / NCHAN
+    FIRST_CHANNEL_CENTER_GHZ = FREQ_LO_GHZ + CHANNEL_WIDTH_GHZ / 2.0
+    CURVE_TYPES = (REGISTRY_ROW.get("curve_types") or "ptsrc").strip()
+    NOISE_POLICY = (os.environ.get("NGVLA_NOISE_POLICY")
+                    or REGISTRY_ROW.get("noise_policy") or "equal").strip()
+    if CURVE_TYPES != "ptsrc":
+        raise ValueError("first MFS campaign requires curve_types=ptsrc, got %r"
+                         % CURVE_TYPES)
+    if NOISE_POLICY != "equal":
+        raise ValueError("MFS noise_policy=%r is not implemented; use 'equal'"
+                         % NOISE_POLICY)
+else:
+    NCHAN = 1
+    REF_FREQ_GHZ = 30.0
+    FREQ_LO_GHZ = FREQ_HI_GHZ = 30.0
+    CHANNEL_WIDTH_GHZ = 0.001
+    FIRST_CHANNEL_CENTER_GHZ = 30.0
+    CURVE_TYPES = "both"
+    NOISE_POLICY = "equal"
 
 # per-rev component .cfg directories and filename maps.  Rev D's "long" is the
 # lba (long-baseline array) config; core/spiral/mid map name-for-name.  Rev D
@@ -140,8 +242,14 @@ _SUBARRAYS = {
 }
 SUBARRAYS = _SUBARRAYS[REV]
 
+MFS_SUBARRAYS = ["core-inner", "core", "spiral", "mid",
+                 "core+spiral", "spiral+mid", "main"]
+if MFS:
+    SUBARRAYS = {name: SUBARRAYS[name] for name in MFS_SUBARRAYS}
+
 # the relatively homogeneous set we got right first (v2)
-RUN_SET = ["core-inner", "core", "spiral", "mid", "core+spiral", "spiral+mid"]
+RUN_SET = list(MFS_SUBARRAYS) if MFS else \
+    ["core-inner", "core", "spiral", "mid", "core+spiral", "spiral+mid"]
 
 _IMSIZE = {
     "revF": {
@@ -191,6 +299,8 @@ _IMSIZE = {
     },
 }
 IMSIZE = _IMSIZE[REV]
+if MFS:
+    IMSIZE = {name: IMSIZE[name] for name in MFS_SUBARRAYS}
 
 ROBUST_LIST = [round(r, 2) for r in np.arange(-2.0, 2.01, 0.4)]
 N_TAPERS = 14        # log-spaced taper count per row
@@ -275,14 +385,17 @@ def _load_caps_from_metadata():
             subs_csv = next(
                 (r["subarrays_csv"].strip() for r in csv.DictReader(f)
                  if r["rev"].strip() == REV
-                 and r["sim_mode"].strip() == SIM_MODE), None)
+                 and r["sim_mode"].strip() == SIM_MODE
+                 and (r.get("band") or "").strip().lower() == BAND), None)
         if not subs_csv:
             return {}
         path = os.path.join(REPO, "sa_select", "data", subs_csv)
         caps = {}
         with open(path, newline="") as f:
             for r in csv.DictReader(f):
-                v = (r.get("beam_cap_arcsec_30ghz") or "").strip()
+                field = "beam_cap_arcsec_native" if MFS \
+                    else "beam_cap_arcsec_30ghz"
+                v = (r.get(field) or "").strip()
                 if v:
                     caps[r["name"].strip()] = float(v)
         return caps
@@ -292,7 +405,8 @@ def _load_caps_from_metadata():
 
 # active caps: the hardcoded measured dict for the default combo (byte-stable),
 # else the caps measured for this combo and written into its metadata CSV
-BEAM_CAP_ARCSEC = (_BEAM_CAP_DEFAULT if (REV, SIM_MODE) == ("revF", "track")
+BEAM_CAP_ARCSEC = (_BEAM_CAP_DEFAULT if not MFS
+                   and (REV, SIM_MODE) == ("revF", "track")
                    else _load_caps_from_metadata())
 # Their fine-to-coarse dynamic range is ~2.5 dex (vs ~1.3 homogeneous) and
 # the beam(taper) mapping crosses a sharp spike-to-plateau transition, so
@@ -345,15 +459,21 @@ MIN_UVRANGE_M = _MIN_UVRANGE.get(REV, {})
 # centered on transit (HA=0) -- the ("-30s","30s") window makes the one dump's
 # midpoint sit at HA=0.  simulate.py asserts exactly one integration lands.
 _SIM_TRACK = dict(
-    frequency="30GHz",
+    frequency=(("%.12gGHz" % FIRST_CHANNEL_CENTER_GHZ) if MFS else "30GHz"),
+    ref_frequency="%.12gGHz" % REF_FREQ_GHZ,
+    channel_width=(("%.12gGHz" % CHANNEL_WIDTH_GHZ) if MFS else "1MHz"),
+    nchannels=NCHAN,
+    correlations="RR LL" if MFS else "RR RL LR LL",
     integration_time="60s",
     timerange=("-2h", "2h"),
+    expected_integrations=240,
     source_dec="+24",
     noise="1Jy",
 )
 SIM_MODES = {
     "track": _SIM_TRACK,
-    "snapshot": dict(_SIM_TRACK, timerange=("-30s", "30s")),
+    "snapshot": dict(_SIM_TRACK, timerange=("-30s", "30s"),
+                     expected_integrations=1),
 }
 if SIM_MODE not in SIM_MODES:
     raise ValueError("unknown NGVLA_SIM_MODE=%r; known modes: %s"
@@ -365,12 +485,16 @@ OVERSAMPLE = 5           # pixels per synthesized-beam FWHM (via im.advise)
 
 
 def config_suffix():
-    """Path suffix for the active combo: "" for the default (revF, track),
-    else "-<rev>_<sim_mode>" so each combination writes to FRESH directories
+    """Path suffix for the active combo: "" for the default mono campaign,
+    else "-<rev>_<sim_mode>[_<band>]" so each combination writes to FRESH directories
     (results-revD_track/, ms-revD_track/, ...) and never collides with the
     Rev F / track data.  Used by all four path constants below."""
-    return "" if (REV, SIM_MODE) == ("revF", "track") \
-        else "-%s_%s" % (REV, SIM_MODE)
+    if not MFS and (REV, SIM_MODE) == ("revF", "track"):
+        return ""
+    parts = [REV, SIM_MODE]
+    if BAND:
+        parts.append(BAND)
+    return "-" + "_".join(parts)
 
 
 _SUFFIX = config_suffix()

@@ -174,6 +174,11 @@ def export_all():
         rows = list(csv.DictReader(f))
     failed = []
     for row in rows:
+        # MFS profiles use band-qualified keys and are wired in MFS-5.  Do not
+        # accidentally re-run the corresponding mono combo under a duplicate
+        # (rev, mode) key while those rows share the registry.
+        if (row.get("band") or "").strip():
+            continue
         rev = row["rev"].strip()
         sim_mode = row["sim_mode"].strip()
         env = dict(os.environ, NGVLA_REV=rev, NGVLA_SIM_MODE=sim_mode)

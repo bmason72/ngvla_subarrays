@@ -26,10 +26,10 @@ sys.path.insert(0, CURVEGEN)
 import make_report as mr  # noqa: E402
 
 
-def reg_row(rev, sim_mode):
+def reg_row(rev, sim_mode, band=""):
     """A config_registry.csv-shaped row (only the columns the plan reads,
     plus the samples_csv routing column build_combined reads afterwards)."""
-    return {"rev": rev, "sim_mode": sim_mode,
+    return {"rev": rev, "sim_mode": sim_mode, "band": band,
             "subarrays_csv": "subarrays_%s_%s.csv" % (rev, sim_mode),
             "samples_csv": "%s_%s_curves.csv" % (rev, sim_mode)}
 
@@ -70,6 +70,15 @@ class TestCombinedComboPlan(unittest.TestCase):
         plan = mr.combined_combo_plan(ROWS, release=True)
         self.assertEqual([entry["key"] for _, entry in plan],
                          ["revF_track", "revD_track", "revC_track"])
+
+    def test_internal_plan_uses_band_in_mfs_key_without_aliasing(self):
+        mfs = reg_row("revF", "track", "band4")
+        plan = mr.combined_combo_plan(ROWS + [mfs])
+        keys = [entry["key"] for _, entry in plan]
+        self.assertIn("revF_track", keys)
+        self.assertIn("revF_track_band4", keys)
+        self.assertEqual(len(keys), len(set(keys)))
+        self.assertTrue(plan[-1][1]["calculator_omitted"])
 
     def test_release_flags_exactly_the_ptsrc_only_combos(self):
         plan = mr.combined_combo_plan(ROWS, release=True)

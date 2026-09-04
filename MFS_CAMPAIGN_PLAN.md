@@ -4,7 +4,12 @@ Standalone summary for resuming this workstream.  The authoritative, fuller
 version lives in `PLAN.md` § "MFS broadband continuum campaigns"; the codex
 gpt-5.6-sol design consult (question + full critique) is in
 `tmp/mfs_campaign_consult.md` / `tmp/mfs_campaign_consult_out.md`.
-**Status: PLANNED ONLY — no code written, nothing launched.**
+**Status: IMPLEMENTATION IN PROGRESS (4 Sep 2026) — MFS-2a's Ka-band routing,
+required-nchan checks, immutable manifest, multi-channel simulation setup, and
+pinned MFS tclean setup are implemented. MFS-2b is substantially hardened;
+the MFS-2c leaf/segmented-edge foundation and band-native collect/report routing
+are built and CASA-free tested. Nothing has been launched. Full limiting
+envelopes, MFS-2d replay, pilots, and the wave runner remain.**
 
 ## What is being built
 
@@ -144,7 +149,7 @@ combos.
 | MFS-2 | Band axis: config/simulate/sweep + manifest + schema/registry | Fable 5 spec, codex gpt-5.6-sol build, high |
 | MFS-3 | Benchmarks + pilots + analysis (bmason checkpoint after) | Sonnet driver, Fable analysis, med/high |
 | MFS-4 | PyLauncher wave runner (in-job prep→caps→sweep→collect) | Fable spec, codex build, high |
-| MFS-5 | collect/report/registry band routing + combined-report keys | codex build, Claude review, medium |
+| MFS-5 | collect/report/registry band routing + combined-report keys | initial native point-source path built 4 Sep; review/QA remains |
 | MFS-6 | Docs (RUN_CAMPAIGNS wave sheet, README, memo) + QA | small model, low |
 
 Order: MFS-1 ∥ MFS-2 → MFS-3 (checkpoint) → MFS-4/5 → wave 1 (track) →

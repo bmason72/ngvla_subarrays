@@ -1,13 +1,13 @@
 """
-Simulate a noise-only measurement set for one subarray at 30 GHz.
+Simulate a noise-only measurement set for one subarray.
 
-Adapted from ngvla-taperability-pipeline/create_sim_ms.py (V. Rosero), with
-the same observing setup -- 60 s dumps, dec +24, one 1 MHz channel, 1 Jy
-per-visibility noise -- but callable as a plain function under CASA's python3
-(casatools, no casashell globals).  The observing WINDOW comes from the active
-sim_mode (config.SIM): "track" is the 4 h HA track (-2h..+2h); "snapshot" is a
-single 60 s integration centered on transit (HA=0).  For snapshot the created
-MS is asserted to hold exactly one integration.
+Adapted from ngvla-taperability-pipeline/create_sim_ms.py (V. Rosero). Legacy
+campaigns keep the same setup -- 60 s dumps, dec +24, one 1 MHz channel, 1 Jy
+per-visibility noise. An MFS campaign instead takes its fixed spectral window,
+channel count, and correlations from config and validates them against the
+created or reused MS. The observing window comes from config.SIM: "track" is
+the 4 h HA track (-2h..+2h); "snapshot" is a single 60 s integration centered
+on transit (HA=0).
 
 Run:  .../python3 curvegen/simulate.py core [spiral ...]
 """
@@ -19,7 +19,9 @@ import sys
 import casatools
 from casatasks.private.simutil import simutil
 
-from config import SUBARRAYS, SIM, SIM_MODE, CFG_DIR, MS_DIR
+from config import (SUBARRAYS, SIM, SIM_MODE, CFG_DIR, MS_DIR, MFS, NCHAN,
+                    FIRST_CHANNEL_CENTER_GHZ, CHANNEL_WIDTH_GHZ)
+from campaign_manifest import ensure_manifest, casa_version_string
 
 
 def make_ms(subarray, overwrite=False):
@@ -31,9 +33,13 @@ def make_ms(subarray, overwrite=False):
     ms_path = os.path.join(MS_DIR, subarray.replace("+", "_") + ".ms")
     if os.path.isdir(ms_path):
         if not overwrite:
+            ensure_manifest(create=False, casa_version=casa_version_string())
+            _validate_ms(ms_path)
             print("reusing existing %s" % ms_path)
             return ms_path
         shutil.rmtree(ms_path)
+
+    ensure_manifest(create=True, casa_version=casa_version_string())
 
     u = simutil()
     # readantenna returns 7 or 8 items depending on CASA version; the last
@@ -53,8 +59,9 @@ def make_ms(subarray, overwrite=False):
                  antname=list(padnames), padname=list(padnames),
                  coordsystem="global", referencelocation=posobs)
     sm.setspwindow(spwname="band", freq=SIM["frequency"],
-                   deltafreq="1MHz", freqresolution="1MHz",
-                   nchannels=1, stokes="RR RL LR LL")
+                   deltafreq=SIM["channel_width"],
+                   freqresolution=SIM["channel_width"],
+                   nchannels=SIM["nchannels"], stokes=SIM["correlations"])
     sm.setfeed("perfect R L")
     sm.setfield(sourcename="source",
                 sourcedirection=["J2000", "00h0m0.0",
@@ -79,6 +86,7 @@ def make_ms(subarray, overwrite=False):
             "snapshot sim for %s produced %d integrations (expected exactly 1)"
             " for window %s -- adjust config.SIM_MODES['snapshot'] timerange"
             % (subarray, n_dumps, SIM["timerange"]))
+    _validate_ms(ms_path)
     print("created %s (%d antennas, %d integration%s)"
           % (ms_path, len(x), n_dumps, "" if n_dumps == 1 else "s"))
     return ms_path
@@ -93,6 +101,59 @@ def _count_integrations(ms_path):
         return int(np.unique(tb.getcol("TIME")).size)
     finally:
         tb.close()
+
+
+def _channel_frequencies_hz(ms_path):
+    """Flatten the sole spectral window's channel-centre frequencies."""
+    tb = casatools.table()
+    tb.open(os.path.join(ms_path, "SPECTRAL_WINDOW"))
+    try:
+        import numpy as np
+        return np.asarray(tb.getcol("CHAN_FREQ"), dtype=float).reshape(-1)
+    finally:
+        tb.close()
+
+
+def _correlation_codes(ms_path):
+    """CASA Stokes integer codes in the sole polarization setup."""
+    tb = casatools.table()
+    tb.open(os.path.join(ms_path, "POLARIZATION"))
+    try:
+        import numpy as np
+        return np.asarray(tb.getcol("CORR_TYPE"), dtype=int).reshape(-1)
+    finally:
+        tb.close()
+
+
+def _validate_ms(ms_path):
+    """Fail closed when a reusable MS does not match active channelization."""
+    if MFS:
+        n_dumps = _count_integrations(ms_path)
+        expected_dumps = SIM["expected_integrations"]
+        if n_dumps != expected_dumps:
+            raise RuntimeError("%s has %d integrations; active MFS campaign "
+                               "requires %d" % (ms_path, n_dumps,
+                                                expected_dumps))
+    freqs = _channel_frequencies_hz(ms_path)
+    if freqs.size != NCHAN:
+        raise RuntimeError("%s has %d channels; active campaign requires %d"
+                           % (ms_path, freqs.size, NCHAN))
+    stokes_codes = {"RR": 5, "RL": 6, "LR": 7, "LL": 8}
+    expected_corr = [stokes_codes[name] for name in SIM["correlations"].split()]
+    actual_corr = [int(value) for value in _correlation_codes(ms_path)]
+    if actual_corr != expected_corr:
+        raise RuntimeError("%s correlations %r do not match active campaign %r"
+                           % (ms_path, actual_corr, expected_corr))
+    expected_first = FIRST_CHANNEL_CENTER_GHZ * 1e9
+    expected_last = (FIRST_CHANNEL_CENTER_GHZ
+                     + (NCHAN - 1) * CHANNEL_WIDTH_GHZ) * 1e9
+    tolerance_hz = max(1.0, abs(CHANNEL_WIDTH_GHZ * 1e9) * 1e-8)
+    if (abs(float(freqs[0]) - expected_first) > tolerance_hz
+            or abs(float(freqs[-1]) - expected_last) > tolerance_hz):
+        raise RuntimeError(
+            "%s channel centres %.9g..%.9g Hz do not match active campaign "
+            "%.9g..%.9g Hz" % (ms_path, freqs[0], freqs[-1],
+                                expected_first, expected_last))
 
 
 if __name__ == "__main__":

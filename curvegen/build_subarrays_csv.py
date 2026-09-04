@@ -29,7 +29,7 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from config import (REV, SIM_MODE, SUBARRAYS, MIN_UVRANGE_M, REPO,   # noqa: E402
+from config import (REV, SIM_MODE, BAND, MFS, SUBARRAYS, MIN_UVRANGE_M, REPO,  # noqa: E402
                     COMPONENT_CFGS, COMPONENT_DIR)
 from build_configs import read_antenna_lines                         # noqa: E402
 
@@ -129,6 +129,7 @@ def build_from_geometry(out_path):
             "b_max_m": "%.2f" % b_max,
             "las_coeff": "0.8",
             "beam_cap_arcsec_30ghz": "",        # filled by fill_beam_caps.py
+            "beam_cap_arcsec_native": "",
             "calc_name": calc.get(name, ""),
             "las_coeff_note": note_for(name),
         })
@@ -143,19 +144,24 @@ def build_from_default(out_path):
     src = os.path.join(DATA_DIR, "subarrays.csv")
     with open(src, newline="") as f:
         rows = list(csv.DictReader(f))
+    if MFS:
+        rows = [r for r in rows if r["name"].strip() in SUBARRAYS]
     for r in rows:
         r["beam_cap_arcsec_30ghz"] = ""
+        if MFS:
+            r["beam_cap_arcsec_native"] = ""
     _write(out_path, rows)
     print("wrote %d subarrays (from subarrays.csv, caps blanked) -> %s"
           % (len(rows), out_path))
 
 
 def _write(out_path, rows):
+    fields = FIELDS + (["beam_cap_arcsec_native"] if MFS else [])
     with open(out_path, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=FIELDS)
+        w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
         for r in rows:
-            w.writerow({k: r.get(k, "") for k in FIELDS})
+            w.writerow({k: r.get(k, "") for k in fields})
 
 
 def registry_subarrays_csv():
@@ -163,10 +169,12 @@ def registry_subarrays_csv():
     reg = os.path.join(DATA_DIR, "config_registry.csv")
     with open(reg, newline="") as f:
         for r in csv.DictReader(f):
-            if r["rev"].strip() == REV and r["sim_mode"].strip() == SIM_MODE:
+            if (r["rev"].strip() == REV
+                    and r["sim_mode"].strip() == SIM_MODE
+                    and (r.get("band") or "").strip().lower() == BAND):
                 return r["subarrays_csv"].strip()
-    raise SystemExit("no config_registry.csv row for (rev=%r, sim_mode=%r) -- "
-                     "add it first" % (REV, SIM_MODE))
+    raise SystemExit("no config_registry.csv row for (rev=%r, sim_mode=%r, "
+                     "band=%r) -- add it first" % (REV, SIM_MODE, BAND))
 
 
 if __name__ == "__main__":
@@ -175,7 +183,7 @@ if __name__ == "__main__":
                     help="copy subarrays.csv geometry (same rev) and blank "
                          "caps, instead of computing from cfgs")
     args = ap.parse_args()
-    if (REV, SIM_MODE) == ("revF", "track"):
+    if not MFS and (REV, SIM_MODE) == ("revF", "track"):
         raise SystemExit("refusing to regenerate the authoritative default "
                          "subarrays.csv; set NGVLA_REV/NGVLA_SIM_MODE")
     out = os.path.join(DATA_DIR, registry_subarrays_csv())

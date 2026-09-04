@@ -14,12 +14,14 @@ import glob
 import math
 import os
 
-from config import RESULTS_DIR, REPO, OVERSAMPLE, REV, SIM_MODE
+from config import (RESULTS_DIR, REPO, OVERSAMPLE, REV, SIM_MODE, BAND, MFS,
+                    REF_FREQ_GHZ)
+from campaign_manifest import ensure_manifest, casa_version_string
 
 DATA_DIR = os.path.join(REPO, "sa_select", "data")
 
 
-def registry_paths(rev=REV, sim_mode=SIM_MODE):
+def registry_paths(rev=REV, sim_mode=SIM_MODE, band=BAND):
     """(subarrays_csv, samples_csv) absolute paths for the active (rev,
     sim_mode), resolved through sa_select/data/config_registry.csv.  This is
     the SAME registry sa_select.CurveLibrary.for_config reads, so a campaign's
@@ -28,13 +30,15 @@ def registry_paths(rev=REV, sim_mode=SIM_MODE):
     reg_path = os.path.join(DATA_DIR, "config_registry.csv")
     with open(reg_path, newline="") as f:
         for r in csv.DictReader(f):
-            if r["rev"].strip() == rev and r["sim_mode"].strip() == sim_mode:
+            if (r["rev"].strip() == rev
+                    and r["sim_mode"].strip() == sim_mode
+                    and (r.get("band") or "").strip().lower() == band):
                 return (os.path.join(DATA_DIR, r["subarrays_csv"].strip()),
                         os.path.join(DATA_DIR, r["samples_csv"].strip()))
     raise SystemExit(
-        "collect.py: no config_registry.csv row for (rev=%r, sim_mode=%r).\n"
-        "Add a row 'rev,sim_mode,subarrays_csv,samples_csv' to %s before "
-        "collecting this campaign's curves." % (rev, sim_mode, reg_path))
+        "collect.py: no config_registry.csv row for (rev=%r, sim_mode=%r, "
+        "band=%r).\nAdd the exact combo to %s before collecting its curves."
+        % (rev, sim_mode, band, reg_path))
 
 
 SUBARRAYS_CSV, OUT = registry_paths()
@@ -42,8 +46,9 @@ SUBARRAYS_CSV, OUT = registry_paths()
 # provenance tag for the source column; the default combo keeps the original
 # "revf-sim" byte-for-byte (pinned by the 12 Jul 2026 axis work), any other
 # combo is labeled by its (rev, sim_mode) -- e.g. "revD_snapshot-sim"
-SOURCE_TAG = "revf-sim" if (REV, SIM_MODE) == ("revF", "track") \
-    else "%s_%s-sim" % (REV, SIM_MODE)
+SOURCE_TAG = ("%s_%s_%s-mfs" % (REV, SIM_MODE, BAND) if MFS
+              else ("revf-sim" if (REV, SIM_MODE) == ("revF", "track")
+                    else "%s_%s-sim" % (REV, SIM_MODE)))
 
 
 def offered_subarrays():
@@ -53,9 +58,14 @@ def offered_subarrays():
     with open(SUBARRAYS_CSV, newline="") as f:
         return {r["name"].strip() for r in csv.DictReader(f)}
 
-OUT_FIELDS = ["subarray", "resolution_arcsec_30ghz", "eta", "skirt",
-              "weighting", "robust", "taper_arcsec_30ghz", "freq_orig_ghz",
-              "source", "note", "sample_status"]
+MONO_OUT_FIELDS = ["subarray", "resolution_arcsec_30ghz", "eta", "skirt",
+                   "weighting", "robust", "taper_arcsec_30ghz",
+                   "freq_orig_ghz", "source", "note", "sample_status"]
+MFS_OUT_FIELDS = ["subarray", "band", "ref_freq_ghz",
+                  "resolution_arcsec_native", "eta", "skirt", "weighting",
+                  "robust", "taper_arcsec_native", "source", "note",
+                  "sample_status"]
+OUT_FIELDS = MFS_OUT_FIELDS if MFS else MONO_OUT_FIELDS
 
 
 def check_cell_convention(r, path):
@@ -142,21 +152,27 @@ def collect_one(path):
         if key in seen:
             continue
         seen.add(key)
-        out.append(dict(
-            subarray=r["subarray"],
-            resolution_arcsec_30ghz="%.6g" % float(r["res_geo_arcsec"]),
-            eta="%.4f" % eta,
-            skirt=r["skirt"],
-            weighting=r["weighting"],
-            robust=robust,
-            taper_arcsec_30ghz="" if taper_mas == 0 else "%.6g" % (taper_mas / 1e3),
-            freq_orig_ghz="30.0",
+        common = dict(
+            subarray=r["subarray"], eta="%.4f" % eta, skirt=r["skirt"],
+            weighting=r["weighting"], robust=robust,
             source="%s:%s:%s_r%s_t%s" % (SOURCE_TAG, r["subarray"],
                                          r["weighting"], r["robust"],
                                          r["taper_mas"]),
             note="",
-            sample_status="ok" if r["status"] == "ok" else "capped_anchor",
-        ))
+            sample_status="ok" if r["status"] == "ok" else "capped_anchor")
+        if MFS:
+            common.update(
+                band=BAND, ref_freq_ghz="%g" % REF_FREQ_GHZ,
+                resolution_arcsec_native="%.6g" % float(r["res_geo_arcsec"]),
+                taper_arcsec_native=("" if taper_mas == 0
+                                     else "%.6g" % (taper_mas / 1e3)))
+        else:
+            common.update(
+                resolution_arcsec_30ghz="%.6g" % float(r["res_geo_arcsec"]),
+                taper_arcsec_30ghz=("" if taper_mas == 0
+                                    else "%.6g" % (taper_mas / 1e3)),
+                freq_orig_ghz="30.0")
+        out.append(common)
     return out
 
 
@@ -168,6 +184,10 @@ DEFERRED = {"core_mid.csv"}
 
 
 def main():
+    if MFS:
+        # Collection reuses both results and their simulation/imaging identity;
+        # fail closed before reading a row or replacing the native curve table.
+        ensure_manifest(create=False, casa_version=casa_version_string())
     offered = offered_subarrays()
     samples = []
     for path in sorted(glob.glob(os.path.join(RESULTS_DIR, "*.csv"))):

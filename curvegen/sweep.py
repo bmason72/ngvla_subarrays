@@ -52,8 +52,10 @@ from casatasks import tclean, casalog
 
 from config import (SUBARRAYS, IMSIZE, OVERSAMPLE, WORK_DIR, RESULTS_DIR,
                     SEEDS, BEAM_CAP_ARCSEC, MIN_UVRANGE_M, grid_rows,
-                    CAPTURE_PROFILES, PROFILE_DIR)
+                    CAPTURE_PROFILES, PROFILE_DIR, MFS, REF_FREQ_GHZ,
+                    FREQ_HI_GHZ)
 from simulate import make_ms
+from campaign_manifest import ensure_manifest, casa_version_string
 from measure import (beam_arcsec, image_rms, psf_skirt, psf_radial_profile,
                     psf_axis_cuts_from_psf, CAPTURE_RMAX_FWHM)
 from adaptive_support import point_key
@@ -214,10 +216,15 @@ def tclean_kwargs(vis, imagename, weighting, robust, taper_mas, imsize,
     uvtaper = [] if taper_mas == 0 else \
         ["%gmarcsec" % taper_mas, "%gmarcsec" % taper_mas, "0deg"]
     uvrange = "" if min_uvrange_m is None else ">%gm" % min_uvrange_m
-    return dict(vis=vis, imagename=imagename, cell=cell_string(cell_arcsec),
-                imsize=imsize, datacolumn="data", weighting=weighting,
-                robust=robust, uvtaper=uvtaper, uvrange=uvrange, niter=0,
-                savemodel="none", pblimit=-0.02)
+    kwargs = dict(vis=vis, imagename=imagename, cell=cell_string(cell_arcsec),
+                  imsize=imsize, datacolumn="data", weighting=weighting,
+                  robust=robust, uvtaper=uvtaper, uvrange=uvrange, niter=0,
+                  savemodel="none", pblimit=-0.02)
+    if MFS:
+        kwargs.update(specmode="mfs", reffreq="%gGHz" % REF_FREQ_GHZ,
+                      nterms=1, deconvolver="hogbom", stokes="I",
+                      parallel=False)
+    return kwargs
 
 
 def run_tclean(**kwargs):
@@ -238,6 +245,9 @@ class Sweep:
             RESULTS_DIR, subarray.replace("+", "_").replace("-", "_") + ".csv")
         self.record_path = record_path or self.results_path
         os.makedirs(RESULTS_DIR, exist_ok=True)
+        if MFS and (os.path.isfile(self.results_path)
+                    or result_shards(self.results_path)):
+            ensure_manifest(create=False, casa_version=casa_version_string())
         extra = []
         if include_shards:
             extra = result_shards(self.results_path)
@@ -260,6 +270,12 @@ class Sweep:
             os.makedirs(self.workdir, exist_ok=True)
             casalog.setlogfile(os.path.join(self.workdir, "casa.log"))
             self.cell = advise_cell(self.vis)
+            if MFS:
+                # im.advise's representative-frequency convention is not a
+                # campaign invariant. Conservatively scale its answer from
+                # the declared reference frequency to the shortest wavelength
+                # so the upper band edge is always sampled safely.
+                self.cell *= REF_FREQ_GHZ / FREQ_HI_GHZ
             print("imsize %d, native cell %.6g arcsec"
                   % (self.imsize, self.cell))
 
@@ -319,6 +335,13 @@ class Sweep:
                     "degenerate tclean product: bmaj %.4g bmin %.4g res %.4g "
                     "arcsec, cell %.4g, rms %.4g"
                     % (bmaj, bmin, res_geo, cell_pt, sigma))
+            if (MFS and taper_mas == 0
+                    and (weighting == "natural" or robust == -2.0)
+                    and bmin < OVERSAMPLE * cell_pt):
+                raise RuntimeError(
+                    "MFS seed is undersampled at the top-of-band-safe cell: "
+                    "bmin %.4g arcsec is %.2f pixels (need at least %d)"
+                    % (bmin, bmin / cell_pt, OVERSAMPLE))
             if bmin < 3.0 * cell_pt:
                 print("  warning: %s bmin %.4g arcsec only %.1f cells -- "
                       "marginally sampled minor axis"

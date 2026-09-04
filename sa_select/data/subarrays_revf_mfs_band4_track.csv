@@ -1,0 +1,8 @@
+name,components,n_ant,b_min_m,b_max_m,las_coeff,beam_cap_arcsec_30ghz,calc_name,las_coeff_note,beam_cap_arcsec_native
+core-inner,core-inner,57,42.15,1630.7,0.8,,,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,
+core,core,114,42.15,4271.93,0.8,,core,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,
+spiral,spiral,54,811.44,39270.01,0.8,,spiral,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,
+mid,mid,46,10121.09,1272904.19,0.8,,mid,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,
+core+spiral,core+spiral,168,42.15,39270.01,0.8,,spiral+core,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,
+spiral+mid,spiral+mid,100,811.44,1272904.19,0.8,,spiral+mid,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,
+main,core+spiral+mid,214,42.15,1272904.19,0.8,,main,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,

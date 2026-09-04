@@ -14,7 +14,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sa_select.envelope import (Envelope, build_points, build_segments,
-                                ETA_CAP)
+                                build_leaf_families, ETA_CAP)
 from sa_select.curves import CurveLibrary
 
 REVF_CSV = os.path.join(os.path.dirname(os.path.dirname(
@@ -437,6 +437,36 @@ class TestColumnSegments(unittest.TestCase):
                            taper=0.0)])
         self.assertIsNone(env.solve(11.0, margin=0.0))
 
+
+class TestAdaptiveLeafFamilies(unittest.TestCase):
+
+    def _samples(self):
+        return [
+            pt(10.0, 1.4, 0.1, robust=0.0, taper=4.0),
+            pt(11.0, 1.3, 0.1, robust=0.2, taper=4.0),  # hanging edge node
+            pt(12.0, 1.2, 0.1, robust=0.4, taper=4.0),
+            pt(13.0, 1.5, 0.1, robust=0.0, taper=6.0),
+            pt(15.0, 1.3, 0.1, robust=0.4, taper=6.0),
+        ]
+
+    def test_explicit_leaf_uses_only_topology_corners(self):
+        leaves = [dict(r0=0.0, r1=0.4, t0=4.0, t1=6.0, cut=False)]
+        points = build_points(self._samples())
+        segments, cells = build_leaf_families(points, leaves)
+        self.assertEqual(len(cells), 1)
+        # The measured hanging node splits the lower edge; it does not become
+        # a cell corner or suppress the explicitly declared adaptive cell.
+        lower = [s for s in segments if s.column and s.a.taper == 4.0
+                 and s.b.taper == 4.0]
+        self.assertEqual(len(lower), 2)
+        self.assertTrue(all(abs(s.b.robust - s.a.robust - 0.2) < 1e-9
+                            for s in lower))
+
+    def test_cut_leaf_has_edges_but_no_bilinear_interior(self):
+        leaves = [dict(r0=0.0, r1=0.4, t0=4.0, t1=6.0, cut=True)]
+        env = Envelope(self._samples(), leaves=leaves)
+        self.assertEqual(env.cells, [])
+        self.assertGreater(len(env.segments), 0)
 
 @unittest.skipUnless(os.path.isfile(REVF_CSV), "Rev F curve data not present")
 class TestStaircaseRegression(unittest.TestCase):

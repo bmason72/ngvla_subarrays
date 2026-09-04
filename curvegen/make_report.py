@@ -29,7 +29,8 @@ import sys
 import numpy as np
 
 from config import (REPO, RESULTS_DIR, ROBUST_LIST, BEAM_CAP_ARCSEC, grid_rows,
-                    REV, SIM_MODE)
+                    REV, SIM_MODE, BAND, MFS, REF_FREQ_GHZ, FREQ_LO_GHZ,
+                    FREQ_HI_GHZ, CURVE_TYPES)
 
 sys.path.insert(0, REPO)                    # for the shared curve engine
 from sa_select.envelope import Envelope, ETA_CAP   # noqa: E402
@@ -72,17 +73,19 @@ SUBARRAYS_CSV = os.path.join(DATA_DIR, "subarrays.csv")
 ACTIVE_ORDER = ORDER
 
 
-def registry_paths(rev, sim_mode):
-    """(subarrays_csv, samples_csv) absolute paths for (rev, sim_mode) from
+def registry_paths(rev, sim_mode, band=""):
+    """(subarrays_csv, samples_csv) absolute paths for (rev, mode, band) from
     config_registry.csv; SystemExit with guidance if the combo is absent."""
     reg = os.path.join(DATA_DIR, "config_registry.csv")
     with open(reg, newline="") as f:
         for r in csv.DictReader(f):
-            if r["rev"].strip() == rev and r["sim_mode"].strip() == sim_mode:
+            if (r["rev"].strip() == rev and r["sim_mode"].strip() == sim_mode
+                    and (r.get("band") or "").strip().lower() == band):
                 return (os.path.join(DATA_DIR, r["subarrays_csv"].strip()),
                         os.path.join(DATA_DIR, r["samples_csv"].strip()))
     raise SystemExit("make_report.py: no config_registry.csv row for "
-                     "(rev=%r, sim_mode=%r)" % (rev, sim_mode))
+                     "(rev=%r, sim_mode=%r, band=%r)"
+                     % (rev, sim_mode, band))
 
 
 def offered_order(subarrays_csv):
@@ -93,7 +96,7 @@ def offered_order(subarrays_csv):
     return [n for n in ORDER if n in offered]
 
 
-def build_curve(samples, skirt_max=None, max_res=None):
+def build_curve(samples, skirt_max=None, max_res=None, leaves=None):
     """The curve as the shared engine computes it: at each target resolution
     on a fine log grid, the cheapest interpolated-family operating point at
     EXACTLY that resolution (see sa_select/envelope.py; this replaced the
@@ -110,8 +113,8 @@ def build_curve(samples, skirt_max=None, max_res=None):
     """
     curve = []
     prev_key, run = None, 0
-    for c in Envelope(samples).curve(skirt_max=skirt_max, grid_dex=GRID_DEX,
-                                     max_res=max_res):
+    for c in Envelope(samples, leaves=leaves).curve(
+            skirt_max=skirt_max, grid_dex=GRID_DEX, max_res=max_res):
         # family level only: on the robust branch c.robust (and the anchor
         # set, near refined minima) drifts continuously, which would reset
         # the run — and mark a tooltip point — at every grid point
@@ -578,7 +581,8 @@ def annotate_adaptive_validation(display_by):
                 path, subarray=name,
                 beam_cap_mas=(float(cap) * 1e3 if cap is not None else None))
             if table.has_anchors:
-                sampler = Sampler(name, table=table, mode="retrofit")
+                sampler = Sampler(name, table=table,
+                                  mode="fresh" if MFS else "retrofit")
         tally = {RESIDUAL_VALIDATED: 0, NOT_RESIDUAL_VALIDATED: 0,
                  NOT_ASSESSED: 0}
         for point in points:
@@ -602,6 +606,10 @@ def build_payload():
     RESULTS_DIR/grid state)."""
     samples_by = {name: [] for name in ACTIVE_ORDER}
     display_by = {name: [] for name in ACTIVE_ORDER}
+    resolution_column = ("resolution_arcsec_native" if MFS
+                         else "resolution_arcsec_30ghz")
+    taper_column = ("taper_arcsec_native" if MFS
+                    else "taper_arcsec_30ghz")
     with open(CURVES_CSV) as f:
         for r in csv.DictReader(f):
             name = r["subarray"]
@@ -618,13 +626,13 @@ def build_payload():
             # 5 could only support curve points the trim excludes anyway); they
             # feed the envelope but not the dots.
             s = sample_from_row(
-                res_mas=float(r["resolution_arcsec_30ghz"]) * 1e3,   # mas
+                res_mas=float(r[resolution_column]) * 1e3,   # mas
                 eta=float(r["eta"]),
                 skirt=float(r["skirt"]) if r["skirt"] else None,
                 weighting=r["weighting"],
                 robust=float(r["robust"]) if r["robust"] else None,
-                taper_mas=(float(r["taper_arcsec_30ghz"]) * 1e3
-                           if r["taper_arcsec_30ghz"] else 0.0),
+                taper_mas=(float(r[taper_column]) * 1e3
+                           if r[taper_column] else 0.0),
                 capped=capped)
             if s is None:
                 continue
@@ -636,27 +644,32 @@ def build_payload():
     caps = {name: None for name in ACTIVE_ORDER}
     with open(SUBARRAYS_CSV) as f:
         for r in csv.DictReader(f):
-            lam = 0.299792458 / 30.0
+            lam = 0.299792458 / REF_FREQ_GHZ
             las[r["name"]] = dict(
                 mas=float(r["las_coeff"]) * lam / float(r["b_min_m"])
                     * 206264.8 * 1e3,
                 coeff=float(r["las_coeff"]),
                 provisional="PROVISIONAL" in r["las_coeff_note"],
                 n_ant=int(r["n_ant"]))
-            cap = r.get("beam_cap_arcsec_30ghz", "").strip()
+            cap_column = ("beam_cap_arcsec_native" if MFS
+                          else "beam_cap_arcsec_30ghz")
+            cap = r.get(cap_column, "").strip()
             if r["name"] in caps:
                 caps[r["name"]] = float(cap) * 1e3 if cap else None
 
     skirt_setpoints = ["%.2f" % s0 for s0 in SKIRT_SETPOINTS]
     imaging = {}
     for s0, key in zip(SKIRT_SETPOINTS, skirt_setpoints):
-        imaging[key] = {n: build_curve(samples_by[n], s0, max_res=caps[n])
-                        for n in ACTIVE_ORDER}
+        imaging[key] = ({n: [] for n in ACTIVE_ORDER} if CURVE_TYPES == "ptsrc"
+                        else {n: build_curve(samples_by[n], s0,
+                                             max_res=caps[n])
+                              for n in ACTIVE_ORDER})
         if key != SKIRT_DEFAULT_KEY:
             for curve in imaging[key].values():
                 for p in curve:
                     p.pop("env_keys", None)
     heatmaps = {}
+    adaptive_leaves = {}
     if os.path.isdir(RESULTS_DIR):
         for base in sorted(os.listdir(RESULTS_DIR)):
             if not base.endswith(".csv") or ".csv.shard_" in base:
@@ -670,6 +683,17 @@ def build_payload():
                          for r in rows if r.get("subarray")), "")
             if name not in ACTIVE_ORDER:
                 continue
+            if MFS:
+                # The collected native table deliberately carries no hidden
+                # topology state. Reconstruct the AMR leaves from the durable
+                # result rows, exactly as the sampler does after a restart.
+                from adaptive import PointTable, Sampler
+                table = PointTable(rows, subarray=name,
+                                   beam_cap_mas=caps.get(name))
+                adaptive_leaves[name] = Sampler(
+                    name, table=table, beam_cap_mas=caps.get(name)
+                ).envelope_leaves()
+                continue                 # legacy rectangular heatmap is invalid
             cells_by_key = best_result_rows(rows)
             nat = cells_by_key.get(("natural", 2.0, 0.0))
             if not nat or nat.get("status") != "ok":
@@ -682,8 +706,16 @@ def build_payload():
         # anchors only feed the default-threshold heatmaps
         for p in curve:
             p.pop("env_keys", None)
-    pointsource = {n: build_curve(samples_by[n], max_res=caps[n])
+    pointsource = {n: build_curve(samples_by[n], max_res=caps[n],
+                                  leaves=adaptive_leaves.get(n))
                    for n in ACTIVE_ORDER}
+    if MFS:
+        missing_topology = [n for n in ACTIVE_ORDER
+                            if samples_by[n] and n not in adaptive_leaves]
+        if missing_topology:
+            raise RuntimeError(
+                "MFS report cannot reconstruct adaptive topology for: %s"
+                % ", ".join(missing_topology))
     for curve in pointsource.values():
         for p in curve:
             p.pop("env_keys", None)
@@ -721,6 +753,10 @@ def build_payload():
                 counts={n: len(display_by[n]) for n in ACTIVE_ORDER},
                 validation_counts=validation_counts,
                 heatmaps=heatmaps)
+    if MFS:
+        data.update(ref_freq_ghz=REF_FREQ_GHZ,
+                    fixed_window=dict(band=BAND, lo_ghz=FREQ_LO_GHZ,
+                                      hi_ghz=FREQ_HI_GHZ))
 
     # core+spiral natural-PSF radial profile measured 5 Jul 2026 (subsampled
     # diagnostic dump; regenerate with the snippet in PLAN.md if needed)
@@ -742,7 +778,7 @@ def build_payload():
     # sigma_nat (Jy/beam) for 1 h on-source in a 1 MHz channel, on a log
     # frequency grid over the receiver bands.  Scales exactly as
     # 1/sqrt(bandwidth * time); the page applies the curve engine's eta.
-    data["sens"] = build_sens_table(las)
+    data["sens"] = {} if MFS else build_sens_table(las)
 
     # QA cross-check vs the sensitivity calculator's native beams
     data["qa"] = [
@@ -759,7 +795,7 @@ def build_payload():
     # per-combo header/labels/notes: the template applies these in BOTH the
     # combined report and standalone per-combo reports (so e.g. the snapshot
     # physics note and the Rev-F-reference card gating work everywhere)
-    data["combo"] = combo_entry(REV, SIM_MODE)
+    data["combo"] = combo_entry(REV, SIM_MODE, BAND)
 
     # Subarrays with a lazy-load PSF payload on disk at build time.  The page
     # uses this to tell "never exported" apart from "the psf/ folder is not
@@ -840,10 +876,32 @@ _SUB_TAIL_HTML = (
     "marker.")
 
 
-def combo_entry(rev, sim_mode):
+def combo_entry(rev, sim_mode, band="", ref_freq_ghz=None,
+                freq_lo_ghz=None, freq_hi_ghz=None):
     """Dropdown metadata + per-combo header HTML for the combined report."""
     rev_html = _REV_HTML.get(rev, rev)
     snap = sim_mode == "snapshot"
+    if band:
+        ref = REF_FREQ_GHZ if ref_freq_ghz is None else float(ref_freq_ghz)
+        flo = FREQ_LO_GHZ if freq_lo_ghz is None else float(freq_lo_ghz)
+        fhi = FREQ_HI_GHZ if freq_hi_ghz is None else float(freq_hi_ghz)
+        mode_html = _SIM_DESC_HTML.get(sim_mode, sim_mode)
+        h1 = ("%s %s broadband MFS point-source taperability curves"
+              % (rev_html, band.upper()))
+        sub = ("These plots show point-source sensitivity cost (&eta;) against "
+               "the native MFS beam for the fixed %.3g&ndash;%.3g&thinsp;GHz "
+               "spectral window (reference %.3g&thinsp;GHz). Sensitivity cost "
+               "is the image rms divided by the same-window natural-weighting "
+               "rms. The data come from %s noise simulations at declination "
+               "+24&deg;. Fixed-window MFS curves are not monochromatic "
+               "30/f-scaled curves."
+               % (flo, fhi, ref, mode_html))
+        return dict(key="%s_%s_%s" % (rev, sim_mode, band),
+                    label="%s — %s — %s" % (_REV_DISPLAY.get(rev, rev),
+                                             _SIM_LABEL.get(sim_mode, sim_mode),
+                                             band.upper()),
+                    h1_html=h1, sub_html=sub, note_html="",
+                    imaging_omitted=True, calculator_omitted=True)
     h1 = "%s %staperability &amp; sculptability curves" % (
         rev_html, "snapshot " if snap else "")
     sub = ("These plots show sensitivity cost (&eta;) against angular "
@@ -875,7 +933,11 @@ def combined_combo_plan(reg_rows, release=False):
     combo with no samples yet is still skipped gracefully there."""
     plan = []
     for r in reg_rows:
-        entry = combo_entry(r["rev"].strip(), r["sim_mode"].strip())
+        band = (r.get("band") or "").strip().lower()
+        entry = combo_entry(
+            r["rev"].strip(), r["sim_mode"].strip(), band,
+            r.get("ref_freq_ghz") or None, r.get("freq_lo_ghz") or None,
+            r.get("freq_hi_ghz") or None)
         if release:
             if entry["key"] not in RELEASE_COMBOS:
                 continue
@@ -976,18 +1038,28 @@ def build_combined(out_path, release=False):
     combos, payloads = [], {}
     for r, entry in combined_combo_plan(reg_rows, release=release):
         rev, mode = r["rev"].strip(), r["sim_mode"].strip()
+        band = (r.get("band") or "").strip().lower()
         samples_csv = os.path.join(DATA_DIR, r["samples_csv"].strip())
         if not os.path.isfile(samples_csv) or os.path.getsize(samples_csv) < 100:
-            print("combined: skipping %s/%s (no curve samples yet)"
-                  % (rev, mode))
+            print("combined: skipping %s/%s/%s (no curve samples yet)"
+                  % (rev, mode, band or "mono"))
             continue
         fd, tmp = tempfile.mkstemp(suffix=".json", prefix="payload_")
         os.close(fd)
         try:
-            env = dict(os.environ, NGVLA_REV=rev, NGVLA_SIM_MODE=mode)
+            env = dict(os.environ, NGVLA_REV=rev, NGVLA_SIM_MODE=mode,
+                       NGVLA_BAND=band)
+            if band:
+                nchan = (r.get("nchan") or "").strip()
+                if not nchan:
+                    raise RuntimeError(
+                        "combined: %s/%s/%s has samples but registry nchan "
+                        "is unset" % (rev, mode, band))
+                env["NGVLA_NCHAN"] = nchan
             subprocess.run(
                 [sys.executable, os.path.abspath(__file__),
-                 "--rev", rev, "--sim-mode", mode, "--payload-json", tmp],
+                 "--rev", rev, "--sim-mode", mode, "--band", band,
+                 "--payload-json", tmp],
                 env=env, check=True)
             with open(tmp) as f:
                 payload = json.load(f)
@@ -995,8 +1067,8 @@ def build_combined(out_path, release=False):
             os.unlink(tmp)
         combos.append(entry)
         payloads[entry["key"]] = payload
-        print("combined: gathered %s/%s (%d subarrays)"
-              % (rev, mode, len(payload.get("order", []))))
+        print("combined: gathered %s/%s/%s (%d subarrays)"
+              % (rev, mode, band or "mono", len(payload.get("order", []))))
     if not combos:
         raise SystemExit("combined: no combo has curve data")
     # dropdown order per bmason: rev first (F, D, C), track before snapshot;
@@ -1037,6 +1109,8 @@ if __name__ == "__main__":
                     help="config revision (default: $NGVLA_REV or revF)")
     ap.add_argument("--sim-mode", default=SIM_MODE, dest="sim_mode",
                     help="simulation mode (default: $NGVLA_SIM_MODE or track)")
+    ap.add_argument("--band", default=BAND,
+                    help="fixed-window MFS band (default: $NGVLA_BAND or mono)")
     ap.add_argument("--payload-json", default=None, metavar="PATH",
                     help="write the combo's data payload as JSON instead of "
                          "an HTML report (used by --combined)")
@@ -1062,19 +1136,22 @@ if __name__ == "__main__":
     # RESULTS_DIR (the heatmap source) is derived from the environment at
     # import time, so --rev/--sim-mode MUST agree with NGVLA_REV/NGVLA_SIM_MODE.
     # Refuse a mismatch rather than silently drawing another combo's heatmaps.
-    if (args.rev, args.sim_mode) != (REV, SIM_MODE):
-        ap.error("--rev/--sim-mode (%s/%s) disagree with the environment "
-                 "(NGVLA_REV=%s NGVLA_SIM_MODE=%s); export those to match, so "
+    if (args.rev, args.sim_mode, args.band) != (REV, SIM_MODE, BAND):
+        ap.error("--rev/--sim-mode/--band (%s/%s/%s) disagree with the environment "
+                 "(NGVLA_REV=%s NGVLA_SIM_MODE=%s NGVLA_BAND=%s); export those to match, so "
                  "RESULTS_DIR points at the right results dir"
-                 % (args.rev, args.sim_mode, REV, SIM_MODE))
+                 % (args.rev, args.sim_mode, args.band, REV, SIM_MODE, BAND))
 
-    is_default = (args.rev, args.sim_mode) == ("revF", "track")
+    is_default = (args.rev, args.sim_mode, args.band) == ("revF", "track", "")
     if not is_default:
-        SUBARRAYS_CSV, CURVES_CSV = registry_paths(args.rev, args.sim_mode)
+        SUBARRAYS_CSV, CURVES_CSV = registry_paths(args.rev, args.sim_mode,
+                                                   args.band)
         ACTIVE_ORDER = offered_order(SUBARRAYS_CSV)
         label = "%s — %s" % (_REV_DISPLAY.get(args.rev, args.rev),
                                   args.sim_mode)
-        default_out = "%s-%s-curves.html" % (args.rev.lower(), args.sim_mode)
+        suffix = "-%s" % args.band if args.band else ""
+        default_out = "%s-%s%s-curves.html" % (
+            args.rev.lower(), args.sim_mode, suffix)
     else:
         label = None
         default_out = "revf-curves.html"

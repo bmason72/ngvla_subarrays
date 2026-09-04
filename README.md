@@ -22,8 +22,8 @@ documents the method, the runbook, and the Python interface.
 | Path | What it is |
 |------|-----------|
 | `sa_select/` | The selection tool (pure Python + numpy at query time, no CASA). `schema.py` documents units and data-table columns. `stroh.py` reads M. Stroh's delivery formats (.cfg subarrays + subarray_data.json curves). |
-| `sa_select/data/` | Per-campaign curve + metadata tables, routed by `config_registry.csv` (revF/revD/revC × track/snapshot). `subarrays*.csv` (per-subarray facts), `<rev>_<mode>_curves.csv` (collected curves). |
-| `curvegen/` | Curve generation under CASA: `config.py` (grids + the (rev, sim_mode) axis — the only file to tweak), `sweep.py` (resumable lattice), `refine.py` (escalating defect refinement), `adaptive.py` (goal-driven quadtree sampler / retrofit), `backfill_psf.py` (PSF axis-cut backfill), `collect.py`, `make_report.py` + `report_template.html` (local HTML reports incl. the `--release` page). `results*/` CSVs are tracked; `ms/`, `work/`, `reports/` are regenerable. |
+| `sa_select/data/` | Per-campaign curve + metadata tables, routed by `config_registry.csv` on `(rev, sim_mode, band)`; an empty band is a legacy mono campaign and `band4` is the in-progress Ka MFS campaign. |
+| `curvegen/` | Curve generation under CASA: `config.py` (grids + campaign axes), `simulate.py` (mono/MFS MS creation and validation), `campaign_manifest.py` (immutable MFS provenance), `sweep.py` (resumable imaging), `refine.py` and `adaptive.py` (refinement/sampling), plus collect/report tooling. `results*/` CSVs are tracked; `ms/`, `work/`, `reports/` are regenerable. |
 | `tests/` | 253 stdlib-unittest tests incl. memo-121 replay validation. |
 | `memo/` | The LaTeX memo (`make pdf`). |
 | `ngvla-configurations/`, `ngvla-sensitivity-calculator/`, `ngvla-taperability-pipeline/`, `memos/`, `memo*/`, `artifacts/` | Upstream raw materials (see CLAUDE.md). |
@@ -56,7 +56,7 @@ python3 -m unittest discover -s tests -t .           # test suite
 python3 build_configs.py            # subarray .cfg files
 python3 sweep.py core               # simulate + sweep one subarray
 python3 refine.py core              # escalating refinement where curves jump
-python3 collect.py                  # results/*.csv -> registered curves CSV
+python3 collect.py                  # results/*.csv -> registered mono or native-MFS curves CSV
 python3 make_report.py reports/revf-curves.html               # one campaign
 python3 make_report.py --combined reports/ngvla-curves.html   # ALL campaigns
 python3 make_report.py --combined --release \

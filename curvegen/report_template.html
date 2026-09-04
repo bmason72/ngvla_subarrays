@@ -216,7 +216,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
       <input id="calc-res" name="resolution" type="number" min="0" step="any" value="0.01" inputmode="decimal">
     </label>
     <label class="calc-field"><span>Bandwidth [MHz]</span>
-      <input id="calc-bandwidth" name="bandwidth" type="number" min="0" step="1" value="1000" inputmode="decimal">
+      <input id="calc-bandwidth" name="bandwidth" type="number" min="0" step="any" value="1000" inputmode="decimal">
     </label>
     <label class="calc-field"><span>LAS [&Prime;]</span>
       <input id="calc-las" name="las" type="number" min="0" step="0.001" placeholder="optional" inputmode="decimal">
@@ -249,6 +249,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
     <label class="calc-field"><span>Sensitivity units</span>
       <select id="calc-sens-unit" name="sens_unit">
         <option value="uJy" selected>&micro;Jy/beam</option>
+        <option value="mJy">mJy/beam</option>
         <option value="K">K</option>
       </select>
     </label>
@@ -893,6 +894,8 @@ function evaluateSubarray(name, request, order) {
       return {name, feasible: false, reasons: [mainSens.reason], order};
     goalMicroJy = mainSens.sigma * Math.sqrt(60 / request.bandwidth);
     goalOrigin = 'main_natural_1min_fiducial';
+  } else if (request.sensUnit === 'mJy') {
+    goalMicroJy = request.sensitivity * 1000;
   } else if (request.sensUnit === 'K') {
     const achievedArcsec = Number(curve.point.res) * 30 / request.freq / 1000;
     goalMicroJy = kelvinToMicroJy(request.sensitivity, achievedArcsec, request.freq);
@@ -1119,7 +1122,9 @@ function curveChart(el, curves, opts) {
   svg.append(svgEl('line', {x1: M.l, x2: W - M.r, y1: H - M.b, y2: H - M.b,
                             stroke: 'var(--axis)', 'stroke-width': 1}));
   const xt = svgEl('text', {x: (M.l + W - M.r)/2, y: H - 6, 'text-anchor': 'middle'});
-  xt.textContent = 'resolution (beam FWHM at 30 GHz)'; svg.append(xt);
+  const refFreq = finitePositive(Number(DATA.ref_freq_ghz))
+    ? Number(DATA.ref_freq_ghz) : 30;
+  xt.textContent = 'resolution (beam FWHM at ' + fmtSig(refFreq) + ' GHz)'; svg.append(xt);
   const yt = svgEl('text', {x: 12, y: (H - M.b + M.t)/2, 'text-anchor': 'middle',
     transform: `rotate(-90 12 ${(H - M.b + M.t)/2})`});
   yt.textContent = 'η  (rms ÷ natural rms)'; svg.append(yt);
@@ -2036,6 +2041,8 @@ function updateComboHeader() {
   // values) -- only show it on that campaign
   const qaCard = document.getElementById('qa-table').closest('.card');
   if (qaCard) qaCard.style.display = combo.key === 'revF_track' ? '' : 'none';
+  const calculator = document.getElementById('subarray-calculator');
+  if (calculator) calculator.style.display = combo.calculator_omitted ? 'none' : '';
 }
 
 function renderAll() {
@@ -2052,7 +2059,8 @@ function renderAll() {
   renderPsfPanel();
   renderQaTable();
   renderDataTable();
-  runSubarrayCalculator();
+  const combo = currentCombo();
+  if (!combo || !combo.calculator_omitted) runSubarrayCalculator();
 }
 
 (function wireComboSelector() {

@@ -120,15 +120,18 @@ class Point:
     """One measured lattice sample, in whatever resolution unit the caller
     uses (the engine only ever compares resolutions to each other)."""
 
-    __slots__ = ("res", "eta", "skirt", "weighting", "robust", "taper", "ref")
+    __slots__ = ("res", "eta", "skirt", "weighting", "robust", "taper",
+                 "capped", "ref")
 
-    def __init__(self, res, eta, skirt, weighting, robust, taper, ref=None):
+    def __init__(self, res, eta, skirt, weighting, robust, taper, capped=False,
+                 ref=None):
         self.res = float(res)
         self.eta = float(eta)
         self.skirt = None if skirt is None else float(skirt)
         self.weighting = weighting
         self.robust = _canon_robust(weighting, robust)
         self.taper = 0.0 if taper is None else float(taper)
+        self.capped = bool(capped)
         self.ref = ref          # caller's original object (e.g. CurveSample)
 
 
@@ -239,8 +242,15 @@ def build_points(samples: Sequence[dict]) -> List[Point]:
     for s in samples:
         get = s.get if isinstance(s, dict) else lambda k, _s=s: getattr(_s, k)
         ref = s["ref"] if isinstance(s, dict) and "ref" in s else s
+        if isinstance(s, dict):
+            capped = bool(s.get("capped", False)
+                          or s.get("sample_status") in ("capped",
+                                                        "capped_anchor"))
+        else:
+            capped = getattr(s, "sample_status", "") in ("capped",
+                                                           "capped_anchor")
         p = Point(get("res"), get("eta"), get("skirt"), get("weighting"),
-                  get("robust"), get("taper"), ref=ref)
+                  get("robust"), get("taper"), capped=capped, ref=ref)
         k = (p.weighting, p.robust, round(p.taper, 6))
         if k in seen:
             continue
@@ -587,6 +597,92 @@ def build_cells(points: Sequence[Point]) -> List["Cell"]:
     return cells
 
 
+def _leaf_attr(leaf, name, default=None):
+    return leaf.get(name, default) if isinstance(leaf, dict) \
+        else getattr(leaf, name, default)
+
+
+def build_leaf_families(points: Sequence[Point], leaves: Sequence
+                        ) -> Tuple[List[Segment], List["Cell"]]:
+    """Build adaptive leaf edges and bilinear interiors.
+
+    ``leaves`` is a sequence of objects/mappings carrying ``r0,r1,t0,t1`` and
+    an optional truthy ``cut`` flag.  Unlike :func:`build_cells`, topology is
+    supplied explicitly: non-dyadic auxiliary points may split a leaf edge
+    into consecutive segments (hanging-node registration), but can never
+    become cell corners.  Cut leaves contribute their measured edges only and
+    no interior bilinear interpolation.  Capped points are resolution-censored
+    and therefore cannot define an adaptive edge or cell.
+
+    Natural-row and taper-zero seam families retain the established regular
+    segment rules; they are outside the positive-taper quadtree.
+    """
+    usable = [p for p in points if not p.capped]
+    by_key = {(round(p.robust, 6), round(p.taper, 6)): p for p in usable
+              if p.weighting == "briggs" and p.robust is not None}
+
+    # Preserve only the 1-D families outside the adaptive domain from the
+    # regular enumerator.  Positive-taper Briggs edges are reconstructed below
+    # from the explicit leaves.
+    segments = [s for s in build_segments(usable)
+                if s.a.weighting == "natural"
+                or (s.a.weighting == "briggs"
+                    and (s.a.taper == 0.0 or s.b.taper == 0.0))]
+    seg_seen = set()
+    for s in segments:
+        ka = (s.a.weighting, s.a.robust, round(s.a.taper, 6))
+        kb = (s.b.weighting, s.b.robust, round(s.b.taper, 6))
+        seg_seen.add(tuple(sorted((ka, kb), key=repr)))
+
+    cells = []
+
+    def add_edge(edge_points, column):
+        edge_points = sorted(edge_points,
+                             key=(lambda p: p.robust) if column
+                             else (lambda p: p.taper))
+        for a, b in zip(edge_points, edge_points[1:]):
+            if column:
+                if b.robust - a.robust > MAX_ROBUST_GAP:
+                    continue
+                limit = MAX_RES_STEP_COLUMN
+            else:
+                if a.taper == 0.0:
+                    limit = ZERO_TAPER_RES_STEP
+                else:
+                    if b.taper / a.taper > MAX_TAPER_STEP:
+                        continue
+                    limit = MAX_RES_STEP
+            if max(a.res, b.res) / min(a.res, b.res) > limit:
+                continue
+            ka = (a.weighting, a.robust, round(a.taper, 6))
+            kb = (b.weighting, b.robust, round(b.taper, 6))
+            skey = tuple(sorted((ka, kb), key=repr))
+            if skey not in seg_seen:
+                segments.append(Segment(a, b, column=column))
+                seg_seen.add(skey)
+
+    for leaf in leaves:
+        r0, r1 = float(_leaf_attr(leaf, "r0")), float(_leaf_attr(leaf, "r1"))
+        t0, t1 = float(_leaf_attr(leaf, "t0")), float(_leaf_attr(leaf, "t1"))
+        tol = 5e-7
+        # Every measured point on an edge participates, so a fine neighbor's
+        # hanging node automatically divides the coarser edge into segments.
+        for tp in (t0, t1):
+            add_edge([p for p in usable if p.weighting == "briggs"
+                      and abs(p.taper - tp) <= tol
+                      and r0 - tol <= p.robust <= r1 + tol], column=True)
+        for rb in (r0, r1):
+            add_edge([p for p in usable if p.weighting == "briggs"
+                      and abs(p.robust - rb) <= tol
+                      and t0 - tol <= p.taper <= t1 + tol], column=False)
+
+        corners = [by_key.get((round(r, 6), round(t, 6)))
+                   for r, t in ((r0, t0), (r1, t0), (r0, t1), (r1, t1))]
+        if not _leaf_attr(leaf, "cut", False) and all(corners):
+            cells.append(Cell(*corners))
+    return segments, cells
+
+
 # --------------------------------------------------------------------------- #
 # the engine
 
@@ -594,10 +690,13 @@ def build_cells(points: Sequence[Point]) -> List["Cell"]:
 class Envelope:
     """Interpolated curve families for ONE subarray's samples."""
 
-    def __init__(self, samples: Sequence):
+    def __init__(self, samples: Sequence, leaves: Optional[Sequence] = None):
         self.points = build_points(samples)
-        self.segments = build_segments(self.points)
-        self.cells = build_cells(self.points)
+        if leaves is None:
+            self.segments = build_segments(self.points)
+            self.cells = build_cells(self.points)
+        else:
+            self.segments, self.cells = build_leaf_families(self.points, leaves)
 
     def coverage(self) -> Optional[Tuple[float, float]]:
         if not self.points:

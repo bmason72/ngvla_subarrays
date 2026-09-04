@@ -26,7 +26,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from config import REV, SIM_MODE, CAP_REFERENCE, SUBARRAYS, REPO   # noqa: E402
+from config import (REV, SIM_MODE, BAND, CAP_REFERENCE, SUBARRAYS, REPO)  # noqa: E402
 
 DATA_DIR = os.path.join(REPO, "sa_select", "data")
 HEAVY_BMAX_M = 2.6e6          # > 2600 km baselines -> own node
@@ -36,10 +36,12 @@ def _subarrays_csv():
     reg = os.path.join(DATA_DIR, "config_registry.csv")
     with open(reg, newline="") as f:
         for r in csv.DictReader(f):
-            if r["rev"].strip() == REV and r["sim_mode"].strip() == SIM_MODE:
+            if (r["rev"].strip() == REV
+                    and r["sim_mode"].strip() == SIM_MODE
+                    and (r.get("band") or "").strip().lower() == BAND):
                 return os.path.join(DATA_DIR, r["subarrays_csv"].strip())
-    raise SystemExit("no config_registry.csv row for (rev=%r, sim_mode=%r)"
-                     % (REV, SIM_MODE))
+    raise SystemExit("no config_registry.csv row for (rev=%r, sim_mode=%r, "
+                     "band=%r)" % (REV, SIM_MODE, BAND))
 
 
 def _offered():

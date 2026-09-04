@@ -337,6 +337,35 @@ class TestRetrofitSeed(unittest.TestCase):
         refined = [c for c in s.tree.all_leaves() if c.refined]
         self.assertGreater(len(refined), 0, "warm start did not refine any cell")
 
+    def test_reconstruction_stops_when_midpoints_alias_stored_keys(self):
+        # Real failing geometry from spiral+mid+long: the four corners are still
+        # distinct at point_key precision, but robust/taper midpoints round onto
+        # endpoints.  An all-hit table must not make that aliasing look like an
+        # indefinitely refinable measured stencil.
+        leaf = A.Leaf(-0.05, -0.0375,
+                      0.1525558129143242, 0.15412765598642578, 6)
+        self.assertEqual(len(set(A.key_rt(*p) for p in leaf.corners())), 4)
+        self.assertFalse(leaf.can_subdivide())
+
+        class AllHitTable:
+            @staticmethod
+            def hit(_key):
+                return True
+
+        tree = A.QuadTree.__new__(A.QuadTree)
+        tree.table = AllHitTable()
+        tree._reconstruct_leaf(leaf)
+        self.assertFalse(leaf.refined)
+        self.assertIsNone(leaf.children)
+
+    def test_planner_rejects_degenerate_stencil_before_partial_proposal(self):
+        leaf = A.Leaf(-0.05, -0.0375,
+                      0.1525558129143242, 0.15412765598642578, 6)
+        self.assertFalse(leaf.can_subdivide())
+        sampler = A.Sampler.__new__(A.Sampler)
+        sampler.table = A.PointTable([], subarray="core")
+        self.assertEqual(sampler._stencil_new(leaf), [])
+
     def test_clean_lattice_has_no_missing_seed_vertices(self):
         s = sampler(model_smooth)
         self.assertEqual(len(s.tree.missing_seed_points()), 0)
@@ -367,6 +396,19 @@ class TestNonDyadicAuxiliary(unittest.TestCase):
 # 6. effective-row rule + capped/failed/retried handling + res censoring
 
 class TestEffectiveRows(unittest.TestCase):
+
+    def test_repeat_rows_estimate_component_jitter(self):
+        rows = [
+            _row("core", "natural", 2.0, 0.0, 1.3, 1.0, 0.05),
+            _row("core", "briggs", 0.0, 1.0, 1.0, 1.0, 0.05),
+            _row("core", "briggs", 0.0, 1.0, 1.02, 1.2, 0.07),
+        ]
+        t = A.PointTable(rows, subarray="core")
+        self.assertTrue(t.has_repeatability)
+        self.assertEqual(t.repeat_components, (True, True, True))
+        self.assertAlmostEqual(t.jitter[0], abs(math.log(1.02)) / math.sqrt(2))
+        self.assertAlmostEqual(t.jitter[1], 0.2 / math.sqrt(2))
+        self.assertAlmostEqual(t.jitter[2], 0.02 / math.sqrt(2))
 
     def test_last_ok_or_capped_wins(self):
         rows = [_row("core", "briggs", 0.0, 1.0, 1.0, 2.0, 0.1, "ok"),
@@ -440,6 +482,22 @@ class TestEffectiveRows(unittest.TestCase):
         # the wild resolution blows up E_T when 'ok', but is censored when 'capped'
         self.assertGreater(e_ok, e_cap + 1.0)
 
+    def test_capped_corner_does_not_define_resolution_range_or_cut(self):
+        leaf = A.Leaf(-1.0, 1.0, 1.0, 2.0, 0)
+        rows = [
+            _row("core", "natural", 2.0, 0.0, 1.3, 1.0, 0.05),
+            _row("core", "briggs", -1.0, 1.0, 1.0, 1.0, 0.05),
+            _row("core", "briggs", 1.0, 1.0, 1.1, 1.0, 0.05),
+            _row("core", "briggs", -1.0, 2.0, 99.0, 1.1, 0.05, "capped"),
+            _row("core", "briggs", 1.0, 2.0, 1.2, 1.1, 0.05),
+        ]
+        table = A.PointTable(rows, subarray="core")
+        sampler = A.Sampler.__new__(A.Sampler)
+        sampler.table = table
+        cm = sampler._corner_mvecs(leaf)
+        self.assertEqual(sampler._leaf_res_range(leaf, cm), (1.0, 1.2))
+        self.assertIsNone(sampler._detect_cut(leaf))
+
 
 # --------------------------------------------------------------------------- #
 # 7. restart determinism (same table -> byte-equal next wave)
@@ -463,6 +521,18 @@ class TestRestartDeterminism(unittest.TestCase):
 # 8. budget admission (whole stencil or nothing; audit cap; B shrink)
 
 class TestBudgetAdmission(unittest.TestCase):
+
+    def test_fresh_restart_budget_counts_failed_attempts(self):
+        rows = [
+            _row("core", "natural", 2.0, 0.0, 1.3, 1.0, 0.05),
+            _row("core", "briggs", -2.0, 0.0, 1.0, 1.02, 0.05),
+            _row("core", "briggs", 0.0, 1.0, None, None, None, "failed"),
+        ]
+        table = A.PointTable(rows, subarray="core")
+        s = A.Sampler("core", table=table, mode="fresh")
+        p = s.plan_wave()
+        self.assertEqual(p.audit_room, A.AUDIT_FRESH - table.n_attempted)
+        self.assertEqual(p.plan_room, A.PLAN_FRESH - table.n_attempted)
 
     def test_audit_cap_never_crossed(self):
         s = sampler(model_gap)
@@ -505,6 +575,17 @@ class TestBudgetAdmission(unittest.TestCase):
 
 class TestClassifier(unittest.TestCase):
 
+    def test_smooth_label_requires_repeatability_evidence(self):
+        rows = synth_rows(model_smooth, "core")
+        no_repeat = A.Sampler("core", table=A.PointTable(rows, subarray="core"))
+        self.assertFalse(any(c.refined and c.feature == A.SMOOTH
+                             for c in no_repeat.tree.all_leaves()))
+        repeated = list(rows) + [dict(rows[0])]
+        with_repeat = A.Sampler(
+            "core", table=A.PointTable(repeated, subarray="core"))
+        self.assertTrue(any(c.refined and c.feature == A.SMOOTH
+                            for c in with_repeat.tree.all_leaves()))
+
     def test_cliff_classified_as_step_with_bracket(self):
         s = sampler(model_cliff)
         steps = [c for c in s.tree.all_leaves()
@@ -514,6 +595,9 @@ class TestClassifier(unittest.TestCase):
         self.assertEqual(cut.axis, "taper")
         self.assertLess(cut.lo, cut.hi)
         self.assertGreater(cut.res_coarse / cut.res_fine, A.GAP_RATIO)
+        self.assertGreater(cut.delta, 0.0)
+        self.assertLessEqual(cut.delta, 1.0)
+        self.assertEqual({cut.fine_side, cut.coarse_side}, {"lo", "hi"})
 
     def test_fillable_map_is_not_a_step(self):
         s = sampler(model_gap)
@@ -571,6 +655,12 @@ class TestDominance(unittest.TestCase):
         dominated = [l for l in s.tree.terminal_leaves()
                      if l.state == A.DOMINATED]
         self.assertTrue(any(l.r0 < 0 for l in dominated))
+        leaf = dominated[0]
+        E = leaf.E_T if leaf.refined else (leaf.parent_E or 0.0)
+        area = leaf.area(s.table.t_min, s.table.t_max)
+        expected = (A.W_GOAL_DOMINATED * min(E, A.E_MAX) * math.sqrt(area)
+                    + A.LAMBDA * area)
+        self.assertAlmostEqual(leaf.loss, expected)
 
     def test_interior_gap_is_not_dominated(self):
         # a leaf straddling a genuine curve gap stays active (long-style)
@@ -641,6 +731,12 @@ class TestLossAndExploration(unittest.TestCase):
 # 12. conforming closure / 2:1 balance geometry
 
 class TestBalanceClosure(unittest.TestCase):
+
+    def test_envelope_topology_marks_step_descendants_as_cut(self):
+        s = sampler(model_cliff)
+        topology = s.envelope_leaves()
+        self.assertEqual(len(topology), len(s.tree.terminal_leaves()))
+        self.assertTrue(any(leaf["cut"] for leaf in topology))
 
     def test_edge_adjacent_detection(self):
         s = sampler(model_smooth)

@@ -75,7 +75,9 @@ if REPO not in sys.path:
     sys.path.insert(0, REPO)
 
 from config import (ROBUST_LIST, TAPER_LO_X, TAPER_HI_X, BEAM_CAP_ARCSEC,
-                    RESULTS_DIR, REV, SIM_MODE, SUBARRAYS, grid_rows)
+                    RESULTS_DIR, REV, SIM_MODE, BAND, MFS, NCHAN,
+                    REF_FREQ_GHZ, FREQ_LO_GHZ, FREQ_HI_GHZ, CURVE_TYPES,
+                    NOISE_POLICY, SUBARRAYS, grid_rows)
 from adaptive_support import (point_key, progressive_log_midpoints, GAP_RATIO,
                               RIM_DEX, SKIRT_MAX)
 from make_report import build_curve, sample_from_row
@@ -164,10 +166,23 @@ def manifest():
         retire_e=RETIRE_E, dominance=DOMINANCE_MARGIN,
         w_goal=(W_GOAL_ON, W_GOAL_DEFAULT, W_GOAL_DOMINATED),
         seed_robusts=SEED_ROBUSTS, n_seed_tapers=N_SEED_TAPERS,
+        seed_total=SEED_TOTAL_FRESH, seed_leaves=SEED_LEAVES_FRESH,
         taper_lo_x=TAPER_LO_X, taper_hi_x=TAPER_HI_X,
         skirt_band=SKIRT_BAND, eta_cap=ETA_CAP, gap_ratio=GAP_RATIO,
         plan=(PLAN_FRESH, PLAN_RETRO), audit=(AUDIT_FRESH, AUDIT_RETRO),
-        tie_break="lexicographic point_key")
+        batch=(B_MIN, B_MAX),
+        freeze=(FREEZE_TAPER_RATIO, FREEZE_ROBUST_WIDTH),
+        localize_k=LOCALIZE_K,
+        jitter_estimator="pooled-within-point sample sigma; component fallback",
+        canonicalization=dict(robust_decimals=2, taper_mas_decimals=3,
+                              negative_zero="fold-to-positive-zero"),
+        topology_key_floor="distinct-3x3-point-key-grid",
+        balance_closure="full coarser-neighbor stencil (budget-accounted fallback)",
+        tie_break="lexicographic point_key",
+        campaign=(dict(band=BAND, nchan=NCHAN, ref_freq_ghz=REF_FREQ_GHZ,
+                       freq_lo_ghz=FREQ_LO_GHZ, freq_hi_ghz=FREQ_HI_GHZ,
+                       curve_types=CURVE_TYPES, noise_policy=NOISE_POLICY)
+                  if MFS else dict(band="", nchan=1, ref_freq_ghz=30.0)))
 
 
 def manifest_hash():
@@ -304,6 +319,70 @@ class PointTable:
         if self.res_fine and self.res_nat:
             self.t_min = TAPER_LO_X * self.res_fine
             self.t_max = TAPER_HI_X * self.res_nat
+        self.jitter, self.repeat_components, self.n_repeat_keys = \
+            self._estimate_jitter(rows)
+
+    def _estimate_jitter(self, rows):
+        """Estimate per-map measurement jitter from repeated canonical points.
+
+        For each model-vector component, pool within-point sample variance so
+        real structure across the map is never mistaken for measurement noise.
+        Components without enough uncensored repeats retain their documented
+        defaults.  Capped rows contribute eta/skirt repeats but never ln-res.
+        """
+        groups = {}
+        for r in rows:
+            if (r.get("status") or "").strip() not in ("ok", "capped"):
+                continue
+            try:
+                key = point_key(r["weighting"], r["robust"], r["taper_mas"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            groups.setdefault(key, []).append(r)
+
+        sumsq = [0.0, 0.0, 0.0]
+        dof = [0, 0, 0]
+        repeat_keys = 0
+        for same_point in groups.values():
+            if len(same_point) < 2:
+                continue
+            repeat_keys += 1
+            values = [[], [], []]
+            for r in same_point:
+                status = (r.get("status") or "").strip()
+                if status != "capped":
+                    try:
+                        res = float(r["res_geo_arcsec"]) * 1e3
+                        if res > 0 and math.isfinite(res):
+                            values[0].append(math.log(res))
+                    except (KeyError, TypeError, ValueError):
+                        pass
+                try:
+                    sigma = float(r["sigma_dirty"])
+                    if self._sigma_nat and math.isfinite(sigma):
+                        values[1].append(sigma / self._sigma_nat)
+                except (KeyError, TypeError, ValueError):
+                    pass
+                try:
+                    skirt = float(r["skirt"])
+                    if math.isfinite(skirt):
+                        values[2].append(skirt)
+                except (KeyError, TypeError, ValueError):
+                    pass
+            for k, vals in enumerate(values):
+                if len(vals) < 2:
+                    continue
+                mean = sum(vals) / len(vals)
+                sumsq[k] += sum((v - mean) ** 2 for v in vals)
+                dof[k] += len(vals) - 1
+
+        estimated = tuple(math.sqrt(sumsq[k] / dof[k]) if dof[k]
+                          else SIGMA_DEFAULT[k] for k in range(3))
+        return estimated, tuple(bool(n) for n in dof), repeat_keys
+
+    @property
+    def has_repeatability(self):
+        return any(self.repeat_components)
 
     # -- construction -------------------------------------------------------- #
     @classmethod
@@ -490,6 +569,20 @@ class Leaf:
                 (self.r0, tm, 0.0, 0.5),
                 (self.r1, tm, 1.0, 0.5)]
 
+    def can_subdivide(self):
+        """Whether bisection produces a distinct 3x3 grid of stored keys.
+
+        Geometry is retained at full precision, but measurements are keyed at
+        0.01 in robust and 0.001 mas in taper.  Once either midpoint rounds to
+        an endpoint, a child's stencil aliases existing corner/probe keys and
+        cannot provide evidence of a further refinement.  Treat that cell as
+        terminal instead of constructing key-degenerate children.
+        """
+        rm, tm = _mid_robust(self.r0, self.r1), _mid_taper(self.t0, self.t1)
+        robust_keys = {key_rt(r, self.t0) for r in (self.r0, rm, self.r1)}
+        taper_keys = {key_rt(self.r0, t) for t in (self.t0, tm, self.t1)}
+        return len(robust_keys) == 3 and len(taper_keys) == 3
+
     def area(self, t_min, t_max):
         """A_T in the normalized (u,v) plane."""
         du = (self.r1 - self.r0) / 4.0
@@ -608,6 +701,13 @@ class QuadTree:
         if not all(t.hit(k) for k in corner_keys):
             leaf.refined = False               # incomplete: corners not all in
             return
+        if not leaf.can_subdivide():
+            # At point_key precision there is no distinct midpoint stencil.
+            # Without this terminal condition, aliased corner/probe hits look
+            # complete forever and reconstruction recurses into zero-key-width
+            # children until Python's recursion limit is reached.
+            leaf.refined = False
+            return
         stencil = leaf.stencil()
         if not all(t.hit(key_rt(rp, tp)) for (rp, tp, _s, _u) in stencil):
             leaf.refined = False               # terminal (untested)
@@ -640,7 +740,7 @@ class QuadTree:
                 if meas is None or None in (c00, c10, c01, c11):
                     continue                    # skirt unmeasured somewhere
                 pred = _bilinear(c00, c10, c01, c11, s, u)
-                r = (abs(meas - pred) - KAPPA * SIGMA_DEFAULT[k])
+                r = (abs(meas - pred) - KAPPA * t.jitter[k])
                 if r > 0:
                     E = max(E, r / TAU[k])
         return E
@@ -747,16 +847,20 @@ class _Envelope:
 class Cut:
     """A discontinuity localized on a leaf edge: the crossed axis ('taper' or
     'robust'), the bracketed crossing interval (lo,hi) in that axis's PARAMETER
-    units, the fine/coarse resolutions across it, and the freeze flag."""
+    units, the normalized bracket width, the fine/coarse side labels and
+    resolutions across it, and the freeze flag."""
 
     __slots__ = ("axis", "fixed", "lo", "hi", "res_fine", "res_coarse",
-                 "delta", "frozen")
+                 "delta", "fine_side", "coarse_side", "frozen")
 
-    def __init__(self, axis, fixed, lo, hi, res_fine, res_coarse, delta, frozen):
+    def __init__(self, axis, fixed, lo, hi, res_fine, res_coarse, delta,
+                 fine_side, coarse_side, frozen):
         self.axis, self.fixed = axis, fixed
         self.lo, self.hi = lo, hi
         self.res_fine, self.res_coarse = res_fine, res_coarse
-        self.delta, self.frozen = delta, frozen
+        self.delta = delta
+        self.fine_side, self.coarse_side = fine_side, coarse_side
+        self.frozen = frozen
 
     def mid_res_mas(self):
         return math.sqrt(self.res_fine * self.res_coarse)
@@ -792,6 +896,14 @@ class Sampler:
     def __init__(self, subarray, table=None, mode=None, audit_budget=None,
                  beam_cap_mas=None):
         self.subarray = subarray
+        # The broadband campaign is a new measurement campaign, never a
+        # retrofit of the legacy 30-GHz lattice.  Pin this before constructing
+        # the tree so a restart on a now-populated MFS table cannot silently
+        # flip from fresh to retrofit budget/topology semantics.
+        if MFS:
+            if mode not in (None, "fresh"):
+                raise ValueError("MFS campaigns require fresh sampler mode")
+            mode = "fresh"
         if table is None:
             path = results_csv_path(subarray)
             cap = beam_cap_mas
@@ -821,7 +933,10 @@ class Sampler:
         return [self.table.mvec(key_rt(*rt)) for rt in leaf.corners()]
 
     def _leaf_res_range(self, leaf, cm):
-        rr = [m.res_mas for m in cm if m is not None]
+        # A capped image says only that the requested field/cell could not
+        # measure the true coarse resolution.  Its eta/skirt remain useful,
+        # but the reported beam must not define a resolution interval.
+        rr = [m.res_mas for m in cm if m is not None and not m.capped]
         return (min(rr), max(rr)) if rr else None
 
     def _leaf_min_eta(self, cm):
@@ -893,23 +1008,29 @@ class Sampler:
                     continue
                 lo, hi = (p0, p1) if p0 < p1 else (p1, p0)
                 fine, coarse = (min(r0, r1), max(r0, r1))
+                fine_side, coarse_side = (("lo", "hi") if r0 < r1
+                                          else ("hi", "lo"))
                 sev = coarse / fine
                 if best is None or sev > best[0]:
                     if axis == "taper":
                         frozen = hi / lo <= FREEZE_TAPER_RATIO
-                        delta = math.log(hi / lo)
+                        if t.has_anchors:
+                            delta = abs(taper_to_v(hi, t.t_min, t.t_max)
+                                        - taper_to_v(lo, t.t_min, t.t_max))
+                        else:
+                            delta = math.log(hi / lo)
                     else:
                         frozen = (hi - lo) <= FREEZE_ROBUST_WIDTH
-                        delta = hi - lo
+                        delta = abs(robust_to_u(hi) - robust_to_u(lo))
                     best = (sev, Cut(axis, fixed, lo, hi, fine, coarse, delta,
-                                     frozen))
+                                     fine_side, coarse_side, frozen))
 
         # taper direction at each robust rim
         for fr in (leaf.r0, leaf.r1):
             seq = []
             for m_taper in self._tapers_in(fr, leaf.t0, leaf.t1):
                 mv = t.mvec_rt(fr, m_taper)
-                if mv is not None:
+                if mv is not None and not mv.capped:
                     seq.append((m_taper, mv.res_mas))
             consider("taper", fr, sorted(seq))
         # robust direction at each taper rim
@@ -917,7 +1038,7 @@ class Sampler:
             seq = []
             for m_rob in self._robusts_in(ft, leaf.r0, leaf.r1):
                 mv = t.mvec_rt(m_rob, ft)
-                if mv is not None:
+                if mv is not None and not mv.capped:
                     seq.append((m_rob, mv.res_mas))
             consider("robust", ft, sorted(seq))
         return best[1] if best else None
@@ -967,7 +1088,8 @@ class Sampler:
                      interior probe dips below the chord) or otherwise ambiguous.
         """
         if cell.E_T is not None and cell.E_T < RETIRE_E:
-            cell.feature = SMOOTH
+            cell.feature = (SMOOTH if self.table.has_repeatability
+                            else UNRESOLVED)
             return
         cut = self._detect_cut(cell)
         if cut is not None:
@@ -1003,7 +1125,8 @@ class Sampler:
                     if not (cut.lo + 1e-9 < tp < cut.hi - 1e-9):
                         continue
                     mv = self.table.mvec_rt(fr, tp)
-                    if mv is not None and lo_r + RIM_DEX < mv.lnres < hi_r - RIM_DEX:
+                    if mv is not None and not mv.capped \
+                            and lo_r + RIM_DEX < mv.lnres < hi_r - RIM_DEX:
                         return True
         else:
             for ft in (cell.t0, cell.t1):
@@ -1011,7 +1134,8 @@ class Sampler:
                     if not (cut.lo + 1e-9 < rb < cut.hi - 1e-9):
                         continue
                     mv = self.table.mvec_rt(rb, ft)
-                    if mv is not None and lo_r + RIM_DEX < mv.lnres < hi_r - RIM_DEX:
+                    if mv is not None and not mv.capped \
+                            and lo_r + RIM_DEX < mv.lnres < hi_r - RIM_DEX:
                         return True
         return False
 
@@ -1023,14 +1147,14 @@ class Sampler:
         if rng is None:
             return []
         res_fine, res_coarse = rng
-        fine_eta = min((m.eta for m in cm if m is not None
+        fine_eta = min((m.eta for m in cm if m is not None and not m.capped
                         and abs(m.res_mas - res_fine) < 1e-9), default=None)
-        coarse_eta = min((m.eta for m in cm if m is not None
+        coarse_eta = min((m.eta for m in cm if m is not None and not m.capped
                           and abs(m.res_mas - res_coarse) < 1e-9), default=None)
         out = []
         for (rp, tp, _s, _u) in leaf.stencil():
             mv = self.table.mvec_rt(rp, tp)
-            if mv is None:
+            if mv is None or mv.capped:
                 continue
             s = sample_from_row(res_mas=mv.res_mas, eta=mv.eta, skirt=mv.skirt,
                                 weighting="briggs", robust=rp, taper_mas=tp,
@@ -1081,7 +1205,8 @@ class Sampler:
                 continue
             if leaf.certified:                  # parent E_T < RETIRE_E
                 leaf.state = CONVERGED
-                leaf.feature = SMOOTH
+                leaf.feature = (SMOOTH if self.table.has_repeatability
+                                else UNRESOLVED)
                 continue
             # feature inherited from the nearest refined ancestor's class
             if leaf.step_owner is not None:
@@ -1105,7 +1230,12 @@ class Sampler:
 
     def _loss(self, leaf, cm):
         E = leaf.E_T if leaf.refined else (leaf.parent_E or 0.0)
-        w = W_GOAL_ON if leaf.goal else W_GOAL_DEFAULT
+        if leaf.goal:
+            w = W_GOAL_ON
+        elif self._is_dominated(leaf, cm):
+            w = W_GOAL_DOMINATED
+        else:
+            w = W_GOAL_DEFAULT
         A = leaf.area(self.table.t_min, self.table.t_max)
         return w * min(E, E_MAX) * math.sqrt(max(A, 0.0)) + LAMBDA * A
 
@@ -1160,9 +1290,29 @@ class Sampler:
         out.sort(key=lambda rl: rl[0][0])
         return [cell for _r, cell in out]
 
+    def envelope_leaves(self):
+        """Serializable positive-taper leaf topology for the MFS envelope.
+
+        A terminal below an unresolved step inherits the parent's cut flag and
+        is deliberately barred from interior bilinear interpolation.  Exact
+        cut brackets remain available separately through ``feature_cells``.
+        """
+        out = []
+        for leaf in self.tree.terminal_leaves():
+            owner_cut = (leaf.step_owner.cut if leaf.step_owner is not None
+                         else None)
+            out.append(dict(r0=leaf.r0, r1=leaf.r1, t0=leaf.t0, t1=leaf.t1,
+                            cut=bool(leaf.cut or owner_cut)))
+        return out
+
     # -- proposal generation ------------------------------------------------- #
     def _stencil_new(self, leaf):
         """New (weighting, robust, taper) stencil points not already present."""
+        # Admission is defined for a distinct 3x3 stored-key grid.  Check the
+        # complete geometry before inspecting individual missing keys; doing
+        # this later can emit a misleading partial stencil at the key floor.
+        if not leaf.can_subdivide():
+            return []
         pts = []
         for (rp, tp, _s, _u) in leaf.stencil():
             trip = ("briggs",) + canon_rt(rp, tp)
@@ -1235,7 +1385,10 @@ class Sampler:
         admission (never a partial stencil), tie-broken by lexicographic
         point_key.  `cap` overrides the per-wave new-eval ceiling (default = the
         plan headroom, always clamped to the hard audit cap)."""
-        used_evals = self.table.n_effective if self.mode == "fresh" else 0
+        # Fresh budgets count attempts, including failed/capped evaluations.
+        # This is derived from the durable CSV rather than process-local state,
+        # so stopping and restarting cannot replenish the campaign audit cap.
+        used_evals = self.table.n_attempted if self.mode == "fresh" else 0
         audit_room = max(0, self.audit_cap - used_evals)
         plan_room = max(0, self.plan_cap - used_evals)
         ceiling = plan_room if cap is None else int(cap)
@@ -1313,9 +1466,10 @@ def plan_only_report(sampler, waves=1, out=sys.stdout):
     """Emit the plan-only summary + next wave (spec CLI contract)."""
     t = sampler.table
     p = lambda *a: print(*a, file=out)
-    band = os.environ.get("NGVLA_BAND", "n/a")
+    band = BAND or "mono"
     p("adaptive sampler -- plan-only  (%s)" % SPEC_VERSION)
-    p("  manifest %s   combo %s/%s   band %s" % (manifest_hash(), REV, SIM_MODE, band))
+    p("  manifest %s   combo %s/%s   band %s   nchan %d"
+      % (manifest_hash(), REV, SIM_MODE, band, NCHAN))
     p("  subarray: %s" % sampler.subarray)
     p("  mode: %s (%s)   audit cap %d   plan cap %d"
       % (sampler.mode,

@@ -14,6 +14,11 @@ fills in when its campaign runs. Release scope (Aug 2026): Rev F track
 point-source+imaging; Rev D and Rev C.01 track point-source only — an
 imaging query against those prints a warning.
 
+The same registry now also carries the in-progress Rev F Ka-band MFS campaign
+rows. They are fixed-window native products and are intentionally filtered out
+of `CurveLibrary.for_config` until the band-aware selector/report consumer is
+implemented; this prevents the legacy 30/f scaling from being applied to MFS.
+
 ## Install or run from a checkout
 
 The calculator is a normal Python package. Its curve tables and Memo-96

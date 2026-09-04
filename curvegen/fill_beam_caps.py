@@ -32,8 +32,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from config import (REV, SIM_MODE, RESULTS_DIR, CAP_REFERENCE,   # noqa: E402
+from config import (REV, SIM_MODE, BAND, MFS, RESULTS_DIR, CAP_REFERENCE,  # noqa: E402
                     SUBARRAYS, REPO)
+from campaign_manifest import ensure_manifest, casa_version_string         # noqa: E402
 
 DATA_DIR = os.path.join(REPO, "sa_select", "data")
 
@@ -67,18 +68,21 @@ def registry_subarrays_csv():
     reg = os.path.join(DATA_DIR, "config_registry.csv")
     with open(reg, newline="") as f:
         for r in csv.DictReader(f):
-            if r["rev"].strip() == REV and r["sim_mode"].strip() == SIM_MODE:
+            if (r["rev"].strip() == REV
+                    and r["sim_mode"].strip() == SIM_MODE
+                    and (r.get("band") or "").strip().lower() == BAND):
                 return os.path.join(DATA_DIR, r["subarrays_csv"].strip())
-    raise SystemExit("no config_registry.csv row for (rev=%r, sim_mode=%r)"
-                     % (REV, SIM_MODE))
+    raise SystemExit("no config_registry.csv row for (rev=%r, sim_mode=%r, "
+                     "band=%r)" % (REV, SIM_MODE, BAND))
 
 
 def _read_metadata(subs_csv):
     with open(subs_csv, newline="") as f:
         rows = list(csv.DictReader(f))
         fields = list(rows[0].keys()) if rows else []
-    if "beam_cap_arcsec_30ghz" not in fields:
-        raise SystemExit("%s has no beam_cap_arcsec_30ghz column" % subs_csv)
+    cap_field = "beam_cap_arcsec_native" if MFS else "beam_cap_arcsec_30ghz"
+    if cap_field not in fields:
+        raise SystemExit("%s has no %s column" % (subs_csv, cap_field))
     return rows, fields
 
 
@@ -94,11 +98,14 @@ def verify():
     needs a cap actually has a non-empty one in the metadata CSV.  Fail closed
     (nonzero) so a non-default full grid never runs uncapped -- covers a direct
     sweep that skipped prep, a blanked CSV, or a partial cap column."""
-    if (REV, SIM_MODE) == ("revF", "track"):
+    if not MFS and (REV, SIM_MODE) == ("revF", "track"):
         print("(revF, track): caps hardcoded in config; verify is a no-op.")
         return
+    if MFS:
+        ensure_manifest(create=False, casa_version=casa_version_string())
     rows, _ = _read_metadata(registry_subarrays_csv())
-    have = {r["name"].strip(): (r.get("beam_cap_arcsec_30ghz") or "").strip()
+    cap_field = "beam_cap_arcsec_native" if MFS else "beam_cap_arcsec_30ghz"
+    have = {r["name"].strip(): (r.get(cap_field) or "").strip()
             for r in rows}
     missing = [n for n in required_cap_subarrays(rows) if not have.get(n)]
     if missing:
@@ -111,7 +118,7 @@ def verify():
 
 
 def main(dry_run=False):
-    if (REV, SIM_MODE) == ("revF", "track"):
+    if not MFS and (REV, SIM_MODE) == ("revF", "track"):
         # SUCCESSFUL no-op, exactly like verify(): the default combo's caps
         # are hardcoded in config.py.  This used to exit nonzero, which
         # failed the whole campaign_prep stage the first time a revF/track
@@ -119,6 +126,8 @@ def main(dry_run=False):
         # 15 Jul 2026 job 3314391).
         print("(revF, track): caps hardcoded in config; nothing to fill.")
         return
+    if MFS:
+        ensure_manifest(create=False, casa_version=casa_version_string())
     subs_csv = registry_subarrays_csv()
     rows, fields = _read_metadata(subs_csv)
 
@@ -144,8 +153,9 @@ def main(dry_run=False):
     # BLANK the whole cap column first, then write the freshly measured caps:
     # a stale non-blank cap on any other row would otherwise be loaded by
     # config._load_caps_from_metadata (codex review, 12 Jul 2026).
+    cap_field = "beam_cap_arcsec_native" if MFS else "beam_cap_arcsec_30ghz"
     for r in rows:
-        r["beam_cap_arcsec_30ghz"] = "%.4g" % caps[r["name"].strip()] \
+        r[cap_field] = "%.4g" % caps[r["name"].strip()] \
             if r["name"].strip() in caps else ""
     tmp = subs_csv + ".tmp"
     with open(tmp, "w", newline="") as f:

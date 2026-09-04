@@ -12,8 +12,23 @@ Units convention (used everywhere in this package):
   * time                                : hours
   * baseline lengths                    : meters
 
-Reference frequency: curve tables are tabulated at 30 GHz. Resolutions scale as
-lambda, i.e.  res(f) = res_30GHz * (30 / f_GHz),  and so does the LAS.
+Reference frequency: selector-facing mono curve tables are tabulated at 30 GHz.
+Resolutions scale as lambda, i.e. res(f) = res_30GHz * (30 / f_GHz), and so
+does the LAS. Broadband MFS campaign rows are fixed-window native products;
+they are registered separately and deliberately excluded from that scaling API.
+
+-------------------------------------------------------------------------------
+CSV table: data/config_registry.csv   (one row per campaign combination)
+  rev, sim_mode  configuration and time-sampling axes
+  band           empty for mono; band4 for the first Ka MFS campaign
+  ref_freq_ghz, freq_lo_ghz, freq_hi_ghz
+                 fixed-window MFS spectral definition (empty for mono)
+  nchan          required MFS channel count; may remain empty before bmason's
+                 pilot decision, in which case NGVLA_NCHAN is mandatory
+  curve_types    both or ptsrc
+  noise_policy   channel noise-weighting convention (currently equal)
+  subarrays_csv, samples_csv
+                 package-relative metadata and collected-curve filenames
 
 -------------------------------------------------------------------------------
 CSV table: data/subarrays.csv   (one row per subarray)
@@ -34,6 +49,8 @@ CSV table: data/subarrays.csv   (one row per subarray)
                (curvegen/config.BEAM_CAP_ARCSEC), so offered curves / selector
                answers are clipped here; samples measured beyond the cap serve
                as interpolation anchors only (9 Jul 2026, see PLAN.md)
+  beam_cap_arcsec_native  MFS-only equivalent measured in that fixed window's
+               native reference frame; never stored in the 30-GHz field
 
 CSV tables: data/revf_curves.csv, data/bootstrap_curves.csv
   (one row per measured curve *sample*)
@@ -56,6 +73,13 @@ CSV tables: data/revf_curves.csv, data/bootstrap_curves.csv
                          bootstrap table) or 'capped_anchor': measured beyond
                          the subarray's beam cap, usable as an interpolation
                          anchor but never offered as an answer itself
+
+CSV tables: data/*_band*_curves.csv
+  Fixed-window MFS samples use a deliberately incompatible native schema:
+  subarray, band, ref_freq_ghz, resolution_arcsec_native, eta, skirt,
+  weighting, robust, taper_arcsec_native, source, note, sample_status.
+  Native angles belong to the complete registered spectral window and must
+  never be interpreted as monochromatic 30-GHz quantities or scaled as 30/f.
 -------------------------------------------------------------------------------
 """
 

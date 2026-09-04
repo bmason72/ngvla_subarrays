@@ -59,8 +59,34 @@ def load_registry(path: Optional[str] = None
     out: Dict[Tuple[str, str], Tuple[str, str]] = {}
     with open(path, newline="") as f:
         for row in csv.DictReader(f):
+            # Public selector v1 is intentionally mono-only.  Broadband MFS
+            # rows share this registry for campaign routing but are fixed-
+            # window native curves and must not enter the 30/f scaling API.
+            if (row.get("band") or "").strip():
+                continue
             out[(row["rev"].strip(), row["sim_mode"].strip())] = (
                 row["subarrays_csv"].strip(), row["samples_csv"].strip())
+    return out
+
+
+def load_campaign_registry(path: Optional[str] = None) -> Dict[Tuple[str, str, str], dict]:
+    """Read all mono and MFS campaign rows, keyed by ``(rev, mode, band)``.
+
+    The empty string is the mono band.  Values retain the complete CSV row so
+    curve-generation code can validate spectral-window and manifest fields.
+    ``load_registry`` remains the backward-compatible selector-facing mono
+    projection until the fixed-window MFS selector API is designed.
+    """
+    path = path or os.path.join(DATA_DIR, "config_registry.csv")
+    out = {}
+    with open(path, newline="") as f:
+        for row in csv.DictReader(f):
+            key = (row["rev"].strip(), row["sim_mode"].strip(),
+                   (row.get("band") or "").strip().lower())
+            if key in out:
+                raise ValueError("duplicate config_registry.csv entry for %r"
+                                 % (key,))
+            out[key] = dict(row)
     return out
 
 

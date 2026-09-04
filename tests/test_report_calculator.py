@@ -34,6 +34,15 @@ class TestReportCalculatorControls(unittest.TestCase):
                       'step="any"', self.text)
         self.assertIn("if (!finitePositive(value))", self.text)
 
+    def test_bandwidth_accepts_sub_mhz_values(self):
+        self.assertIn('id="calc-bandwidth" name="bandwidth" type="number" '
+                      'min="0" step="any"', self.text)
+
+    def test_millijansky_per_beam_unit_is_converted_to_microjanskys(self):
+        self.assertIn('<option value="mJy">mJy/beam</option>', self.text)
+        self.assertIn("request.sensUnit === 'mJy'", self.text)
+        self.assertIn("goalMicroJy = request.sensitivity * 1000", self.text)
+
     def test_resolution_accepts_sub_milliarcsecond_precision(self):
         self.assertIn('id="calc-res" name="resolution" type="number" min="0" '
                       'step="any"', self.text)

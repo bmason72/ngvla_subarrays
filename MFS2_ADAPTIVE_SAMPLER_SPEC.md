@@ -1,19 +1,122 @@
-# MFS-2 adaptive sampler — design spec v2 (build contract)
+# MFS-2 adaptive sampler — design spec v2.1 (build contract)
 
-**Status: v2, executable (21 Jul 2026).**  Build contract for three
-implementation agents — **sampler core** (2b), **envelope enumerator** (2c),
-**band axis** (2a).  Every rule is meant to be coded from without guessing;
-numbers are pinned (see "Constants").  Supersedes v1 + its two appendices (codex
-review + bmason addendum folded into the body; a finding→resolution changelog
-closes the file).  Companion: `MFS_CAMPAIGN_PLAN.md` (bands, nchan pilots, noise
-A/B, PyLauncher wave, storage — unchanged except where cited).
+**Status: v2.1, reviewed against the worktree 1 Sep 2026.**  This remains the
+normative MFS build contract, now with the mono-sampler work completed since the
+original 21 Jul v2 separated from the MFS work still to be implemented.  Every
+target rule is meant to be coded without guessing; pinned numbers are in
+"Constants".  Supersedes v1 + its two appendices (codex review + bmason addendum
+folded into the body).  Companion: `MFS_CAMPAIGN_PLAN.md` (bands, nchan pilots,
+noise A/B, PyLauncher wave, storage — unchanged except where cited).
 
-**Operational rule (live-code hazard).**  Campaign jobs `import` the repo at
-execution time, so **do not edit `sweep.py`, `config.py`, `simulate.py`, or
-`envelope.py` while any campaign job is queued or running.**  The sampler ships
-as a NEW module (`curvegen/adaptive.py`) plus additive-only, replay-guarded
-changes to `envelope.py`; retrofit deployment waits for the in-flight revD/track
-canary (see Tasks).
+**Operational rule (live-code hazard, updated 1 Sep).**  Campaign tasks import
+the checkout when each task starts, and later collect/report tasks import it
+again.  While any campaign chain is queued or running, documentation-only work
+is safe; **do not edit live-path modules**, including `curvegen/config.py`,
+`simulate.py`, `sweep.py`, `adaptive_support.py`, `refine.py`, `make_report.py`,
+`adaptive.py`, or `sa_select/envelope.py`, nor their schemas/registry, until the
+chain has drained or its exact import boundary has been verified.  In
+particular, `sweep.py` and `refine.py` now import `adaptive_support.py`, so that
+helper is not isolated sampler code.  Do not launch, cancel, requeue, collect,
+or rewrite result tables as part of MFS implementation review.  The MFS build
+may start only after bmason confirms the active non-MFS campaign work has
+drained.
+
+## Current implementation baseline (4 Sep 2026)
+
+The repository now has the first **Ka MFS implementation layers** plus the
+working mono-campaign adaptive retrofit foundation:
+
+- **Built:** MFS-2b's point-table/quadtree planner and MFS-2e's measuring loop
+  and retrofit sbatch; deterministic restart, residual/dominance retirement,
+  classification, budget admission, and conservative per-point report status
+  (`residual-validated`, `not-residual-validated`, `not-assessed`).  The sbatch
+  combo map now also includes **revC/track** at array index 4.
+- **Built 4 Sep:** MFS-2a's Ka band/manifest/registry axis and `nchan`
+  fail-fast. `config.py` routes band4 into isolated combo paths, `simulate.py`
+  lays out and validates the 20.25--33.75 GHz channel centers with RR/LL only,
+  `sweep.py` pins the MFS tclean convention and seed sampling check, and an
+  immutable per-combo manifest guards artifact reuse. The selector's existing
+  `(rev, mode)` registry view deliberately filters band rows so fixed-window
+  native curves cannot enter its legacy 30/f scaling API.
+- **Built/hardened 4 Sep:** repeat-derived per-map jitter with component
+  fallback, repeatability-gated `smooth` labels, full capped-resolution
+  censoring in ranges/cuts/interior evidence, pre-proposal rejection of
+  key-degenerate stencils, normalized cut widths + fine/coarse side labels,
+  the dominated loss weight, fresh-attempt budget accounting, and manifest-
+  enforced fresh mode for MFS restarts.
+- **MFS-2c foundation built 4 Sep:** `sa_select.envelope.build_leaf_families`
+  consumes explicit adaptive leaves, registers measured hanging nodes as split
+  edge segments, excludes capped resolution geometry, and suppresses bilinear
+  interiors for cut leaves. The legacy `build_cells()` path is unchanged.
+  Full per-edge cut sets and the global limiting-envelope freeze test remain.
+- **MFS-5 foundation built 4 Sep:** collection uses an incompatible native
+  fixed-window schema, standalone reports reconstruct adaptive topology from
+  result rows, and internal combined-report keys include `band`. MFS reports
+  are point-source only and hide the mono calculator.
+- **Not built:** MFS-2d/V1 retrospective replay and the MFS-4 PyLauncher wave
+  runner. The unresolved MFS-2b/2c deltas below remain deployment blockers.
+
+The worktree audit also found that tracked modules import
+`curvegen/adaptive_support.py` while that helper is currently **untracked**.
+It must be reviewed and added to the implementation change set (without
+discarding the present user-owned file) before claiming a reproducible clean
+checkout.  The code's `SPEC_VERSION` intentionally remains
+`MFS2-adaptive-sampler v2 (21 Jul 2026)` until the v2.1 obligations are
+implemented; changing a documentation version alone must not relabel the
+existing algorithm.
+
+### Known code/contract deltas to resolve during MFS implementation
+
+These are implementation obligations; the target semantics later in this file
+remain authoritative unless bmason explicitly changes them:
+
+1. **Resolved 4 Sep:** pooled within-point repeat variance now estimates each
+   per-map jitter component, falling back component-by-component to
+   `SIGMA_DEFAULT`; `smooth` requires repeatability evidence.
+2. **Partial 4 Sep:** a cell still records only its strongest detected cut and
+   freezes by the local proxies `t_hi/t_lo <= 1.05` or
+   `r_hi-r_lo <= 0.10`, not the global limiting-envelope stability test.
+   Strongest cuts now carry fine/coarse side labels and normalized `u`/`v`
+   widths; per-edge cut sets and global freezing remain.
+3. Balance closure currently schedules full stencils on coarser neighbors.  It
+   does not implement the lower-cost hanging-node registration/segmented-edge
+   consumer described in v2. **Partial 4 Sep:** the consumer now segments a
+   coarser edge at every measured hanging node, while the sampler retains the
+   conservative full-stencil closure fallback and accounts for every proposal.
+4. The implemented goal test uses corner skirt values in `[0.05,0.20]` and a
+   point-source envelope proximity test. **Partial 4 Sep:**
+   `W_GOAL_DOMINATED=0.25` is applied and the immutable per-combo manifest pins
+   `nchan`, spectral window,
+   batch/freeze/localization constants, seed/topology policy, jitter estimator,
+   and float canonicalization. Scaled mono cliff priors still need a reviewed
+   data source before they can be pinned or used.
+5. Non-dyadic legacy rows currently assist cut classification and the global
+   point-cloud envelope used for goal/dominance decisions; the
+   residual/certification calculation uses exact dyadic corners and stencil
+   probes.  Failed keys remain occupied even after process restart, whereas v2
+   intended them to be re-proposable in a later run.
+6. **Resolved 4 Sep:** capped probes and corners are excluded from resolution
+   residual/range prediction, cut detection/filling, adaptive edges/cells, and
+   interior resolution evidence; eta/skirt remain usable.
+7. **Resolved 4 Sep:** reconstruction and proposal generation both reject a
+   cell unless bisection produces a distinct 3x3 stored-key grid.
+8. `--plan-only` reports only the immediate next wave, not a forecast of the
+   complete retrofit/new-evaluation total required by the pre-submission
+   certification gate.
+9. Fresh MFS audit accounting is now reconstructed from all durable attempted
+   keys, including failures, so a restart cannot replenish its total cap.
+   Retrofit audit accounting is still new-evaluations-per-process, so a killed and
+   resubmitted process can spend another audit allowance.  The table/topology is
+   resumable, but a durable per-run budget ledger is required if the audit cap
+   is to remain a hard cross-restart bound.
+10. The refactor shares constants and proposal helpers through
+    `adaptive_support.py`, but the actual classifiers remain separate
+    (`refine._classify_scan` and `adaptive.Sampler._classify_cell`).  MFS-2b must
+    either establish one tested classifier or explicitly specify and test the
+    intended semantic differences.
+11. **Resolved for MFS 4 Sep:** the immutable campaign manifest pins
+    `run_mode=fresh`, and `Sampler` enforces fresh mode for MFS even after the
+    table is populated; an explicit MFS retrofit request fails closed.
 
 ## Scope (bmason, 21 Jul — supersedes conflicts)
 
@@ -30,10 +133,11 @@ canary (see Tasks).
    a clear message** if `nchan` is unset for an MFS combo; it is never derived
    or defaulted silently.  Analytic floor, as GUIDANCE only:
    `nchan ≥ 38.5·f_bw → 19.25 → 32` for Ka (pow2-rounded).
-4. **Retrofit ("backfill") is ORDERED on all four mono campaigns**
-   (revF/track, revF/snapshot, revD/track, revD/snapshot) as a
-   certification-first warm start — but only AFTER the in-flight revD/track
-   canary campaign completes.
+4. **Mono retrofit history/scope.**  The certification-first retrofit was
+   deployed after the July revD/track canary on revF/track, revF/snapshot,
+   revD/track, and revD/snapshot.  The shared retrofit array now supports
+   revC/track as a fifth combo.  These mono runs validate and warm the sampler
+   foundation; they do not constitute an MFS campaign or waive the MFS gates.
 
 ## Surrogate framing (the mental model)
 
@@ -69,7 +173,8 @@ output) for a real budget saving.
 ## Architecture (3 layers)
 
 1. **Point table = source of truth.**  The per-(subarray, combo) results CSV
-   (`sweep.FIELDS` schema, keyed by `sweep.point_key`), append-only, resumable.
+   (`sweep.FIELDS` schema, keyed by the shared
+   `adaptive_support.point_key`), append-only, resumable.
    Combo routing = `-<rev>_<mode>_<band>` per `MFS_CAMPAIGN_PLAN.md`.  Every
    existing table is a valid warm start.
 2. **Topology = derived view**, reconstructed deterministically from the table
@@ -78,9 +183,10 @@ output) for a real budget saving.
    seed cells; leaves are rectangles with 4 measured corners.  The taper=0
    column and natural row are 1-D families glued to the edge, never quadtree
    coordinates.
-3. **Features = recomputed annotations** (never stored): the classifier — the
-   ONE shared implementation ported from `refine.py`'s E2 rim classification —
-   labels leaves and cut edges from the rows at build time.
+3. **Features = recomputed annotations** (never stored).  The target is ONE
+   shared implementation of the E2 rim-classification semantics labeling leaves
+   and cut edges from the rows at build time.  The mono code currently has
+   separate refine/adaptive classifiers; this must be reconciled as delta 10.
 
 ### Coordinates and the taper=0 / natural seam (finding #6)
 
@@ -120,8 +226,10 @@ deduped within a wave.  Arithmetic (honest, worst case = no sharing):
   (< plan ✓); B=16 → 56+16·5 = **136** (< audit ✓).
 - **Whole-cell, balance-aware admission:** a refinement is admitted only if
   ALL its stencil points **plus any 2:1-balance closures** (below) fit under
-  the **hard audit cap**.  Never buy half a stencil.  `B` shrinks from 16→8→…
-  as the running total approaches the cap.
+  the **hard audit cap**.  Never buy half a stencil.  The implementation packs
+  up to `B_MAX=16` whole units and skips a unit that does not fit the remaining
+  room; the resulting unit count naturally shrinks near the cap.  `B_MIN=8` is
+  retained as planning guidance, not an enforced lower bound.
 - Retrofit maps: **seed cost = 0** (existing rows); plan/audit count **NEW
   evals only**: **plan 40, audit 80 per map**, subject to the per-map
   certification estimate reported before any Slurm submission.
@@ -152,7 +260,10 @@ A leaf moves through states; the residual is owned unambiguously by the PARENT:
 for each leaf, test whether all 5 stencil probes are EXACT `point_key` hits at
 its dyadic coordinates.  All 5 present ⇒ the leaf was refined ⇒ compute `E_T`,
 materialise the 4 children, recurse.  Corners-only ⇒ untested leaf.  This is
-deterministic and needs no state file.
+deterministic and needs no state file.  Bisection also requires a distinct 3×3
+grid at stored `point_key` precision (three robust keys × three taper keys).
+If either midpoint aliases an endpoint, the cell is terminal: no further
+measurement can encode four distinct children in the source-of-truth table.
 
 ## Loss, constants, retirement
 
@@ -171,9 +282,10 @@ step widths are unit-free):
   cannot monopolise the queue).
 - `w_goal = 3` for cells on/adjacent to a deliverable locus or the skirt binding
   band `[0.05, 0.20]`; `1` default; `0.25` for dominated cells after coverage
-  (never zeroed before coverage).
-- wave batch `B = 8–16`, shrinking to fit the cap; tie-break = lexicographic
-  `point_key`.
+  (never zeroed before coverage).  The `0.25` branch is a target requirement;
+  the mono implementation currently defines but does not apply it.
+- wave batch `B_MAX = 16` whole units, with fewer admitted as the cap fills
+  (`B_MIN = 8` guidance only); tie-break = lexicographic `point_key`.
 
 **Two-way retirement (finding #8 half + dominance).**  A leaf retires when
 EITHER (a) **residual** `E_T < 1`; OR (b) **dominance** — its optimistic bound
@@ -213,7 +325,8 @@ bilinear interpolation.**  Instead it contributes its two rim sub-regions via
 boundary, give an upper and a lower envelope bound.  The report draws the step
 at the **bracket midpoint**, with the full bracket recorded in the payload.
 
-**Step stopping test (finding #9).**  Freeze a cut when the two limiting
+**Target step stopping test (finding #9; not yet implemented).**  Freeze a cut
+when the two limiting
 envelopes — cut placed at bracket-low vs bracket-high — differ by **less than
 tolerance on every affected resolution bin** (`dη ≤ 0.1`, `d ln res ≤ ln 1.05`,
 `ds ≤ 0.02`).  This is the global "envelope-stable bracket", not a bare
@@ -222,26 +335,34 @@ progressive log-midpoint machinery along the crossed axis.
 
 ## Hanging nodes — conforming closure (finding #7)
 
-Adopt **conforming closure**: when a leaf is refined, any neighbor sharing a
-hanging node must at least **register that node as a measured point on its
-edge** (it is one of the refined leaf's stencil midpoints, so this is the SAME
-measurement, deduped — no extra tclean).  The envelope consumer treats an edge
-carrying a measured interior point as **TWO segments**.  This is the smaller
-change vs re-teaching the bilinear solver.  **Documented fallback** if that
-proves heavy: full conforming refinement of the neighbor (costlier, simpler).
+The target is **conforming closure**: when a leaf is refined, any neighbor
+sharing a hanging node must at least **register that node as a measured point on
+its edge** (it is one of the refined leaf's stencil midpoints, so this is the
+SAME measurement, deduped — no extra tclean).  The envelope consumer treats an
+edge carrying a measured interior point as **TWO segments**.  This is the
+smaller change vs re-teaching the bilinear solver.  The mono planner currently
+adopted the documented fallback: **full conforming refinement of the coarser
+neighbor** (costlier, simpler).  MFS-2c must either implement segmented edges
+and return to the lower-cost rule, or retain full closure and account for it
+explicitly in the replay/budget results.
 
 ## Point-table determinism (finding #11)
 
 - **Effective-row rule:** the LAST `ok`|`capped` row per canonical `point_key`
-  (matching the profiles convention).  `failed` rows count as "attempted" (no
-  re-propose within a run; re-proposable across runs).
+  (matching the profiles convention).  `failed` rows count as "attempted" and
+  are not re-proposed within a run.  Target MFS policy is re-proposable across
+  runs; the current point-table reconstruction keeps them occupied across
+  restarts, so MFS-2b hardening must add explicit run provenance/retry policy or
+  document and approve permanent occupation.
 - **Censoring:** `capped` rows are res-censored — usable for η/skirt residuals,
   but the **res residual is skipped beyond the cap** (a cap-clipped resolution
   must not manufacture a residual or step).
 - **Manifest pins** (so "same table → same next wave" holds across software
   changes): spec version, classifier/loss version, all constants above, seed
   definition, band priors, `nchan`, tie-breaking (lexicographic `point_key`),
-  float canonicalization (`point_key` rounding).
+  float canonicalization (`point_key` rounding), and the distinct-3×3-key-grid
+  topology floor.  This is the target MFS manifest; the current mono manifest
+  is only a subset (see Current implementation baseline).
 
 ## Retrofit / warm-start mode (findings #5, #13; addendum)
 
@@ -249,38 +370,44 @@ Warm start = **certification-first mode**, same code path, different entry state
 With an existing map (~230–500 rows per (subarray, combo)):
 
 - **Non-dyadic legacy rows are auxiliary evidence ONLY** (finding #5): they
-  inform classification, residuals (extra probes inside their containing leaf),
-  and certification — but never become topology vertices.  New AMR vertices are
-  seed-grid dyadics exclusively.
-- **Retrofit seed = the coarsest dyadic grid whose vertices are all EXACT
-  `point_key` hits** in the table (every-other of `ROBUST_LIST`
-  {−2,−1.2,−0.4,0.4,1.2,2} plus matching canonical tapers — first-level dyadic
-  midpoints land on the step-0.4 lattice, so are usually warm too; deeper
-  refinement produces new evals).  Missing seed vertices are the first wave.
+  may inform classification and, once the residual model is extended to accept
+  auxiliary probes, certification — but never become topology vertices.  The
+  current mono code uses them for cut classification and the global envelope
+  behind goal/dominance decisions; residuals use the exact five-point dyadic
+  stencil.  New AMR vertices are seed-grid dyadics exclusively.
+- **Retrofit seed = the fixed coarse canonical dyadic grid:** every-other of
+  `ROBUST_LIST` {−2,−1.2,−0.4,0.4,1.2,2} plus every-other canonical taper, with
+  the coarsest rim force-included.  Existing exact `point_key` hits cost zero;
+  missing seed vertices are the first wave.  First-level dyadic midpoints land
+  on the skipped step-0.4/canonical-taper lattice and are usually warm too;
+  deeper refinement produces new evaluations.  The grid is not dynamically
+  chosen from the union of measured/non-dyadic rows.
 - The seed STAGE is skipped; build topology, run the certification pass, and
   only the unretired remainder — loci neighborhoods, cliff brackets, uncertified
   pockets — generates new evals (plan 40 / audit 80 new evals/map).
 - **Gate status (finding #13):** V1 replay gates DEPLOYMENT of fresh-seed MFS
-  waves; **implementation is not gated** (2b/2c/2d built first).  Retrofit
-  deployment is **bmason-ordered** and supersedes the gate for retrofit — but
-  the certification assessment runs first and the expected new-eval counts are
-  reported before any Slurm job is submitted.
+  waves; implementation is not scientifically gated, but shared-code edits are
+  operationally blocked while current campaigns are live.  The July mono
+  retrofit deployment was bmason-ordered and superseded V1 for retrofit only.
 
-**Priors (finding #14).**  Scaled cliff locations from the mono campaigns (∝ λ)
+**Target priors (finding #14; not yet in the manifest).**  Scaled cliff
+locations from the mono campaigns (∝ λ)
 and the skirt goal band `[0.05, 0.20]` are **immutable manifest INPUTS per
 run**, not reconstructible from the rows.  Bands are independent per-band maps
 (band is NOT a third continuous axis); Ka is the only band in scope now.
 
 ## Envelope consumer changes (2c)
 
-`sa_select/envelope.py` gains a **leaf-cell enumerator**: the validated bilinear
+`sa_select/envelope.py` must gain a **leaf-cell enumerator**: the validated bilinear
 `Cell` solver is reused VERBATIM per leaf; row/column segments become leaf edges
 (segmented where a hanging node sits on them); cut edges emit limiting envelopes
 instead of interior interpolation.  Display trims (`eta ≤ ETA_CAP`, ok+capped,
 cap-clipping via `make_report.sample_from_row`) are unchanged.  The
 global-lattice enumerator STAYS for legacy tables (a regular lattice is the
 degenerate quadtree), so all existing campaigns keep working unmodified.  This
-touches the validated solver and is replay-guarded.
+touches the validated solver and must be replay-guarded.  As of 1 Sep it has not
+been implemented; the existing `build_cells()` point-cloud enumerator remains
+the only consumer.
 
 ## Invocation & cases
 
@@ -289,29 +416,36 @@ touches the validated solver and is replay-guarded.
     casapy adaptive.py <subarray> [--plan-only] [--budget N] [--waves N]
                        [--warm-start | --fresh]
 
-- Combo routing via `NGVLA_REV` / `NGVLA_SIM_MODE` / `NGVLA_BAND` + the
-  config registry (extended with `band, ref_freq_ghz, freq_lo/hi_ghz, nchan,
-  curve_types, noise_policy`).  MFS combos MUST have `nchan` set (else fail
-  fast).
+- Combo routing now uses `NGVLA_REV` / `NGVLA_SIM_MODE` / `NGVLA_BAND` and the
+  registry fields `band, ref_freq_ghz, freq_lo/hi_ghz, nchan, curve_types,
+  noise_policy`. MFS combos MUST have `nchan` set via `NGVLA_NCHAN` or the
+  registry (and the two must agree when both are present), else config fails
+  fast before any artifact is touched.
 - **Mode auto-detect:** empty table → **fresh seed**; populated table →
   **certification-first**.  Overrides: `--warm-start` / `--fresh`.
-- `--plan-only` emits the next wave (and, for retrofit, the certification
-  estimate + expected new-eval counts) without measuring.
+- `--plan-only` currently emits the reconstructed certification state and the
+  immediate next wave without measuring.  Before MFS deployment it must also
+  provide the complete expected-new-evaluation forecast required by the gate,
+  or the gate must define an explicit iterative dry-run procedure.
 
-**Run matrix** (copy-paste commands mirrored to `RUN_CAMPAIGNS.md` at build):
+**Run matrix:**
 
 | combo(s) | mode | style | when |
 |---|---|---|---|
-| revF/track, revF/snapshot, revD/track, revD/snapshot (mono) | retrofit (warm) | campaign-sbatch | **after** the revD/track canary completes |
-| Ka MFS: 7 subarrays × {track, snapshot} (revF) | fresh seed | PyLauncher wave (MFS-4) | **blocked on bmason's `nchan`** |
+| revF/track, revF/snapshot, revD/track, revD/snapshot (mono) | retrofit (warm) | `adaptive_retrofit.sbatch` indices 0–3 | deployed July; further runs only by current run sheet/bmason direction |
+| revC/track (mono) | retrofit (warm) | `adaptive_retrofit.sbatch` index 4 | supported; coordinate with any active campaign chain |
+| Ka MFS: 7 subarrays × {track, snapshot} (revF) | fresh seed | PyLauncher wave (MFS-4) | **not runnable: 2c/2d/MFS-4 absent and `nchan` unset** |
 
-Examples — retrofit (post-canary): `bash curvegen/submit_campaign.sh revD
-snapshot --adaptive --budget 80`; Ka fresh (post-nchan, in the wave runner):
-`NGVLA_BAND=band4 NGVLA_NCHAN=32 casapy adaptive.py core --fresh --budget 140`.
+The old v2 examples using `submit_campaign.sh --adaptive` or setting only
+`NGVLA_BAND`/`NGVLA_NCHAN` were aspirational and are not valid current launch
+commands.  Mono retrofit uses explicit sbatch array indices documented in
+`RUN_CAMPAIGNS.md`.  A copy-paste Ka command must not be published until MFS-2a,
+MFS-2c, MFS-2d, and MFS-4 pass and bmason pins `nchan`.
 
 ## Validation gates
 
-**V1 — retrospective replay** (extends MFS-1, pure `sa_select`, no CASA).
+**V1 — retrospective replay (required, not yet implemented)** (extends MFS-1,
+pure `sa_select`, no CASA).
 Replay each map's full point table through the sampler policy as a simulated
 acquisition (each "measurement" = a lookup).
 
@@ -330,34 +464,59 @@ acquisition (each "measurement" = a lookup).
 - **Acceptance:** ALL maps pass AND p90 of the normalized sample fraction
   ≤ 0.6.  Budget exhaustion = fail.
 
-**V2 — analytic harness** (extend `tests/test_refine.py`'s FakeSweep maps).
+**V2 — analytic harness (partially implemented in `tests/test_adaptive.py`).**
 Required tests (finding #15): non-dyadic retrofit rows; taper=0 / natural seam;
 hanging-node segmented-edge enumeration; capped / failed / retried points;
 balanced-refinement budget admission (cannot cross the audit cap); cut-cell
 limiting envelopes; exact-hit replay behaviour; classifier transitions
 (smooth↔step↔ridge as evidence grows); deterministic ties; restart-determinism
-(same table → same next wave); cell-completeness of every emitted batch.
+(same table → same next wave); cell-completeness of every emitted batch.  The
+current CASA-free suite covers the sampler/driver, hanging-node segmented
+edges, cut-interior suppression, MFS fail-fast/routing, repeat-derived
+jitter/confidence, complete capped-corner semantics, and restart-stable MFS
+mode. Exact-hit V1 replay and full limiting-envelope comparisons remain. Add a
+fresh-run kill/resubmit integration test that omits an in-memory mode pin and
+verifies the persisted manifest prevents a topology switch.
 
-## Task breakdown (replaces the MFS-2 row; canary-hazard sequenced)
+## Task breakdown (1 Sep implementation order)
 
-| # | Task | Depends | Who/effort |
-|---|------|---------|-----------|
-| MFS-2a | Ka band axis + manifest + registry/schema (`nchan` required, fail-fast) | — | codex build or Sonnet 5, high |
-| MFS-2b | Sampler core: quadtree/point-table view, residual+lifecycle, loss, feature/state machine, wave scheduler (CASA-free, FakeSweep-tested) | 2a | Fable 5 or Opus 4.8 / GPT-5.6, high — loss+classifier semantics are the hard part |
-| MFS-2c | Envelope leaf-cell enumerator + cut/limiting-envelope + segmented edges | 2b | Opus 4.8 / GPT-5.6, high — touches the validated solver, replay-guarded |
-| MFS-2d | V1 replay harness + report (joint with MFS-1) | 2b,2c | Sonnet 5 / GPT-5, medium |
-| MFS-2e | Retrofit-mode driver (warm start, certification estimate, sbatch glue) | 2b–2d | Sonnet 5, medium |
+| # | Task | Status / depends |
+|---|------|------------------|
+| MFS-2a | Ka band axis + manifest + registry/schema (`nchan` required, fail-fast) | **built and CASA-free tested 4 Sep 2026**; no simulation launched |
+| MFS-2b | Sampler core: quadtree/point-table view, residual+lifecycle, loss, feature/state machine, wave scheduler | **substantially hardened 4 Sep**; remaining deltas: per-edge/global cut freezing, failed-key cross-run retry policy, forecast/retrofit ledger, classifier reconciliation, reviewed cliff priors |
+| MFS-2c | Envelope leaf-cell enumerator + cut/limiting-envelope + segmented edges | **foundation built 4 Sep** (explicit leaves, hanging segments, cut-interior suppression); full limiting envelopes remain; replay-guarded |
+| MFS-2d | V1 replay harness + report (joint with MFS-1) | **not built**; depends on 2b/2c |
+| MFS-2e | Retrofit-mode driver (warm start, certification estimate, sbatch glue) | **built and used for mono campaigns**; retain as regression surface, not the MFS production wave runner |
+| MFS-4 | PyLauncher fresh-MFS wave runner | **not built**; depends on 2a–2d and pilot decisions |
 
-**Phase 1 (implementation, unblocked now):** MFS-2a → 2b → 2c → 2d.  These are
-NOT gated (finding #13) and are pure code / replay — no campaign jobs, so no
-live-code hazard.  **Phase 2 (deployment, canary-gated):** once the revD/track
-canary finishes AND no campaign jobs are queued, run 2e's certification pass on
-the four mono maps, report expected new-eval counts, then submit the retrofit
-sbatches.  Ka fresh waves deploy after V1 passes AND bmason sets `nchan`.
+**Implementation sequence after the active campaigns drain:** first make the
+worktree reproducible (`adaptive_support.py`) and implement MFS-2a (**done 4
+Sep**); next harden MFS-2b against the listed deltas; implement MFS-2c;
+build/run MFS-2d/V1; only
+then implement/integrate MFS-4.  These steps do not authorize simulation
+submission.  Ka pilots/production remain gated by V1, the MFS-3 pilot/checkpoint,
+and bmason's explicit `nchan` and noise-policy choices.
 
 ---
 
-## v2 changelog (finding → resolution)
+## v2.1 review delta (1 Sep 2026)
+
+- Recorded the actual boundary: mono MFS-2b/2e foundation built; MFS-2a/2c/2d
+  and MFS-4 absent.
+- Added revC/track retrofit support and the report's conservative per-point
+  adaptive validation projection.
+- Added the stored-key topology floor that prevents recursive aliasing below
+  the 0.01-robust / 0.001-mas `point_key` precision.
+- Replaced obsolete canary and aspirational launch text with the current
+  operational gate; expanded the live import surface after the
+  `adaptive_support.py` refactor.
+- Enumerated eleven code/contract deltas that must be closed or explicitly
+  adjudicated before fresh MFS deployment.
+- Marked the untracked shared helper as a reproducibility prerequisite.  No
+  simulation, queue, result-table, or implementation-code change is part of
+  this documentation revision.
+
+## Original v2 changelog (finding → target resolution)
 
 - **#1 residual ownership** → PARENT owns `E_T` (its 5 stencil probes vs its
   bilinear corner prediction); children certified (inherit) or activated;
