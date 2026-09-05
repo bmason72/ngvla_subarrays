@@ -1,5 +1,7 @@
 # NGVLA subarray selection
 
+See `docs/INDEX.md` for a full list of project documentation.
+
 A stand-alone Python tool that, given a desired resolution, frequency, sensitivity,
 and largest angular scale (LAS), returns a ranked list of NGVLA subarrays with
 the `tclean` weighting parameters (Briggs robust / uv taper) that achieve the
