@@ -5,7 +5,7 @@
     "rev": "revF",
     "sim_mode": "4h_track",
     "reference_freq_GHz": 30.0,
-    "eta_definition": "dirty-image rms at the operating point divided by the natural-untapered dirty rms, at the 30 GHz reference. Convention warning: theta here is geometric-mean FWHM in mas; mstroh/subarray_data.json thetas are quadrature-sum values, about sqrt(2) larger for near-circular beams (see mstroh_comparison.md finding 1). Convention warning: b_min/b_max here are physical 3-D baseline lengths from the Rev F .cfg files; Stroh's are projected-uv baselines at mid-track.",
+    "eta_definition": "dirty-image rms at the operating point divided by the natural-untapered dirty rms, at the 30 GHz reference. Convention warning: theta here is geometric-mean FWHM in mas; mstroh/subarray_data.json thetas are quadrature-sum values, about sqrt(2) larger for near-circular beams (see docs/architecture/mstroh_comparison.md finding 1). Convention warning: b_min/b_max here are physical 3-D baseline lengths from the Rev F .cfg files; Stroh's are projected-uv baselines at mid-track.",
     "beam_cap_units": "arcsec at 30 GHz",
     "spline_convention": "x = log10(theta_mas), y = eta, scipy PPoly [c, x]",
     "curve_selection_policy": "point_source is the engine min-eta curve. imaging_s0_0.10 is strict skirt <= 0.10 where a strict capped-domain run exists; otherwise it is the engine relaxed best-achievable-skirt curve, marked selection_policy='relaxed_best_achievable_no_strict_domain'.",
