@@ -1,8 +1,9 @@
 """
-The selection engine (Phase B of PLAN.md): given an ObservingRequest, evaluate
-every tabulated subarray against it and return a ranked list of Candidates.
+The selection engine (Phase B of docs/architecture/selection-tool-design.md): given an
+ObservingRequest, evaluate every tabulated subarray against it and return a ranked list
+of Candidates.
 
-For each subarray the steps are (PLAN.md section 8):
+For each subarray the steps are (docs/architecture/selection-tool-design.md section 8):
   1. scale its 30 GHz reference curve to the requested frequency;
   2. feasibility: can it make the requested beam (within beam_margin), and is
      its LAS large enough?  Imaging projects additionally require a PSF-skirt

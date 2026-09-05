@@ -1,9 +1,9 @@
 # NEXT_AGENT — start here (updated 19 Aug 2026)
 
 Hand-off sheet for whoever (human or agent) picks this up.  Read order:
-`WRAPUP.md` (bmason's 17 Aug scope — the authority) → `RELEASE_PLAN.md`
-(the live plan) → `CLAUDE.md` → `README.md` → `PLAN.md` (18-Aug delta
-first) → `RUN_CAMPAIGNS.md` → `casaLocation.md`.
+`docs/plans/WRAPUP.md` (bmason's 17 Aug scope — the authority) → `docs/plans/RELEASE_PLAN.md`
+(the live plan) → `CLAUDE.md` → `README.md` → `docs/plans/PLAN.md` (18-Aug delta
+first) → `docs/ops/RUN_CAMPAIGNS.md` → `docs/ops/casaLocation.md`.
 
 ## Where things stand (19 Aug 2026)
 
@@ -16,7 +16,7 @@ first) → `RUN_CAMPAIGNS.md` → `casaLocation.md`.
   therefore still embeds mostly 3-FWHM cuts (verified by decoding its
   payloads: revF 0/2839 at 10 FWHM, revD 451/2852, revC 0/1935) — the
   rebuild was premature.  The chart code is fine (renders each entry at
-  its own captured range); only the data lags.  Full story: PLAN.md
+  its own captured range); only the data lags.  Full story: docs/plans/PLAN.md
   19-Aug delta.
 - The 17-Aug wave (retrofit wave 2 tracks + backfills; the first
   revC/track campaign, prep → sweep → collect) completed 18 Aug, every
@@ -33,12 +33,12 @@ first) → `RUN_CAMPAIGNS.md` → `casaLocation.md`.
   (grep lines in RUN_CAMPAIGNS "Adaptive retrofit wave"); wave-2
   history: revF/track 6/14 maps converged, revD/track 2/9, rest at the
   80-eval audit cap, all step features classified genuine.
-- Scope (WRAPUP.md): release = web page + python calculator for
+- Scope (docs/plans/WRAPUP.md): release = web page + python calculator for
   revF/track (ptsrc+imaging), revD/track (ptsrc only), revC/track
   (ptsrc only).  Snapshots are not released.  RELEASE_PLAN T0-T5 DONE;
   T6 (docs + memo) in progress.
 
-## Immediate queue (in order; see RELEASE_PLAN.md for detail)
+## Immediate queue (in order; see docs/plans/RELEASE_PLAN.md for detail)
 
 1. **Wait for the backfills to drain** (3418623_0, 3418624_2,
    3421939_4),
@@ -48,7 +48,7 @@ first) → `RUN_CAMPAIGNS.md` → `casaLocation.md`.
    in `curvegen/reports/psf/*/*.js` (untagged cut entries = old 3-FWHM);
    rebuild combined + release reports; re-verify the release page by
    decoding its `data-psf-id` gzip+base64 blocks; tests; data commit —
-   checklist in the PLAN.md 19-Aug delta.
+   checklist in the docs/plans/PLAN.md 19-Aug delta.
 2. **T6 — finish the memo:** bmason's review comments beyond the §4 ¶1
    stop marker (memo/myComments.tex), then the final editorial pass
    (ASD-STE100 + Zinsser), compile clean.
@@ -69,8 +69,8 @@ first) → `RUN_CAMPAIGNS.md` → `casaLocation.md`.
   well-specified tasks.
 - Use casapy; CASA cwd on scratch; never write CASA products under $HOME.
 - Commit at milestones; don't sweep bmason's scratch files (files.txt,
-  revDsnapshotIssue.txt, memo/foo.tar, tmp/, ETA_JUMPS.md,
-  POLISH_AND_STORAGE.md).
+  revDsnapshotIssue.txt, memo/foo.tar, tmp/, docs/architecture/ETA_JUMPS.md,
+  docs/ops/POLISH_AND_STORAGE.md).
 
 ## Sharp edges (full log PLAN §13; 21-Jul ones still apply)
 

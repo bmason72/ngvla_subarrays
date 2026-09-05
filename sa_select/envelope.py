@@ -2,7 +2,7 @@
 Shared curve engine: piecewise row interpolation of the (robust, taper)
 lattice, used by BOTH the selector (`curves.CurveLibrary.solve`) and the
 report (`curvegen/make_report.py`).  Introduced after the 6 Jul 2026
-curve-anomaly post-mortem (`curve_anomaly_postmortem.md`): the previous
+curve-anomaly post-mortem (`docs/postmortems/2026-07-06-curve-anomaly.md`): the previous
 hard-window + hard-threshold + window-local-relaxation logic turned lattice
 quantization into isolated pop-ups/drop-outs in the curves.
 
@@ -96,7 +96,7 @@ SKIRT_TIE_TOL = 1e-6
 # form quadratics) plus a deterministic scan+refine for the one transcendental
 # case (the penalized eta+skirt stationary point), then validates each
 # candidate by recomputing (res, skirt, eta).  See the 7 Jul 2026 design
-# consult in PLAN.md sec.13 and tests/test_envelope.py::TestBilinearCells.
+# consult in docs/plans/PLAN.md sec.13 and tests/test_envelope.py::TestBilinearCells.
 CELL_RES_TOL = 1e-6      # |log(res_candidate/theta)| tolerance for validation
 CELL_SINGULAR = 1e-12    # |C + D s| below this is the iso-resolution singularity
 CELL_DEGEN = 1e-12       # polynomial coefficient magnitude treated as zero

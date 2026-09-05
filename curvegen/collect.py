@@ -124,7 +124,7 @@ def collect_one(path):
     # interpolation ANCHORS (sample_status=capped_anchor): they extend row
     # coverage up to the cap so the offered curve can end exactly there,
     # but the engine/report/selector never offer a beam beyond the cap
-    # (9 Jul 2026; see PLAN.md and sa_select/schema.py)
+    # (9 Jul 2026; see docs/plans/PLAN.md and sa_select/schema.py)
     with open(path, newline="") as f:
         rows = [r for r in csv.DictReader(f)
                 if r["status"] in ("ok", "capped")]
@@ -194,7 +194,7 @@ def main():
         if ".csv.shard_" in os.path.basename(path):
             continue                    # sweep_parallel.py in-flight shards
         if os.path.basename(path) in DEFERRED:
-            print("%-28s deferred (heterogeneous; see PLAN.md)"
+            print("%-28s deferred (heterogeneous; see docs/plans/PLAN.md)"
                   % os.path.basename(path))
             continue
         got = collect_one(path)

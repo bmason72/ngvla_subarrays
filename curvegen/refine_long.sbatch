@@ -20,7 +20,7 @@
 # re-runs.  refine.py runs Sweep in-process (serial), and unlike
 # sweep_parallel.py it does NOT chdir to scratch itself -- so we cd into a
 # per-subarray scratch dir first, or CASA writes multi-GB TempLattice* files to
-# $HOME and blows the 14 GB quota (see PLAN.md sec.13 / casaLocation.md).
+# $HOME and blows the 14 GB quota (see docs/plans/PLAN.md sec.13 / docs/ops/casaLocation.md).
 # Sweep.ensure_ready() re-simulates the MS if scratch was purged, so this is
 # self-contained.  Must be submitted from a LOGIN node (compute nodes cannot
 # sbatch).

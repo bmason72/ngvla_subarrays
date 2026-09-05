@@ -5,11 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **Freshness (17 Aug 2026):** the task statement, domain concepts, and raw-materials map
 > below remain authoritative.  The *built* system now lives in `sa_select/` (selection
 > engine) + `curvegen/` (CASA curve generation + campaigns + HTML reports) — see
-> `WRAPUP.md` for bmason's current release scope, `RELEASE_PLAN.md` for the live plan,
-> `README.md` for layout/commands, `PLAN.md` for status/decisions/gotchas,
-> `NEXT_AGENT.md` for the hand-off, `RUN_CAMPAIGNS.md` for the Slurm run sheet,
-> and `PSF_DIAGNOSTICS.md` for how the reports measure and present PSF quality.
+> `docs/plans/WRAPUP.md` for bmason's current release scope, `docs/plans/RELEASE_PLAN.md` for the live plan,
+> `README.md` for layout/commands, `docs/plans/PLAN.md` for status/decisions/gotchas,
+> `docs/plans/NEXT_AGENT.md` for the hand-off, `docs/ops/RUN_CAMPAIGNS.md` for the Slurm run sheet,
+> and `docs/architecture/PSF_DIAGNOSTICS.md` for how the reports measure and present PSF quality.
 > Where this file and those disagree (environment especially), trust them.
+> Session deltas now append to `docs/plans/PLAN-session-log.md`; `docs/INDEX.md` lists every doc.
 > bmason launches all Slurm jobs himself — agents prepare command lines only.
 
 ## Project goal (the task)
@@ -104,11 +105,11 @@ return an integration time for the selected array + imaging parameters.
 ## Environment & commands
 
 - **This IS a git repo** (since 5 Jul 2026, branch `main`); commit at milestones, and only
-  when the user has asked or a milestone commit is queued in `PLAN.md`.
+  when the user has asked or a milestone commit is queued in `docs/plans/PLAN.md`.
 - **Current platform is TACC Stampede3** — use the `casapy` wrapper
   (`/work2/10240/bmason72/stampede3/casaenv/bin/casapy`, modular CASA 6.7.5 + numpy/scipy);
-  see `casaLocation.md` for the wrapper rationale and quota/TempLattice gotchas, and
-  `RUN_CAMPAIGNS.md` for Slurm campaign submission.  Tests:
+  see `docs/ops/casaLocation.md` for the wrapper rationale and quota/TempLattice gotchas, and
+  `docs/ops/RUN_CAMPAIGNS.md` for Slurm campaign submission.  Tests:
   `casapy -m unittest discover -s tests -t .` from the repo root.
 - Big data placement: MS stores persist under `$WORK/ngvla_curvegen` (`NGVLA_MS_BASE`);
   tclean scratch stays under `$SCRATCH/ngvla_curvegen` (`NGVLA_SCRATCH`, purged, disposable).

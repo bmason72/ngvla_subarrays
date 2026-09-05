@@ -1,7 +1,7 @@
 # MFS broadband continuum campaigns — plan summary (16 Jul 2026)
 
 Standalone summary for resuming this workstream.  The authoritative, fuller
-version lives in `PLAN.md` § "MFS broadband continuum campaigns"; the codex
+version lives in `docs/plans/PLAN.md` § "MFS broadband continuum campaigns"; the codex
 gpt-5.6-sol design consult (question + full critique) is in
 `tmp/mfs_campaign_consult.md` / `tmp/mfs_campaign_consult_out.md`.
 **Status: IMPLEMENTATION IN PROGRESS (4 Sep 2026) — MFS-2a's Ka-band routing,
@@ -40,7 +40,7 @@ combos.
    Resumable — interior fills in later if/when imaging curves are wanted.
    **SUPERSEDED 21 Jul 2026:** the fixed reduced lattice becomes the SEED
    of a goal-oriented adaptive (quadtree/AMR) sampler — bmason-approved
-   design in `MFS2_ADAPTIVE_SAMPLER_SPEC.md` (tolerances, loss, cliff
+   design in `docs/features/MFS2_ADAPTIVE_SAMPLER_SPEC.md` (tolerances, loss, cliff
    localization, V1 replay gate).  MFS-2 in the task table below is
    replaced by that spec's MFS-2a..2e breakdown.
 

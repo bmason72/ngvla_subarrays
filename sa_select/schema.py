@@ -50,7 +50,7 @@ CSV table: data/subarrays.csv   (one row per subarray)
                own native beam are always better made with that component
                (curvegen/config.BEAM_CAP_ARCSEC), so offered curves / selector
                answers are clipped here; samples measured beyond the cap serve
-               as interpolation anchors only (9 Jul 2026, see PLAN.md)
+               as interpolation anchors only (9 Jul 2026, see docs/plans/PLAN.md)
   beam_cap_arcsec_native  MFS-only equivalent measured in that fixed window's
                native reference frame; never stored in the 30-GHz field
 
@@ -60,7 +60,7 @@ CSV tables: data/revf_curves.csv, data/bootstrap_curves.csv
   are derived from these at query time by curves.py (imaging = only samples
   with skirt <= threshold). Bootstrap samples come from the memo-121 CSVs and
   were the stand-in until the Rev F curves (revf_curves.csv, from
-  curvegen/collect.py) were generated (PLAN.md Track 2).
+  curvegen/collect.py) were generated (docs/plans/PLAN.md Track 2).
   subarray               canonical name (see above)
   resolution_arcsec_30ghz  beam FWHM scaled to 30 GHz (geometric mean if elliptical)
   eta                    sensitivity-loss factor vs natural weighting (>= 1)

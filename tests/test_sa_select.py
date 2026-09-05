@@ -799,7 +799,7 @@ class TestConfigRegistry(unittest.TestCase):
             self.assertEqual(len(info), n, "%s subarray count" % (combo,))
 
     def test_revc_campaign_config(self):
-        # Rev C (WRAPUP.md release scope): the curvegen config must resolve
+        # Rev C (docs/plans/WRAPUP.md release scope): the curvegen config must resolve
         # the Rev C.01 component cfgs, offer the Rev-D-shaped subarray set,
         # and carry the site-internal spurious-shorts cut.  config freezes
         # (rev, sim_mode) at import, so validate in a subprocess.

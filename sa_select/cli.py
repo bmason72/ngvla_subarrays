@@ -7,7 +7,7 @@ package.  Run as ``python -m sa_select --resolution ... --frequency ...``.
 
 Configuration revisions: ``--rev`` / ``--sim-mode`` select any campaign
 registered in data/config_registry.csv (default: revF, track).  Release
-scope note (WRAPUP.md, 17 Aug 2026): the released curves are revF/track
+scope note (docs/plans/WRAPUP.md, 17 Aug 2026): the released curves are revF/track
 (point-source AND imaging), revD/track (point-source only), revC/track
 (point-source only) -- an imaging query against a point-source-only
 release prints a warning but still runs (the imaging samples exist in the
@@ -39,7 +39,7 @@ from .curves import CurveLibrary
 from .heuristics import HEURISTICS
 
 #: (rev, sim_mode) combinations whose IMAGING curves are outside the release
-#: scope (WRAPUP.md): queries still run, with a warning.
+#: scope (docs/plans/WRAPUP.md): queries still run, with a warning.
 PTSRC_ONLY_RELEASE = {("revD", "track"), ("revC", "track")}
 
 _TRUE = {"1", "true", "yes", "imaging"}

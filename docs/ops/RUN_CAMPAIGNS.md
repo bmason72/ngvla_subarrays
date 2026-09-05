@@ -37,7 +37,7 @@ keeps production `nchan` blank.
 
 ## PSF backfill (cut-bearing anchors)
 
-See `PSF_DIAGNOSTICS.md` for what the PSF metrics (half-power width,
+See `docs/architecture/PSF_DIAGNOSTICS.md` for what the PSF metrics (half-power width,
 restoring beam, confusion, nearest-PSF lookup) mean; this section is the
 commands only.
 
@@ -70,7 +70,7 @@ full commands): `export_psf_data.py --all`, then
 `make_report.py --combined reports/ngvla-curves.html` and
 `make_report.py --combined --release`.
 
-## 17 Aug release wave — COMPLETE (harvested 18 Aug; see PLAN.md 18-Aug delta)
+## 17 Aug release wave — COMPLETE (harvested 18 Aug; see docs/plans/PLAN.md 18-Aug delta)
 
 Outcome (all 11 jobs exit 0): retrofit wave 2 tracks (3415615_{0,2}) +
 backfills (3415617_0, 3415618_2); revC/track campaign end-to-end (prep
@@ -96,7 +96,7 @@ three range-refresh backfills are now launched and RUNNING: 3418623_0 revF,
 was PREMATURE** — it embeds mostly 3-FWHM cuts (revF 0/2839 at 10 FWHM,
 revD 451/2852, revC 0/1935; verified by decoding its payloads) because the
 backfills carry the anchor refresh.  Rebuild both reports again AFTER the
-three backfills drain; harvest checklist in the PLAN.md 19-Aug delta.
+three backfills drain; harvest checklist in the docs/plans/PLAN.md 19-Aug delta.
 
 **PSF range upgrade rides along (18 Aug pm):** capture now goes to 10 FWHM
 (was 3; `measure.CAPTURE_RMAX_FWHM`) and backfill treats shorter-range cuts
@@ -142,7 +142,7 @@ resumable: re-running a campaign continues where it left off.
 
 - **All four base campaigns are DONE** (13–14 Jul): revF/track (mature),
   revF/snapshot, revD/track, revD/snapshot.  Curves + reports exist for all.
-- **Curve-defect diagnosis complete** (PLAN.md, 15 Jul): the visible
+- **Curve-defect diagnosis complete** (docs/plans/PLAN.md, 15 Jul): the visible
   jumps/staircases are refinement-budget starvation (worse: the old refine
   chased invisible eta>5 fringe jumps and never chased point-source-curve
   jumps — both fixed in `refine.py`); one corrupt snapshot LONG row was
@@ -200,7 +200,7 @@ revD/track mid+long spike and main ptsrc: FIXED):
 
 "Candidates exhausted" = refine measured every bracketing probe its
 generator can propose and the jump stayed — per the polish assumption
-(ETA_JUMPS.md), that is now real evidence of physics/branch transitions
+(docs/architecture/ETA_JUMPS.md), that is now real evidence of physics/branch transitions
 (the snapshot natural-end eta cliffs especially), not under-sampling.
 Next levers, bmason's call: (a) resubmit revD/track polish (helps `long`
 only), (b) the logged codex advisories — dense 1-D taper scans through the
@@ -221,7 +221,7 @@ part of bmason's survivors decision.
 
 ## 21 Jul wave — escalated refine + PSF anchor backfill (launch sheet)
 
-The 21 Jul code upgrade (PLAN.md 21-Jul part-2 delta) gives refine.py an
+The 21 Jul code upgrade (docs/plans/PLAN.md 21-Jul part-2 delta) gives refine.py an
 escalation ladder (E1 secant / E2 staged taper scans / E3 homogeneous gaps /
 E4 bumps) that targets every defect bmason flagged on 21 Jul, plus P1 axis-cut
 capture (new refine points carry PSF cuts natively) and the P2 anchor-backfill
@@ -244,7 +244,7 @@ grep -E "refined|budget|worst|escalation|E2 " /work2/10240/bmason72/stampede3/sw
 
 ### Adaptive retrofit wave (REPLACES escalation campaigns 2-4; 21 Jul pm)
 
-The adaptive sampler (curvegen/adaptive.py, spec MFS2_ADAPTIVE_SAMPLER_SPEC.md)
+The adaptive sampler (curvegen/adaptive.py, spec docs/features/MFS2_ADAPTIVE_SAMPLER_SPEC.md)
 runs certification-first on every existing map and measures only what your
 tolerances still need.  Certification pass (21 Jul): first wave = 1508 evals
 across all 46 maps (revF/track 537, revF/snapshot 391, revD/track 342-stale,
@@ -327,7 +327,7 @@ Success criterion per subarray: `worst in-band step` ≤ ~0.25 for BOTH
 `(imaging)` and `(ptsrc)` lines, or a budget-reached line worth reading.
 
 After the polish campaigns land, the next campaign to stage is the **PSF
-anchor backfill** (PLAN.md "PSF inspector plan", task P2) — it must wait for
+anchor backfill** (docs/plans/PLAN.md "PSF inspector plan", task P2) — it must wait for
 polish because refinement moves the envelope anchors it targets.
 
 ## 2. MS regeneration (insurance — run after any scratch purge, or never)
@@ -404,4 +404,4 @@ scancel -u bmason72 --name=ngvla_collect
 - A stage failed midway → just re-run the same `submit_campaign.sh` line; prep
   seeds and measured sweep points are skipped, only the missing work runs.
 - History: the 12 Jul across-the-board sweep failure was the `GROUPS` bash
-  special variable (fixed 13 Jul; gotcha logged in PLAN.md §13).
+  special variable (fixed 13 Jul; gotcha logged in docs/plans/PLAN.md §13).

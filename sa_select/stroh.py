@@ -1,7 +1,7 @@
 """
-Adapters for Michael Stroh's delivery formats (RELEASE_PLAN.md T5).
+Adapters for Michael Stroh's delivery formats (docs/plans/RELEASE_PLAN.md T5).
 
-Two input formats are supported (see mstroh_comparison.md for the full
+Two input formats are supported (see docs/architecture/mstroh_comparison.md for the full
 review of the delivery):
 
 1. **Per-subarray CASA ``.cfg`` files** (``ngvla-revF.<subarray>.cfg``: one
@@ -17,7 +17,7 @@ review of the delivery):
    ``select_subarrays`` can rank subarrays against his curves directly.
 
 Convention conversions applied on load (both verified against his package,
-mstroh_comparison.md):
+docs/architecture/mstroh_comparison.md):
 
 * **sqrt(2) beam convention**: his resolution scalar is
   ``1000*sqrt(bmaj^2 + bmin^2)`` mas -- a quadrature sum, ~sqrt(2) larger

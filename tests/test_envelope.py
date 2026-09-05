@@ -1,7 +1,7 @@
 """
 Tests for the shared curve engine (sa_select/envelope.py), including
 regression tests for the 6 Jul 2026 curve-anomaly post-mortem
-(curve_anomaly_postmortem.md): the pop-ups/drop-outs bmason flagged must not
+(docs/postmortems/2026-07-06-curve-anomaly.md): the pop-ups/drop-outs bmason flagged must not
 reappear.  Run from the repository root:
 
     python3 -m unittest tests.test_envelope

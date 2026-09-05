@@ -1,6 +1,6 @@
 # Rev D + snapshot campaign — implementation handoff (12 Jul 2026)
 
-Implements `campaign_proposal_revd_snapshot.md` (features 5 & 6) plus its
+Implements `docs/archive/plans/campaign_proposal_revd_snapshot.md` (features 5 & 6) plus its
 prerequisite, the deferred tranche **Component D** — the `(rev, sim_mode)` axis,
 which had never been implemented. Codex was used as a design thinking-partner up
 front and as a diff reviewer at the end (7 findings, all resolved — one was a
@@ -79,7 +79,7 @@ New sbatch/helper files: `campaign_prep.sbatch`, `campaign_sweep.sbatch`,
   (it still defaults to Rev F via `CurveLibrary()`); `for_config` exists for
   when a second dataset is swept and we want to expose it.
 
-See `PLAN.md` (section "(rev, sim_mode) axis + Rev D / snapshot campaign
+See `docs/plans/PLAN.md` (section "(rev, sim_mode) axis + Rev D / snapshot campaign
 machinery, 12 Jul 2026") for the durable in-repo record, and
 `tmp/codex_revd_snapshot_design.md` + `tmp/codex_review*.out` for the codex
 consult/review transcripts.

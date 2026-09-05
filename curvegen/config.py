@@ -1,5 +1,5 @@
 """
-Configuration for Rev F taperability/sculptability curve generation (PLAN.md
+Configuration for Rev F taperability/sculptability curve generation (docs/plans/PLAN.md
 Track 2).  Everything tunable lives here: subarray composition, image sizes,
 and the (robust, taper) parameter grids.
 
@@ -170,7 +170,7 @@ _COMPONENT_CFGS = {
         "mid": "ngvla-revD.mid.cfg",
         "long": "ngvla-revD.lba.cfg",
     },
-    # Rev C.01 (WRAPUP.md release scope, 17 Aug 2026): components mirror Rev D
+    # Rev C.01 (docs/plans/WRAPUP.md release scope, 17 Aug 2026): components mirror Rev D
     # (core 94 / spiral 74 / mid 46 / lba 30 antennas; the provided monolithic
     # main.cfg equals core+spiral+mid antenna-for-antenna, 214).  Its lba
     # short-baseline pathology DIFFERS from D/F: ~10 VLBA-style sites of 2-4
@@ -220,7 +220,7 @@ _SUBARRAYS = {
         "mid+spiral+core-outer": ["mid", "spiral", "core-outer"],
         "long+mid+spiral+core-outer": ["long", "mid", "spiral", "core-outer"],
     },
-    # Rev D offered set (bmason, campaign_proposal_revd_snapshot.md): mirror the
+    # Rev D offered set (bmason, docs/archive/plans/campaign_proposal_revd_snapshot.md): mirror the
     # Rev F structure where components exist.  Rev D has no core-inner/core-outer
     # split, so those and the spiral+mid+long / core-outer combos are omitted.
     "revD": {
@@ -234,7 +234,7 @@ _SUBARRAYS = {
         "mid+long": ["mid", "long"],
         "main+long": ["core", "spiral", "mid", "long"],
     },
-    # Rev C offered set mirrors Rev D (bmason, WRAPUP.md release scope): same
+    # Rev C offered set mirrors Rev D (bmason, docs/plans/WRAPUP.md release scope): same
     # component structure, no core-inner/core-outer split.
     "revC": {
         "core": ["core"],

@@ -141,7 +141,7 @@ adjust to whatever is current.)
   process cwd (two quota blowouts on 6 Jul 2026 before this was pinned down;
   invoke as `cd $SCRATCH/... && casapy $repo/curvegen/sweep.py <sa>` — imports
   resolve from the script dir). casatools also clashes with TACC's Intel oneAPI
-  `LD_LIBRARY_PATH` — always use the `casapy` wrapper (`casaLocation.md`).
+  `LD_LIBRARY_PATH` — always use the `casapy` wrapper (`docs/ops/casaLocation.md`).
 - `.venv/` has **only pip** (no numpy/scipy). Use CASA's Python
   (`/Applications/CASA.app/Contents/MacOS/python3`) or install deps into the venv.
 - Git repo initialized 5 Jul 2026 (branch `main`); commit at milestones. `.gitignore` excludes

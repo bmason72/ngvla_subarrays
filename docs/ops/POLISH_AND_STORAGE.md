@@ -10,7 +10,7 @@ The polish commands rerun the normal campaign with `--refine-budget 200
 --refine-rounds 8`. Because the base lattice is resumable and already
 complete, prep, sweep, and grid filling are effectively no-ops; refinement
 does the new work. The 200-point budget is per subarray, not per whole
-campaign. See `RUN_CAMPAIGNS.md` and `curvegen/campaign_sweep.sbatch`.
+campaign. See `docs/ops/RUN_CAMPAIGNS.md` and `curvegen/campaign_sweep.sbatch`.
 
 For each round, `refine.py`:
 
@@ -116,9 +116,9 @@ Meanwhile:
 
 ## Primary references
 
-- `RUN_CAMPAIGNS.md`
-- `PLAN.md`
-- `casaLocation.md`
+- `docs/ops/RUN_CAMPAIGNS.md`
+- `docs/plans/PLAN.md`
+- `docs/ops/casaLocation.md`
 - `curvegen/refine.py`
 - `curvegen/config.py`
 - `curvegen/make_report.py`

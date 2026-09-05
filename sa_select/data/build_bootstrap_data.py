@@ -13,7 +13,7 @@ docstring of sa_select/schema.py):
                            from Viviana Rosero's memo-121 use-case simulation
                            tables (memo121artifacts/*Cln.csv). These are a
                            stand-in for proper Rev F taperability/sculpting
-                           curves (see PLAN.md Track 2) -- they cover a
+                           curves (see docs/plans/PLAN.md Track 2) -- they cover a
                            scattering of science-case resolutions rather than
                            a dense scan, and are unevenly distributed across
                            subarrays and frequencies.

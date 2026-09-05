@@ -1,5 +1,5 @@
 ---
-split_from: PLAN.md (lines 483-988 at commit 7f0a63f)
+split_from: docs/plans/PLAN.md (lines 483-988 at commit 7f0a63f)
 history: git log --follow docs/plans/PLAN.md
 ---
 ### HANDOFF STATE (7 Jul 2026 — read this first)
@@ -84,7 +84,7 @@ reproducing make_report.build_curve exactly per campaign) grounded it.
   -> `NGVLA_REFINE_BUDGET/ROUNDS` -> `campaign_sweep.sbatch` refine call.
 - 3 new campaigns re-collected (revf_snapshot_curves.csv is 1 corrupt row
   lighter; labels fixed).
-- **Staged for bmason (RUN_CAMPAIGNS.md §1): four POLISH campaigns**
+- **Staged for bmason (docs/ops/RUN_CAMPAIGNS.md §1): four POLISH campaigns**
   (budget 200, rounds 8; prep/sweep/fill are resumable no-ops, only refine
   runs).  Order free; revF/track last/optional (its two ptsrc steps).
 - **NOT changed on purpose**: mid+long snapshot capping (honest physics),
@@ -178,7 +178,7 @@ section below ("PSF inspector plan").
    `$NGVLA_SCRATCH/run_<jobid>[_<task>]`; ~9 GB debris deleted; also fixed
    `fill_beam_caps.py` hard-exiting on the default combo (first
    revF/track-through-submit_campaign ever).  Commit 553a765; post-mortem
-   in RUN_CAMPAIGNS.md.  Second failure mode found: the per-user
+   in docs/ops/RUN_CAMPAIGNS.md.  Second failure mode found: the per-user
    queued-job LIMIT silently kills later sbatch calls when 3-4 campaign
    chains stack up (cost revD/track its collect job TWICE) — gotcha below.
 2. *16 Jul relaunch (bmason, 3 campaigns): DONE.*  All sweeps completed;
@@ -188,7 +188,7 @@ section below ("PSF inspector plan").
    imaging, budget-limited — a resubmit continues it); most flagged
    defects FIXED (revF/snapshot main+long imaging 1.42→0.24; revD/track
    mid+long spike and main ptsrc gone); survivors (residual table in
-   RUN_CAMPAIGNS.md) all stopped on CANDIDATES EXHAUSTED — dense local
+   docs/ops/RUN_CAMPAIGNS.md) all stopped on CANDIDATES EXHAUSTED — dense local
    sampling didn't move them, which per the polish assumption is now real
    evidence of physics/branch transitions (esp. the snapshot natural-end
    ptsrc cliffs: main+long revD/snapshot 1.58).  Next levers = dense 1-D
@@ -199,8 +199,8 @@ section below ("PSF inspector plan").
    polish is the one campaign still to launch; P1 (cut capture) next,
    then P2 backfill AFTER revF/track polish lands.
 4. bmason wrote two reference notes at repo root (untracked, theirs):
-   `ETA_JUMPS.md` (why eta jumps happen; the polish assumption) and
-   `POLISH_AND_STORAGE.md` (how polish samples; the $WORK/$SCRATCH
+   `docs/architecture/ETA_JUMPS.md` (why eta jumps happen; the polish assumption) and
+   `docs/ops/POLISH_AND_STORAGE.md` (how polish samples; the $WORK/$SCRATCH
    layout).
 
 **SESSION DELTA (21 Jul 2026, Fable — state audit: revF/track polish LANDED
@@ -219,7 +219,7 @@ section below ("PSF inspector plan").
    revF-track-curves.html + the combined ngvla-curves.html + PSF payloads
    (`reports/psf/revF_track`) with HEAD code (c643dca touched only
    planning docs).  revF/track's PSF panel still shows "pending backfill"
-   by design until P2.  Survivors table in RUN_CAMPAIGNS.md gained the
+   by design until P2.  Survivors table in docs/ops/RUN_CAMPAIGNS.md gained the
    revF/track row.
 3. *Milestone commit (this one)*: routed `revf_curves.csv` (4038 samples)
    + `results/long_mid_spiral_core_outer.csv` (+5 refine points) + these
@@ -291,7 +291,7 @@ escalated refine + display smoothing + P1 + P2).**
    setpoints" — the s0=0.10+ptsrc+natural scope is bmason's approved P2
    spec AND make_report strips env_keys for non-default setpoints, so the
    report cannot reference them (coupling comment added).
-7. *Wave plan* (RUN_CAMPAIGNS.md "21 Jul wave"): revD/track CANARY
+7. *Wave plan* (docs/ops/RUN_CAMPAIGNS.md "21 Jul wave"): revD/track CANARY
    (budget 240, rounds 12) + chained backfill --array=2; inspect
    escalation logs; then revF/snapshot, revD/snapshot, revF/track (200,
    12) serialized vs queue headroom, each + its backfill; final combined
@@ -303,7 +303,7 @@ resolved; adaptive-sampler direction approved + spec).**
 1. *Wave launched (canary stage).*  revD/track: prep 3333952 → sweep
    3333953[0-3] → collect 3333954 → backfill 3333958[2], all PENDING at
    hand-off.  Remaining three campaigns + backfills launch after canary
-   inspection — NEXT_AGENT.md item 1-2, RUN_CAMPAIGNS.md "21 Jul wave".
+   inspection — docs/plans/NEXT_AGENT.md item 1-2, docs/ops/RUN_CAMPAIGNS.md "21 Jul wave".
    The 09d6d7e milestone commit carries the whole code upgrade (177 green).
 2. *Beam-cap question (bmason): resolved as a memo misreading.*  The cap
    binds only the COARSE end; reference = coarsest component (mid+long →
@@ -327,7 +327,7 @@ resolved; adaptive-sampler direction approved + spec).**
    mandatory — imaging winners are interior); triangular/scattered mesh
    REJECTED as architecture unless a replay shows ≥30% additional saving
    at p90 (Delaunay simplices across cliffs manufacture nonexistent
-   resolutions).  Full spec: `MFS2_ADAPTIVE_SAMPLER_SPEC.md` (supersedes
+   resolutions).  Full spec: `docs/features/MFS2_ADAPTIVE_SAMPLER_SPEC.md` (supersedes
    MFS scope decision 4; seed ≈56 pts, budget plan 80/map, V1 replay
    gate).  Codex spec-review launched at session end — may need re-run
    (NEXT_AGENT).  bmason's standing bet: the in-flight wave (new
@@ -375,7 +375,7 @@ retrofit staged; grid MFS dropped).**
    (then Ka MFS wave once bmason supplies nchan).
 
 **SESSION DELTA (17 Aug 2026, Fable — July wave harvested; NEW SCOPE =
-WRAPUP.md; live plan = RELEASE_PLAN.md).**
+docs/plans/WRAPUP.md; live plan = docs/plans/RELEASE_PLAN.md).**
 1. *The 21-24 Jul chain COMPLETED unattended* (recovered from sacct + the
    logs bmason archived to /work2/.../oldNgvlaLogs/ on 13 Aug): canary
    sweep/collect (3333953/3333954), adaptive retrofit array 0-3 (3335064),
@@ -394,11 +394,11 @@ WRAPUP.md; live plan = RELEASE_PLAN.md).**
    tests green, combined report rebuilt post-backfill (the run-sheet's
    final step, previously pending).  PSF axis-cut payloads exist for all
    four campaigns (reports/psf/, 23-24 Jul).
-4. *NEW SCOPE (bmason, WRAPUP.md 17 Aug — supersedes this file where in
+4. *NEW SCOPE (bmason, docs/plans/WRAPUP.md 17 Aug — supersedes this file where in
    conflict):* release the calculator web + python prototypes for
    revF/track (ptsrc+imaging), revD/track (ptsrc only), revC/track (ptsrc
    only, NEW campaign).  Snapshots NOT released.  Plan of record:
-   `RELEASE_PLAN.md` (T0 harvest ✓ / T1 retrofit wave 2 / T2 revC campaign
+   `docs/plans/RELEASE_PLAN.md` (T0 harvest ✓ / T1 retrofit wave 2 / T2 revC campaign
    / T3 release page / T4 calculator surface / T5 MStroh formats /
    T6 docs+memo).  bmason launches all Slurm jobs himself now — agents
    prepare command lines only.
@@ -482,8 +482,8 @@ wave-3 status + harvest checklist).**
 **SESSION DELTA (4 Sep 2026, Fable — PSF Gaussian reference switched to the
 restoring beam; range-classification/legacy-warning logic reverted).**
 bmason decision: legacy ~3-FWHM captures are pre-18-Aug data left as is (no
-range-classification, no legacy warnings — see `PSF_REPORT_FIX_PLAN.md`, which
-supersedes `PSF_PLOT_FIX_HANDOFF.md` §3). ΩGaussian is now the tclean
+range-classification, no legacy warnings — see `docs/archive/plans/PSF_REPORT_FIX_PLAN.md`, which
+supersedes `docs/archive/plans/PSF_PLOT_FIX_HANDOFF.md` §3). ΩGaussian is now the tclean
 restoring-beam volume (π·bmaj·bmin/(4 ln 2)); exporter/report/template/tests
 updated; Rev F/Rev C track points nearly all have a beam, but ~1,750 Rev D
 track exploratory points and most snapshot points (Rev F ~2,470/3,830, Rev D
@@ -495,7 +495,7 @@ half-power width (up to 1.25-1.6x, mostly at Briggs+taper points) — tclean's
 `psfcutoff=0.35` fit picks up the PSF shoulder. Added
 `restoring_to_halfpower_ratio` to `derive_psf_metrics`/the compact summary
 (index 6) and surfaced it in the PSF inspector, chart legend/x-axis title,
-and a new QA-table "beam/core" column; see PSF_DIAGNOSTICS.md's "Restoring
+and a new QA-table "beam/core" column; see docs/architecture/PSF_DIAGNOSTICS.md's "Restoring
 beam versus core half-power width" section for the measured per-subarray
 ratios and the confirmed default-`psfcutoff` tclean call.
 
@@ -505,6 +505,6 @@ the one nearest in (weighting, robust, taper), so an interpolated curve point
 often displayed a PSF from the wrong weighting family (MAIN skirt excess
 median +0.05/p90 +0.16/max +0.38). Fixed to rank by weighting family first,
 then normalized robust/taper distance, resolution as tie-break only; see
-PSF_DIAGNOSTICS.md's "Which captured PSF the calculator shows" section and
+docs/architecture/PSF_DIAGNOSTICS.md's "Which captured PSF the calculator shows" section and
 `tests/test_psf_lookup_replay.py`.
 

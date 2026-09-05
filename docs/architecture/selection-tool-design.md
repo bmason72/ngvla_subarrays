@@ -1,5 +1,5 @@
 ---
-split_from: PLAN.md (lines 14-208 at commit 7f0a63f)
+split_from: docs/plans/PLAN.md (lines 14-208 at commit 7f0a63f)
 history: git log --follow docs/plans/PLAN.md
 ---
 ## 1. Objective

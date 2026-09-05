@@ -5,7 +5,7 @@ normative MFS build contract, now with the mono-sampler work completed since the
 original 21 Jul v2 separated from the MFS work still to be implemented.  Every
 target rule is meant to be coded without guessing; pinned numbers are in
 "Constants".  Supersedes v1 + its two appendices (codex review + bmason addendum
-folded into the body).  Companion: `MFS_CAMPAIGN_PLAN.md` (bands, nchan pilots,
+folded into the body).  Companion: `docs/plans/MFS_CAMPAIGN_PLAN.md` (bands, nchan pilots,
 noise A/B, PyLauncher wave, storage — unchanged except where cited).
 
 **Operational rule (live-code hazard, updated 1 Sep).**  Campaign tasks import
@@ -132,7 +132,7 @@ remain authoritative unless bmason explicitly changes them:
 1. **No grid-style MFS.**  The adaptive sampler IS the MFS engine from day one.
 2. **MFS = Ka band only** initially: the calculator's 27 GHz band (band 4),
    **27 ± 6.75 GHz = 20.25–33.75 GHz**, fractional bandwidth **0.50**
-   (`MFS_CAMPAIGN_PLAN.md` scope decision 2, `receiver_data.pkl`).  revF,
+   (`docs/plans/MFS_CAMPAIGN_PLAN.md` scope decision 2, `receiver_data.pkl`).  revF,
    homogeneous + main set (7 subarrays: core-inner, core, spiral, mid,
    core+spiral, spiral+mid, main), **point-source goal first**.  Skirt is
    still always measured and recorded on every point; imaging curves derive
@@ -184,7 +184,7 @@ output) for a real budget saving.
 1. **Point table = source of truth.**  The per-(subarray, combo) results CSV
    (`sweep.FIELDS` schema, keyed by the shared
    `adaptive_support.point_key`), append-only, resumable.
-   Combo routing = `-<rev>_<mode>_<band>` per `MFS_CAMPAIGN_PLAN.md`.  Every
+   Combo routing = `-<rev>_<mode>_<band>` per `docs/plans/MFS_CAMPAIGN_PLAN.md`.  Every
    existing table is a valid warm start.
 2. **Topology = derived view**, reconstructed deterministically from the table
    on every restart — **no pickled sampler state**.  A 2:1-balanced quadtree
@@ -448,7 +448,7 @@ the only consumer.
 The old v2 examples using `submit_campaign.sh --adaptive` or setting only
 `NGVLA_BAND`/`NGVLA_NCHAN` were aspirational and are not valid current launch
 commands.  Mono retrofit uses explicit sbatch array indices documented in
-`RUN_CAMPAIGNS.md`.  A copy-paste Ka command must not be published until MFS-2a,
+`docs/ops/RUN_CAMPAIGNS.md`.  A copy-paste Ka command must not be published until MFS-2a,
 MFS-2c, MFS-2d, and MFS-4 pass and bmason pins `nchan`.
 
 ## Validation gates

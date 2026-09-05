@@ -1,5 +1,5 @@
 ---
-split_from: PLAN.md (lines 226-482 and 1447-1591 at commit 7f0a63f)
+split_from: docs/plans/PLAN.md (lines 226-482 and 1447-1591 at commit 7f0a63f)
 history: git log --follow docs/plans/PLAN.md
 ---
 ### v2 curve generation (5–6 Jul 2026, after bmason's review of v1 curves)
@@ -58,7 +58,7 @@ User feedback on v1 (all implemented):
   regression tests (28 total).
 
 ### TACC round (6 Jul 2026, evening — resumed on Stampede3)
-Environment: see `casaLocation.md` (modular CASA 6.7.5 venv in `$WORK` + `casapy`
+Environment: see `docs/ops/casaLocation.md` (modular CASA 6.7.5 venv in `$WORK` + `casapy`
 wrapper; the previously-noted monolithic install is broken). 28/28 tests pass.
 - **Homogeneous set refreshed:** all 6 MSes re-simulated; relaxation-aware
   `refine.py` re-run per the handoff plan (core-inner/core/spiral/mid converged at
@@ -87,7 +87,7 @@ sqrt(2) quadrature; PCHIP-PPoly splines, <1% vs engine, QA PNGs);
 v13 (a40d4b1) report skirt-setpoint dropdown (pre-tabulated s0 = 0.05/0.10/
 0.15/0.20; heatmap rings pinned to 0.10). The (rev, sim_mode) schema axis
 (tranche component D) was DEFERRED by bmason — it is the prerequisite for
-the RevD/snapshot campaigns (campaign_proposal_revd_snapshot.md).  **Now
+the RevD/snapshot campaigns (docs/archive/plans/campaign_proposal_revd_snapshot.md).  **Now
 IMPLEMENTED (12 Jul 2026) together with the Rev D + snapshot campaign
 machinery — see the dedicated section below.**  v13's missing codex review
 was re-run post-hoc on the committed diff (11 Jul; findings adjudicated
@@ -102,7 +102,7 @@ below/in git).
    (`selection_policy` field) because they have NO strict skirt<=0.10
    points — settle with Stroh/ngECT whether that is acceptable to the
    consumer, and share the sqrt(2)-convention + spiral-spline findings
-   (mstroh_comparison.md).
+   (docs/architecture/mstroh_comparison.md).
 
 ### (rev, sim_mode) axis + Rev D / snapshot campaign machinery (12 Jul 2026)
 
@@ -254,7 +254,7 @@ blank until its own prep runs — sweep preflight fails closed, verified).
 All 4 registry combos now pass `campaign_tasks.py narray/groups/seeds`.
 Codex (gpt-5.5 xhigh) reviewed the fixes: confirmed both, flagged committing
 the untracked metadata CSV with the registry row as required for a clean
-checkout.  Relaunch commands: `RUN_CAMPAIGNS.md` (step 0 cancels the two
+checkout.  Relaunch commands: `docs/ops/RUN_CAMPAIGNS.md` (step 0 cancels the two
 orphaned DependencyNeverSatisfied collect jobs 3299897/3299901).  Memo
 updated the same day (scope now 14 subarrays, full-grid + uv-filter + campaign
 sections, real figures replacing the three placeholders).
@@ -318,15 +318,15 @@ LAUNCHED by bmason 8 Jul; QA when it lands.]
    for when a second dataset is swept and we want to expose it.
 
 **Context for another model/agent**: CLAUDE.md (repo guide) → this PLAN →
-`curve_anomaly_postmortem.md` (why the engine is what it is) →
-`mstroh_comparison.md` (external validation) → `casaLocation.md` (TACC env:
+`docs/postmortems/2026-07-06-curve-anomaly.md` (why the engine is what it is) →
+`docs/architecture/mstroh_comparison.md` (external validation) → `docs/ops/casaLocation.md` (TACC env:
 casapy wrapper, quota/TempLattice gotchas) → `memo/` (the write-up) →
 `codex-bridge/` + `tmp/codex/tasks/` (second-model consult/build transcripts).
 
 ### Curve-anomaly post-mortem + shared engine (6 Jul 2026, TACC evening)
 bmason flagged pop-ups/drop-outs in both curve types (e.g. spiral+mid ptsrc
 17.8 mas; mid imaging 8.08 mas; core+spiral imaging 103–118 mas sawtooth).
-Post-mortem (`curve_anomaly_postmortem.md`): NOT noise — hard ±5% window +
+Post-mortem (`docs/postmortems/2026-07-06-curve-anomaly.md`): NOT noise — hard ±5% window +
 hard skirt threshold + window-local relaxation applied to a quantized lattice
 (mechanisms M1–M3, M3b, M4a–d; census: 14 anomalies, all composite configs;
 codex critique folded in). **Fix implemented (bmason-approved):**

@@ -1,5 +1,5 @@
 """
-Tests for the release page's standalone PSF embedding (RELEASE_PLAN.md's
+Tests for the release page's standalone PSF embedding (docs/plans/RELEASE_PLAN.md's
 "standalone release page" follow-up): make_report.embed_psf_payloads reads
 the lazy-load psf/<comboKey>/<stem>.js JSONP files and inlines them as
 gzip+base64 <script type="text/plain" data-psf-id="..."> blocks, so the

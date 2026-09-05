@@ -8,16 +8,16 @@ pipeline that generates the underlying taperability/sculptability curves. The
 ranked results also estimate the number of raw visibilities for one channel and
 a 5 s correlator dump time.
 
-**Release scope (Aug 2026, see `WRAPUP.md` + `RELEASE_PLAN.md`):** the released
+**Release scope (Aug 2026, see `docs/plans/WRAPUP.md` + `docs/plans/RELEASE_PLAN.md`):** the released
 products are the web page (`make_report.py --combined --release`) and the
 `sa_select` Python calculator for **Rev F 4-h track** (point-source and
 imaging), **Rev D 4-h track** (point-source), and **Rev C.01 4-h track**
 (point-source). Snapshot campaigns exist but are internal.
 
-**Start here:** `RELEASE_PLAN.md` (current plan) → `PLAN.md` (history, decisions,
-gotchas §13) → `RUN_CAMPAIGNS.md` (Slurm run sheet). `CLAUDE.md` is the task
+**Start here:** `docs/plans/RELEASE_PLAN.md` (current plan) → `docs/plans/PLAN.md` (history, decisions,
+gotchas §13) → `docs/ops/RUN_CAMPAIGNS.md` (Slurm run sheet). `CLAUDE.md` is the task
 statement and repo map for coding agents; the memo (`memo/ngvla_sa_selection.tex`)
-documents the method, the runbook, and the Python interface. `PSF_DIAGNOSTICS.md`
+documents the method, the runbook, and the Python interface. `docs/architecture/PSF_DIAGNOSTICS.md`
 covers how the reports measure and present PSF quality (half-power width,
 restoring beam, confusion, nearest-PSF lookup).
 
@@ -36,7 +36,7 @@ restoring beam, confusion, nearest-PSF lookup).
 
 Everything runs under **any CASA 6.5+ Python** (needs `casatools`, `casatasks`,
 `numpy`, `scipy`). On TACC Stampede3 use the `casapy` wrapper
-(`/work2/10240/bmason72/stampede3/casaenv/bin/casapy`; see `casaLocation.md`).
+(`/work2/10240/bmason72/stampede3/casaenv/bin/casapy`; see `docs/ops/casaLocation.md`).
 Only `curvegen/` needs CASA. `sa_select/` needs just numpy (+ scipy for the
 sensitivity calculator and Stroh splines).
 
@@ -66,7 +66,7 @@ python3 make_report.py --combined reports/ngvla-curves.html   # ALL campaigns
 python3 make_report.py --combined --release \
         reports/ngvla-curves-release.html            # the RELEASED page
 
-# campaigns on TACC (Slurm; see RUN_CAMPAIGNS.md for the full sheet)
+# campaigns on TACC (Slurm; see docs/ops/RUN_CAMPAIGNS.md for the full sheet)
 bash curvegen/submit_campaign.sh revC track --time 47:00:00
 sbatch --array=0,2 curvegen/adaptive_retrofit.sbatch  # retrofit tracks
 # isolated, simulation-only Ka snapshot nchan/RSS pilot (one queue slot)
@@ -80,7 +80,7 @@ is chosen. The 54-channel run is a focused convergence check, not the start of
 a large powers-of-two ladder. It does **not**
 authorize or run the production adaptive snapshot campaign; inspect its memory
 logs, finish the imaging convergence/replay gates, and record the nchan/noise
-decision first (see `RUN_CAMPAIGNS.md` and `MFS_CAMPAIGN_PLAN.md`).
+decision first (see `docs/ops/RUN_CAMPAIGNS.md` and `docs/plans/MFS_CAMPAIGN_PLAN.md`).
 
 ## Picking up on a new machine
 

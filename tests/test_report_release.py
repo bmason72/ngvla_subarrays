@@ -1,6 +1,6 @@
 """
-Tests for the release build of the combined curves report (RELEASE_PLAN.md
-T3; WRAPUP.md items 2+3): make_report.combined_combo_plan is the pure
+Tests for the release build of the combined curves report (docs/plans/RELEASE_PLAN.md
+T3; docs/plans/WRAPUP.md items 2+3): make_report.combined_combo_plan is the pure
 registry-rows -> kept-combos + flags mapping behind `--combined --release`.
 Release mode keeps only RELEASE_COMBOS and stamps imaging_omitted=True on the
 RELEASE_PTSRC_ONLY campaigns' dropdown metadata; non-release (internal)

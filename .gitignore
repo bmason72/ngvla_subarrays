@@ -40,7 +40,7 @@ curvegen/work
 curvegen/ms-*/
 curvegen/work-*/
 
-# external delivery (contains nested git repos; see mstroh_comparison.md)
+# external delivery (contains nested git repos; see docs/architecture/mstroh_comparison.md)
 mstroh/
 ._codex-bridge
 # transient run logs and in-flight parallel shards (all rev/sim_mode results

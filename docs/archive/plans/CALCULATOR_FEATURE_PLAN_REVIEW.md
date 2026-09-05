@@ -1,4 +1,4 @@
-# Review of CALCULATOR_FEATURE_PLAN.md
+# Review of docs/archive/plans/CALCULATOR_FEATURE_PLAN.md
 
 Reviewer: Claude (Fable 5), 21 August 2026. Every factual claim in the plan was
 checked against the current working tree; code references below are to the

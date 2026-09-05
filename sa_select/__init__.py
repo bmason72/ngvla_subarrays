@@ -16,7 +16,7 @@ Typical use:
     print(result.table())
     best = result.best          # a Candidate; best.tclean_pars() -> dict
 
-See PLAN.md and the memos (55/65/67/72/76/121) for the method.  Curve data in
+See docs/plans/PLAN.md and the memos (55/65/67/72/76/121) for the method.  Curve data in
 sa_select/data/ is currently BOOTSTRAP data derived from memo 121 (pre-Rev-F
 simulations) -- a stand-in until the Rev F curves are generated.
 """

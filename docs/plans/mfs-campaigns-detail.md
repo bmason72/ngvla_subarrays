@@ -1,5 +1,5 @@
 ---
-split_from: PLAN.md (lines 1083-1324 at commit 7f0a63f)
+split_from: docs/plans/PLAN.md (lines 1083-1324 at commit 7f0a63f)
 history: git log --follow docs/plans/PLAN.md
 ---
 ### MFS broadband continuum campaigns (16 Jul 2026 — IMPLEMENTATION IN PROGRESS)
@@ -242,5 +242,5 @@ set is refined/smooth; the campaign set is coarser (see item 1 caveats).
    read + real figures (placeholders marked).
 5. **COMMITTED: v4 (f1a02da)** — bilinear engine + 14-subarray report; and
    the refine sbatch (c8a4bdc). Working tree clean except untracked
-   `NEXT_AGENT.md` / `futureDev.md`. 62 tests green.
+   `docs/plans/NEXT_AGENT.md` / `docs/_needs-triage/futureDev.md`. 62 tests green.
 

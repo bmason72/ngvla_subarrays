@@ -1,5 +1,5 @@
 ---
-split_from: PLAN.md (lines 989-1082 at commit 7f0a63f)
+split_from: docs/plans/PLAN.md (lines 989-1082 at commit 7f0a63f)
 history: git log --follow docs/plans/PLAN.md
 ---
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)
@@ -15,7 +15,7 @@ backfill).  Entry points wired: subarray dropdown, heatmap-cell click,
 small-multiple-mark click, calculator per-row "PSF" button
 (nearest-measured-key resolution).  P1 (axis-cut capture) and P2 (anchor
 backfill) were BUILT 21 Jul — see the 21 Jul part-2 delta; backfill runs
-ride the 21 Jul campaign wave (RUN_CAMPAIGNS.md).
+ride the 21 Jul campaign wave (docs/ops/RUN_CAMPAIGNS.md).
 
 bmason's decisions (AskUserQuestion, 15 Jul): **(1)** azimuthal profiles AND
 major/minor-axis cuts (cuts need a capture extension; they expose the

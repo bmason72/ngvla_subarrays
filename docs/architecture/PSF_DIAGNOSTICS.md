@@ -3,7 +3,7 @@
 This file is the reference for how the curve reports measure and present PSF
 quality: half-power width, first-null volumes, the restoring-beam Gaussian
 reference, confusion scaling, and how the calculator picks a captured PSF to
-display. `RUN_CAMPAIGNS.md` holds only the commands for running the backfill
+display. `docs/ops/RUN_CAMPAIGNS.md` holds only the commands for running the backfill
 and regeneration jobs; look there for the Slurm run sheet, and here for what
 the numbers mean.
 

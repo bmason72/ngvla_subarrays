@@ -153,9 +153,9 @@ the repair commit.
 
 Sections 3 and 4 (the strict range-classification/legacy-warning
 specification and its commit split) are superseded 4 Sep 2026 by bmason's
-decision recorded in `PSF_REPORT_FIX_PLAN.md`: legacy ~3-FWHM captures are
+decision recorded in `docs/archive/plans/PSF_REPORT_FIX_PLAN.md`: legacy ~3-FWHM captures are
 pre-18-Aug data and are left as is (no range-classification code, no legacy
 warnings, no lattice backfill campaign), and the Gaussian reference becomes
 the tclean restoring beam rather than a fitted or direct-half-power width. See
-`PSF_REPORT_FIX_PLAN.md` for what was actually implemented and
-`PSF_DIAGNOSTICS.md` for the resulting state.
+`docs/archive/plans/PSF_REPORT_FIX_PLAN.md` for what was actually implemented and
+`docs/architecture/PSF_DIAGNOSTICS.md` for the resulting state.

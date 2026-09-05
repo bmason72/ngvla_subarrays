@@ -10,11 +10,11 @@ codex-bridge/CLAUDE.local.md and codex-bridge/PROTOCOL.md before first use.
 
 ORIENT (read in this order before doing anything):
 1. CLAUDE.md                      — task statement, repo map, environment rules
-2. PLAN.md, top section "HANDOFF STATE (7 Jul 2026)" — current state, open
+2. docs/plans/PLAN.md, top section "HANDOFF STATE (7 Jul 2026)" — current state, open
    items, and the gotchas log (§13). Trust this over any older section.
-3. curve_anomaly_postmortem.md    — why sa_select/envelope.py is what it is
-4. mstroh_comparison.md           — external validation status
-5. casaLocation.md                — TACC environment (READ BEFORE running CASA)
+3. docs/postmortems/2026-07-06-curve-anomaly.md    — why sa_select/envelope.py is what it is
+4. docs/architecture/mstroh_comparison.md           — external validation status
+5. docs/ops/casaLocation.md                — TACC environment (READ BEFORE running CASA)
 
 ENVIRONMENT (TACC Stampede3, compute node):
 - Python/CASA: /work2/10240/bmason72/stampede3/casaenv/bin/casapy (a python3
@@ -41,7 +41,7 @@ WORKING AGREEMENTS (from our sessions — keep these):
   the report — never fork the logic. Changes need tests; the named
   anomalies in tests/test_envelope.py must stay pinned.
 - Local HTML reports only — never publish artifacts to the web.
-- Keep PLAN.md's HANDOFF STATE current as you work; log new gotchas in
+- Keep docs/plans/PLAN.md's HANDOFF STATE current as you work; log new gotchas in
   §13. Commit at milestones with descriptive messages.
 - Check in with me (bmason) before: changing curve/selection semantics,
   dropping/adding offered subarrays, or launching compute campaigns beyond

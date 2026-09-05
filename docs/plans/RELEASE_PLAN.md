@@ -1,10 +1,10 @@
-# RELEASE_PLAN — MVP release per WRAPUP.md (drafted 17 Aug 2026)
+# RELEASE_PLAN — MVP release per docs/plans/WRAPUP.md (drafted 17 Aug 2026)
 
 > **Progress (18 Aug 2026):** T0 DONE (6332362).  **T1 DONE** — retrofit
 > wave 2 (tracks) + backfills completed 18 Aug, exit 0; revF/track 6/14
 > maps converged, revD/track 2/9, the rest still at the audit cap; all
 > step features again classified genuine.  **Wave 3 = bmason decision**
-> (launch lines in RUN_CAMPAIGNS.md).  **T2 DONE** (code 66a5e7c; the
+> (launch lines in docs/ops/RUN_CAMPAIGNS.md).  **T2 DONE** (code 66a5e7c; the
 > campaign ran 17-18 Aug, 9 subarrays, all curves + PSF payloads in; NO
 > combo-4 backfill needed — dry-run audit shows every anchor cut-bearing).
 > T3 DONE (437d083; release page rebuilt 18 Aug WITH revC).  T4 DONE
@@ -47,9 +47,9 @@
 > 3-FWHM: revF 0/2839 cuts at 10, revD 451/2852, revC 0/1935).  revC's
 > range-refresh backfill was subsequently launched as 3421939_4.  Rebuild
 > + re-verify
-> after all backfills drain; harvest checklist in PLAN.md 19-Aug delta.
+> after all backfills drain; harvest checklist in docs/plans/PLAN.md 19-Aug delta.
 
-Scope authority: `WRAPUP.md` (17 Aug) supersedes PLAN.md / NEXT_AGENT.md where
+Scope authority: `docs/plans/WRAPUP.md` (17 Aug) supersedes docs/plans/PLAN.md / docs/plans/NEXT_AGENT.md where
 they conflict.  Release = calculator **web page** (the in-report client-side
 calculator + curves) and **python prototype** (`sa_select/`) for:
 
@@ -140,7 +140,7 @@ call on a third wave.  Commit data milestone when it drains.
 - Input: accept a per-subarray monolithic `.cfg` (his
   `ngvla-revF.<sa>.cfg` style) as a subarray definition alongside component
   composition.
-- Interchange: read (convert √2 beam convention! see mstroh_comparison.md)
+- Interchange: read (convert √2 beam convention! see docs/architecture/mstroh_comparison.md)
   and optionally write `subarray_data.json`/splines for the calculator.
 
 ### T6. Documentation sweep  [Fable/gpt-5.6-sol high — editorial]

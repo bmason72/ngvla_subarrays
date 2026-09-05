@@ -1,5 +1,5 @@
 ---
-split_from: PLAN.md (lines 1325-1446 at commit 7f0a63f)
+split_from: docs/plans/PLAN.md (lines 1325-1446 at commit 7f0a63f)
 history: git log --follow docs/plans/PLAN.md
 ---
 ### Next-steps roadmap (8 Jul 2026, bmason directive)

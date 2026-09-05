@@ -84,7 +84,7 @@ def _meta() -> Dict[str, object]:
             "Convention warning: theta here is geometric-mean FWHM in mas; "
             "mstroh/subarray_data.json thetas are quadrature-sum values, "
             "about sqrt(2) larger for near-circular beams (see "
-            "mstroh_comparison.md finding 1). Convention warning: b_min/b_max "
+            "docs/architecture/mstroh_comparison.md finding 1). Convention warning: b_min/b_max "
             "here are physical 3-D baseline lengths from the Rev F .cfg files; "
             "Stroh's are projected-uv baselines at mid-track."
         ),

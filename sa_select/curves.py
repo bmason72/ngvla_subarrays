@@ -14,7 +14,7 @@ The on-disk tables (see schema.py docstring for columns) hold raw curve
 
 Frequency scaling: resolutions and tapers scale as lambda, so a sample at
 30 GHz maps to frequency f by multiplying by (30/f).  eta is assumed
-invariant under this scaling (PLAN.md open question 2).
+invariant under this scaling (docs/plans/PLAN.md open question 2).
 """
 
 import csv
@@ -282,7 +282,7 @@ class CurveLibrary:
 
         # the envelope engine interpolates within measured lattice rows, so
         # the answer varies continuously with the request (see envelope.py
-        # and curve_anomaly_postmortem.md for why the old per-window sample
+        # and docs/postmortems/2026-07-06-curve-anomaly.md for why the old per-window sample
         # min produced discontinuities)
         choice = self.envelope(name).solve(res_ref, margin=beam_margin,
                                            skirt_max=skirt_threshold,

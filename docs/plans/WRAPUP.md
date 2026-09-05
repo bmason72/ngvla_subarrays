@@ -1,6 +1,6 @@
 
 My instructions defining our high level goal now (17aug2026).
-This supercedes the previous PLAN.md and NEXT_AGENT.md where in conflict
+This supercedes the previous docs/plans/PLAN.md and docs/plans/NEXT_AGENT.md where in conflict
 and may in particular apply a narrower scope of activities in some respects.
 
 1- New goal: release the calculator web and python prototypes 

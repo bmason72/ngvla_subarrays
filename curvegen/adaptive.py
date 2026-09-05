@@ -44,7 +44,7 @@ input plane and decides where to measure NEXT.  It plans; it does not measure
     stencils (+ 2:1 balance closures) under the plan/audit caps, tie-broken by
     lexicographic point_key -- never a partial stencil.
 
-Every rule and constant is pinned by MFS2_ADAPTIVE_SAMPLER_SPEC.md (the build
+Every rule and constant is pinned by docs/features/MFS2_ADAPTIVE_SAMPLER_SPEC.md (the build
 contract); read it for the derivations.  This file is meant to be read by an
 astronomer: units and contracts are in the docstrings.
 

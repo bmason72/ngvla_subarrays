@@ -2,7 +2,7 @@
 
 This re-implements, in Python, the parameter-space nearest-PSF ranking used
 by `nearestPsfKey` in curvegen/report_template.html (see the 4 Sep PSF audit
-in RUN_CAMPAIGNS.md).  It is a standalone mirror kept only for testing the
+in docs/ops/RUN_CAMPAIGNS.md).  It is a standalone mirror kept only for testing the
 *algorithm* against small synthetic lattices -- it is NOT imported by the
 report and must be kept in sync by hand if `nearestPsfKey` changes.
 """

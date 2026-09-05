@@ -59,7 +59,7 @@ SKIRT_DEFAULT_KEY = "%.2f" % SKIRT_DEFAULT
 
 DATA_DIR = os.path.join(REPO, "sa_select", "data")
 
-# Release build (--combined --release; RELEASE_PLAN.md T3, WRAPUP.md items
+# Release build (--combined --release; docs/plans/RELEASE_PLAN.md T3, docs/plans/WRAPUP.md items
 # 2+3): the public page carries ONLY these campaigns, and the ones released
 # point-source only advertise it via imaging_omitted=True in their combo
 # metadata (the page then blanks the imaging-curves card and pins the
@@ -833,7 +833,7 @@ def build_payload():
                                       hi_ghz=FREQ_HI_GHZ))
 
     # core+spiral natural-PSF radial profile measured 5 Jul 2026 (subsampled
-    # diagnostic dump; regenerate with the snippet in PLAN.md if needed)
+    # diagnostic dump; regenerate with the snippet in docs/plans/PLAN.md if needed)
     data["profile"] = dict(
         subarray="core+spiral", fitted_fwhm_mas=285.7, memo121_fwhm_mas=147.7,
         r_arcsec=[0.0055, 0.0495, 0.0935, 0.1375, 0.1815, 0.2255, 0.2695,
@@ -896,7 +896,7 @@ def main(out_path, title_label=None):
     # replacements on the rendered HTML (NOT the shared template), so the
     # default (title_label=None) output stays byte-for-byte identical.  The
     # profile/qa diagnostic blocks remain the Rev F reference values (a known
-    # cosmetic limitation, noted in PLAN.md).
+    # cosmetic limitation, noted in docs/plans/PLAN.md).
     if title_label:
         html = (html
                 .replace("NGVLA Rev F subarray curves",
@@ -983,7 +983,7 @@ _SNAPSHOT_NOTE_HTML = (
     "samples. Briggs weighting can have more effect on real data. Snapshot "
     "beams can also be long and narrow. The plotted geometric-mean resolution "
     "does not show the axis ratio. Dotted LONG-family segments show measured "
-    "coverage gaps. See PLAN.md for the analysis from 15 Jul 2026.")
+    "coverage gaps. See docs/plans/PLAN.md for the analysis from 15 Jul 2026.")
 
 # the imaging-curve explanation shared by every combo's subtitle (matches the
 # template's static paragraph)

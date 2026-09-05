@@ -1,6 +1,6 @@
 """
 Tests for the sa_select CLI (rev routing, release-scope warning, batch mode)
-and the selector's n_ant_actual wiring (RELEASE_PLAN.md T4).
+and the selector's n_ant_actual wiring (docs/plans/RELEASE_PLAN.md T4).
 
 Run with the CASA python (stdlib unittest only, no pytest) from the repo root.
 """

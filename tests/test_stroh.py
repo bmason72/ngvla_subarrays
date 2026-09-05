@@ -1,5 +1,5 @@
 """
-Tests for sa_select/stroh.py (MStroh delivery adapters, RELEASE_PLAN.md T5).
+Tests for sa_select/stroh.py (MStroh delivery adapters, docs/plans/RELEASE_PLAN.md T5).
 
 A synthetic subarray_data.json fixture covers the format logic everywhere;
 tests against the real delivery run only where mstroh/ is present (it is
@@ -122,7 +122,7 @@ class TestCfgAdapter(unittest.TestCase):
 
 @unittest.skipUnless(HAVE_MSTROH, "mstroh/ delivery not present")
 class TestRealDelivery(unittest.TestCase):
-    """Spot checks against mstroh_comparison.md's verified numbers."""
+    """Spot checks against docs/architecture/mstroh_comparison.md's verified numbers."""
 
     def test_core_native_beam(self):
         data = stroh.load_subarray_data(MSTROH_JSON)
