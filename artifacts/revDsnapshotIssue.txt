@@ -1,0 +1,9 @@
+General issue with the sweeps:
+ head /work2/10240/bmason72/stampede3/sweep_3299900_0.log
+ verify OK: all 3 capped subarrays have caps
+ SWEEP: campaign_tasks FAILED
+
+Rev D snapshot issue;
+ curvegen/submit_campaign.sh revD snapshot --time 24:00:00 
+ less sa_select/data/config_registry.csv 
+
