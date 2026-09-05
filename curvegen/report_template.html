@@ -558,27 +558,51 @@ function openMeasuredPsf(saName, weighting, robust, taper) {
   scrollToPsf();
 }
 
+// Natural weighting and high-robust (>= 1.99) Briggs are numerically
+// near-identical, so they count as the same weighting "family" here.
+function isNearNaturalFamily(weighting, robust) {
+  return weighting === 'natural' || Number(robust) >= 1.99;
+}
+
+// Pick the lattice-captured PSF nearest to a curve/calculator point in
+// (weighting-family, robust, taper) parameter space -- NOT nearest in
+// resolution.  Curve points are interpolated (e.g. briggs robust -0.22,
+// taper 40.2 mas), so a resolution-only match can land on a completely
+// different weighting family whose PSF quality (skirt/shoulder) differs
+// substantially even when its beam size happens to coincide.  Candidates
+// whose weighting family matches the target always rank ahead of the other
+// family; only fall back to the other family when the target family has no
+// captures at all.  Within a family, minimize robust/taper distance (each
+// normalized to a characteristic scale) and break ties by resolution.
 function nearestPsfKey(data, point) {
   const targetRes = Number(point.res);
   const targetWeighting = point.weighting;
   const targetRobust = targetWeighting === 'natural' || point.robust === null
     ? 2.0 : Number(point.robust);
+  const targetTaper = Number.isFinite(Number(point.taper)) ? Number(point.taper) : 0.0;
+  const taperScale = targetRes > 0 ? 0.1 * targetRes : NaN;
+  const targetNearNatural = isNearNaturalFamily(targetWeighting, targetRobust);
   let best = null;
   Object.keys(data || {}).forEach(key => {
     const entry = data[key];
     const res = entry ? Number(entry.res_geo_arcsec) * 1e3 : NaN;
     if (!(res > 0) || !(targetRes > 0)) return;
     const parsed = parsePsfKey(key);
+    const sameFamily = parsed.weighting === targetWeighting ||
+      (targetNearNatural && isNearNaturalFamily(parsed.weighting, parsed.robust));
+    const dRobust = (parsed.robust - targetRobust) / 0.2;
+    const dTaper = taperScale > 0 ? (parsed.taper - targetTaper) / taperScale : 0;
     const candidate = {
       key,
-      distance: Math.abs(Math.log(res / targetRes)),
-      family: parsed.weighting === targetWeighting ? 0 : 1,
-      robust: Math.abs(parsed.robust - targetRobust),
+      family: sameFamily ? 0 : 1,
+      paramDistance: dRobust * dRobust + dTaper * dTaper,
+      resDistance: Math.abs(Math.log(res / targetRes)),
     };
-    if (!best || candidate.distance < best.distance - 1e-12 ||
-        (Math.abs(candidate.distance - best.distance) <= 1e-12 &&
-         (candidate.family < best.family ||
-          (candidate.family === best.family && candidate.robust < best.robust))))
+    if (!best || candidate.family < best.family ||
+        (candidate.family === best.family &&
+         (candidate.paramDistance < best.paramDistance - 1e-12 ||
+          (Math.abs(candidate.paramDistance - best.paramDistance) <= 1e-12 &&
+           candidate.resDistance < best.resDistance))))
       best = candidate;
   });
   return best ? best.key : null;
@@ -710,6 +734,11 @@ function togglePsfInline(anchorTr, saName, point) {
       return;
     }
     const parsed = parsePsfKey(key);
+    // Carry the curve point's target resolution along so renderPsfParams can
+    // report how far the captured lattice PSF is from the point it stands in
+    // for -- the heatmap inspector path (parsePsfKey with no point.res) skips
+    // this by simply having nothing to attach.
+    if (finitePositive(Number(point.res))) parsed.res = Number(point.res);
     const sample = matchingPsfSample(saName, parsed);
     renderPsfParams(saName, parsed, entry, sample, params);
     if (!psfHasCuts(entry))
@@ -1121,7 +1150,9 @@ function renderCalcTable(table, feasible, request) {
         ? 'radial-minimum null proxy; ' : 'null; ') +
       'scaled by sqrt(∫B²dΩ / ∫G²dΩ) against ΩGaussian, the tclean ' +
       'restoring-beam volume (Condon 1974 γ=3); kept separate from ' +
-      'thermal sensitivity');
+      'thermal sensitivity; from the captured lattice PSF nearest in ' +
+      '(weighting, robust, taper) -- its beam may differ from the curve ' +
+      'point\'s by up to ~20%');
     const volumeRatio = row.psfMetric
       ? Number(row.psfMetric.psf_to_gaussian_volume_ratio) : NaN;
     addCell(tr, Number.isFinite(volumeRatio) ? fmtSig(volumeRatio) : '—',
@@ -1129,7 +1160,9 @@ function renderCalcTable(table, feasible, request) {
       (row.psfMetric && row.psfMetric.first_null_is_proxy
         ? 'radial-minimum null proxy' : 'null') + ' divided by ΩGaussian, ' +
       'the tclean restoring-beam volume; restoring beam may exceed the ' +
-      'core half-power width for two-scale PSFs, see the PSF inspector');
+      'core half-power width for two-scale PSFs, see the PSF inspector; ' +
+      'from the captured lattice PSF nearest in (weighting, robust, ' +
+      'taper) -- its beam may differ from the curve point\'s by up to ~20%');
     addCell(tr, fmtSig(Number(p.eta)));
     addCell(tr, Number.isFinite(Number(p.skirt)) ? fmtSig(100 * Number(p.skirt)) + '%' : '—');
     addCell(tr, tcleanText(p, request.freq));
@@ -1908,10 +1941,22 @@ function psfHasCuts(entry) {
 
 function renderPsfParams(saName, point, entry, sample, el) {
   const parts = [saName];
-  parts.push(point.weighting === 'natural'
-    ? 'natural' : 'briggs robust ' + point.robust.toFixed(2));
+  // When called from a curve/calculator point (point.res set), this is the
+  // nearest *captured* lattice PSF standing in for that interpolated point,
+  // not necessarily the point's own robust/taper/beam -- label it as such.
+  const targetRes = finitePositive(Number(point.res)) ? Number(point.res) : null;
+  parts.push((targetRes !== null ? 'nearest captured lattice PSF: ' : '') +
+    (point.weighting === 'natural'
+      ? 'natural' : 'briggs robust ' + point.robust.toFixed(2)));
   parts.push(point.taper ? 'taper ' + fmtRes(point.taper) : 'no taper');
-  parts.push('beam ' + fmtRes(Number(entry.res_geo_arcsec) * 1e3));
+  const beamMas = Number(entry.res_geo_arcsec) * 1e3;
+  let beamPart = 'beam ' + fmtRes(beamMas);
+  if (targetRes !== null) {
+    const offsetPct = 100 * (beamMas - targetRes) / targetRes;
+    beamPart += ' (curve point ' + fmtRes(targetRes) + ', ' +
+      (offsetPct >= 0 ? '+' : '') + offsetPct.toFixed(1) + '%)';
+  }
+  parts.push(beamPart);
   const bmaj = Number(entry.bmaj_arcsec), bmin = Number(entry.bmin_arcsec);
   if (bmaj > 0 && bmin > 0) {
     const bpa = Number(entry.bpa_deg);

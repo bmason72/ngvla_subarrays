@@ -89,6 +89,28 @@ was. The confusion estimate is insensitive to which width is used as the
 reference: Condon's γ=3 scaling has the source-count model going as θ and the
 correction as 1/θ, so they cancel to first order.
 
+**Nearest-PSF lookup fixed to rank by parameter space, not resolution (4
+Sep).** `nearestPsfKey` in `curvegen/report_template.html` — used by the
+calculator's ΩPSF/ΩGaussian and confusion columns, the PSF inspector, and the
+per-row "PSF" inline expander — picked the captured lattice PSF nearest to a
+curve/calculator point by resolution alone (weighting/robust were only
+exact-tie breaks). Curve points are interpolated (e.g. Briggs robust -0.221,
+taper 40.2 mas), so the resolution-nearest capture frequently came from a
+different weighting family entirely: for MAIN at 87 mas the curve point is
+Briggs -0.22 (skirt 10%) but the old lookup returned `natural_2.00_7.245`
+(skirt 45%). Replayed over all MAIN curve points, the displayed PSF's skirt
+exceeded the curve point's skirt by median +0.05, p90 +0.16, max +0.38. Fixed
+by ranking candidates first by weighting family (natural and Briggs
+robust&ge;1.99 count as the same family; same-family candidates always beat
+the other family, which is used only when no same-family capture exists),
+then within a family by normalized robust/taper distance, with resolution as
+the final tie-break. Same MAIN replay after the fix: skirt excess 0.00/+0.01/
++0.04 (median/p90/max) — at the cost of a median 7%, p90 17% resolution
+offset between the displayed PSF and the curve point, now stated explicitly
+in the inspector text and calculator tooltips. See
+`tests/test_psf_lookup_replay.py` for a standalone Python mirror of the
+ranking and its regression cases.
+
 ## 17 Aug release wave — COMPLETE (harvested 18 Aug; see PLAN.md 18-Aug delta)
 
 Outcome (all 11 jobs exit 0): retrofit wave 2 tracks (3415615_{0,2}) +

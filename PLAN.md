@@ -977,6 +977,15 @@ and a new QA-table "beam/core" column; see RUN_CAMPAIGNS.md's "Restoring beam
 vs. core half-power width" note for the measured per-subarray ratios and the
 confirmed default-`psfcutoff` tclean call.
 
+**Follow-up (4 Sep, same session): nearest-PSF lookup bug fixed.**
+`nearestPsfKey` picked the resolution-nearest captured lattice PSF instead of
+the one nearest in (weighting, robust, taper), so an interpolated curve point
+often displayed a PSF from the wrong weighting family (MAIN skirt excess
+median +0.05/p90 +0.16/max +0.38). Fixed to rank by weighting family first,
+then normalized robust/taper distance, resolution as tie-break only; see
+RUN_CAMPAIGNS.md's "Nearest-PSF lookup fixed" note and
+`tests/test_psf_lookup_replay.py`.
+
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)
 
 **Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage

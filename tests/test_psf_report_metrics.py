@@ -81,6 +81,16 @@ class TestBrowserPsfContract(unittest.TestCase):
         self.assertIn("Confusion: ', fmtConfusion", self.html)
         self.assertIn("confusion as an independent feasibility", self.html)
 
+    def test_nearest_psf_key_ranks_by_parameter_space_not_resolution(self):
+        # nearestPsfKey used to pick the resolution-nearest lattice capture,
+        # which frequently landed on the wrong weighting family for an
+        # interpolated curve point (see the 4 Sep PSF audit).  It must now
+        # rank candidates by (weighting family, robust, taper) distance.
+        self.assertIn("isNearNaturalFamily", self.html)
+        self.assertIn("paramDistance", self.html)
+        self.assertIn("nearest captured lattice PSF", self.html)
+        self.assertNotIn("candidate.distance < best.distance - 1e-12", self.html)
+
     def test_confusion_floor_is_gated_only_for_fixed_window_mfs(self):
         self.assertIn("if (DATA.fixed_window)", self.html)
         self.assertIn("requested sensitivity is below the MFS confusion floor",
