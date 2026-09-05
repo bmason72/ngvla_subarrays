@@ -136,11 +136,12 @@ combos.
 
 1. **Cost/packing benchmark:** fit the cost model; pick node packing;
    sm.corrupt MaxRSS check.
-2. **nchan convergence:** core + main, band 2, BOTH modes,
-   nchan ∈ {16,32,64,128,256,512}, 10–12 lattice points (natural ×
+2. **nchan convergence:** core + main, Band 4 snapshot first, using
+   nchan ∈ {27,54} (0.5 and 0.25 GHz channels), 10–12 lattice points (natural ×
    {0, mid, coarse taper}; robust {−2, 0, +1.2} × {0, mid, coarse}).
-   Pass = two consecutive doublings with |Δeta|/eta < 0.5%, |Δb|/b < 1%,
-   envelope p95 |Δeta|/eta < 1% (max 2%), endpoints stable to 1%.
+   Adopt 27 if 27→54 gives |Δeta|/eta < 0.5%, |Δb|/b < 1%, envelope
+   p95 |Δeta|/eta < 1% (max 2%), and endpoints stable to 1%. Expand the
+   trial set only if this focused comparison fails.
 3. **Noise A/B** (equal vs receiver-weighted channels) at band 2.
    → **bmason checkpoint** on nchan rule + noise policy before the wave.
 
@@ -152,11 +153,9 @@ bash curvegen/submit_mfs_snapshot_sim_pilot.sh
 ```
 
 It uses one Slurm queue slot and runs core/main snapshot MS creation for
-`nchan=16,32,64,128`, recording `/usr/bin/time -v` in per-run logs. Every
+`nchan=27,54`, recording `/usr/bin/time -v` in per-run logs. Every
 nchan is isolated by `NGVLA_CAMPAIGN_VARIANT`, so the runs cannot collide with
-one another or with production artifacts. Inspect the 64/128 MaxRSS results
-before explicitly continuing with
-`--nchan-list 256:512`. This launcher does not run tclean or determine
+one another or with production artifacts. This launcher does not run tclean or determine
 convergence; the imaging half of the pilot and the bmason checkpoint still
 gate production.
 

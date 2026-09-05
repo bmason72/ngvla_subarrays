@@ -72,8 +72,10 @@ bash curvegen/submit_mfs_snapshot_sim_pilot.sh
 ```
 
 The MFS snapshot pilot creates only the core/main measurement sets for
-`nchan=16,32,64,128`, with an isolated manifest and scratch path per channel
-count. It is safe to launch before production nchan is chosen. It does **not**
+`nchan=27,54` (0.5 and 0.25 GHz across Band 4), with an isolated manifest and
+scratch path per channel count. It is safe to launch before production nchan
+is chosen. The 54-channel run is a focused convergence check, not the start of
+a large powers-of-two ladder. It does **not**
 authorize or run the production adaptive snapshot campaign; inspect its memory
 logs, finish the imaging convergence/replay gates, and record the nchan/noise
 decision first (see `RUN_CAMPAIGNS.md` and `MFS_CAMPAIGN_PLAN.md`).

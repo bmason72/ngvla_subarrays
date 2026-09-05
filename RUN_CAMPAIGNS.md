@@ -8,7 +8,8 @@ run tclean or mutate production result tables, and consumes one Slurm queue
 slot. Each nchan has an isolated manifest and scratch MS directory.
 
 ```bash
-# Stage 1: nchan 16--128, then inspect simulator MaxRSS before going higher.
+# 27 channels = 0.5 GHz/channel across the 13.5-GHz Band-4 window;
+# 54 is one deliberately limited convergence check at 0.25 GHz/channel.
 bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_mfs_snapshot_sim_pilot.sh
 
 # Monitor the umbrella job and inspect the per-run resource logs.
@@ -16,15 +17,16 @@ squeue -u bmason72 -o "%.18i %.22j %.10T %.12M %.6D %R"
 grep -E "created |reusing existing|Maximum resident set size|Elapsed \(wall clock\)" \
   /work2/10240/bmason72/stampede3/mfs_snapshot_sim_<JOBID>_*.log
 
-# Stage 2 only after the 64/128 memory results are safe:
-bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_mfs_snapshot_sim_pilot.sh \
-  --nchan-list 256:512 --max-procs 2
 ```
 
 Success means every per-run log reports `created` or validated `reusing
 existing`, the umbrella job exits 0, snapshot validation finds exactly one
 integration, and MaxRSS leaves comfortable node headroom. Re-running either
 command is safe and revalidates/reuses its own MS.
+
+The two nchan values test whether the derived beam/skirt/eta quantities have
+already converged at the proposed 0.5-GHz spacing while also measuring memory;
+there is no plan to continue to 128--512 unless 27 versus 54 fails that test.
 
 This is **not** the production MFS snapshot campaign. Do not use
 `submit_campaign.sh` for MFS: its full-grid/fill path violates the adaptive

@@ -1,12 +1,12 @@
 #!/bin/bash
 # Submit the simulation/RSS half of the Ka MFS snapshot convergence pilot as
-# one queue slot.  Defaults stop at nchan=128 so sm.corrupt memory is inspected
-# before the explicitly requested 256/512 continuation.
+# one queue slot.  Band 4 is 13.5 GHz wide, so nchan=27 gives 0.5-GHz channels;
+# nchan=54 is the single convergence check at twice the spectral sampling.
 set -euo pipefail
 
 CG=$HOME/Code/ngvla_subarrays/curvegen
 PY=/work2/10240/bmason72/stampede3/casaenv/bin/casapy
-NCHAN_LIST="16:32:64:128"
+NCHAN_LIST="27:54"
 WALL="04:00:00"
 MAX_PROCS=4
 
@@ -15,7 +15,7 @@ while [ $# -gt 0 ]; do
         --nchan-list) NCHAN_LIST=${2:?}; shift 2 ;;
         --time) WALL=${2:?}; shift 2 ;;
         --max-procs) MAX_PROCS=${2:?}; shift 2 ;;
-        *) echo "usage: $0 [--nchan-list 16:32:64:128] [--time HH:MM:SS] [--max-procs N]" >&2
+        *) echo "usage: $0 [--nchan-list 27:54] [--time HH:MM:SS] [--max-procs N]" >&2
            exit 2 ;;
     esac
 done

@@ -210,7 +210,7 @@ assert sens['sigma_nat_ujy'][0] > 0
         self.assertNotIn("fill_grid.py", batch)
         self.assertNotIn("adaptive.py", batch)
         self.assertNotIn("collect.py", batch)
-        self.assertIn('NCHAN_LIST="16:32:64:128"', submit)
+        self.assertIn('NCHAN_LIST="27:54"', submit)
         self.assertIn("NGVLA_MFS_MS_BASE", submit)
 
 
