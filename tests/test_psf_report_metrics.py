@@ -1,6 +1,7 @@
 """Focused tests for PSF metrics exposed by the report."""
 
 import json
+import math
 import os
 import sys
 import tempfile
@@ -22,8 +23,10 @@ class TestReportPsfMetricSummary(unittest.TestCase):
             "res_geo_arcsec": 1.0,
             "r_arcsec": [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5],
             "psf": [1.0, 0.96, 0.85, 0.68, 0.50, 0.18, 0.0, -0.1],
-            "bmaj_arcsec": 1.0,
-            "bmin_arcsec": 1.0,
+            # The half-power crossing lands at r=1.0 (measured FWHM = 2.0);
+            # match the restoring beam to that so beam/core is ~1 here.
+            "bmaj_arcsec": 2.0,
+            "bmin_arcsec": 2.0,
         }
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "demo_array.jsonl")
@@ -36,11 +39,13 @@ class TestReportPsfMetricSummary(unittest.TestCase):
             finally:
                 mr.ACTIVE_ORDER = old_order
         metrics = summary["demo-array"][0]
-        self.assertEqual(len(metrics), 6)
+        self.assertEqual(len(metrics), 7)
         self.assertEqual(metrics[0], "natural_2.00_0.000")
         self.assertGreater(metrics[2], 0)  # restoring-beam geo-mean FWHM
         self.assertGreater(metrics[3], 0)  # integral(B^2) in sr
         self.assertGreater(metrics[4], 0)  # signed-volume/Gaussian ratio
+        self.assertTrue(math.isfinite(metrics[6]))  # beam/core ratio
+        self.assertAlmostEqual(metrics[6], 1.0, delta=0.02)
 
 
 class TestBrowserPsfContract(unittest.TestCase):
@@ -52,6 +57,8 @@ class TestBrowserPsfContract(unittest.TestCase):
     def test_psf_plot_uses_restoring_beam_reference(self):
         self.assertIn("restoring_fwhm_geo_arcsec", self.html)
         self.assertIn("restoring beam", self.html)
+        self.assertIn("psfcutoff 0.35", self.html)
+        self.assertIn("restoring_to_halfpower_ratio", self.html)
         self.assertNotIn("drawGaussian(Number(entry.gaussian_fit", self.html)
         self.assertNotIn("robust core Gaussian", self.html)
         self.assertNotIn("legacy capture ends", self.html)

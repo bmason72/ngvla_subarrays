@@ -967,6 +967,16 @@ updated; Rev F/Rev C track points nearly all have a beam, but ~1,750 Rev D
 track exploratory points and most snapshot points (Rev F ~2,470/3,830, Rev D
 ~1,560/2,380) lack one and get no ratio ("—").
 
+**Follow-up (4 Sep, same session):** for two-scale (composite-subarray)
+PSFs the restoring beam is systematically wider than the radial profile's
+half-power width (up to 1.25-1.6x, mostly at Briggs+taper points) — tclean's
+`psfcutoff=0.35` fit picks up the PSF shoulder. Added
+`restoring_to_halfpower_ratio` to `derive_psf_metrics`/the compact summary
+(index 6) and surfaced it in the PSF inspector, chart legend/x-axis title,
+and a new QA-table "beam/core" column; see RUN_CAMPAIGNS.md's "Restoring beam
+vs. core half-power width" note for the measured per-subarray ratios and the
+confirmed default-`psfcutoff` tclean call.
+
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)
 
 **Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage

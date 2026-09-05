@@ -117,7 +117,11 @@ def derive_psf_metrics(record):
     slightly underestimates the true 2-D value for an elongated beam (Cauchy-
     Schwarz: the squared azimuthal average is <= the true 2-D integral), so
     the squared-volume ratio -- and the confusion scaling built on it -- is a
-    mild underestimate in that case.
+    mild underestimate in that case. For two-scale PSFs (composite subarrays,
+    mostly at Briggs+taper points) the restoring beam is systematically wider
+    than the core half-power width, because tclean's psfcutoff=0.35 fit
+    picks up the PSF shoulder; ``restoring_to_halfpower_ratio`` is the
+    diagnostic for that.
     """
     points = _profile_points(record)
     if len(points) < 2:
@@ -142,6 +146,8 @@ def derive_psf_metrics(record):
         bmin_rad = bmin * ARCSEC_TO_RAD
         metrics["gaussian_volume_sr"] = (
             math.pi * bmaj_rad * bmin_rad / (4.0 * math.log(2.0)))
+        metrics["restoring_to_halfpower_ratio"] = (
+            metrics["restoring_fwhm_geo_arcsec"] / measured_fwhm)
 
     null_result = _first_null_or_radial_minimum(points, hwhm)
     if null_result is None:

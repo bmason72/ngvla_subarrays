@@ -613,14 +613,15 @@ def build_psf_metric_summary(profile_dir=None):
                 continue
             # Compact positional schema used only by report_template.html:
             # key, resolution, restoring-beam geo-mean FWHM, integral(B^2),
-            # volume ratio, and whether the radial-minimum fallback supplied
-            # the null.
+            # volume ratio, whether the radial-minimum fallback supplied the
+            # null, and the restoring-beam/core-half-power-width ratio.
             compact.append([
                 key, profile["res_geo_arcsec"],
                 profile["restoring_fwhm_geo_arcsec"],
                 profile["psf_squared_volume_first_null_sr"],
                 profile.get("psf_to_gaussian_volume_ratio"),
                 bool(profile.get("first_null_is_proxy")),
+                profile.get("restoring_to_halfpower_ratio"),
             ])
         if compact:
             out[name] = compact

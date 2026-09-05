@@ -599,6 +599,7 @@ function psfMetricForPoint(saName, point) {
     psf_squared_volume_first_null_sr: row[3],
     psf_to_gaussian_volume_ratio: row[4],
     first_null_is_proxy: Boolean(row[5]),
+    restoring_to_halfpower_ratio: row[6],
   } : null;
 }
 
@@ -1127,7 +1128,8 @@ function renderCalcTable(table, feasible, request) {
       'Signed PSF volume to the first ' +
       (row.psfMetric && row.psfMetric.first_null_is_proxy
         ? 'radial-minimum null proxy' : 'null') + ' divided by ΩGaussian, ' +
-      'the tclean restoring-beam volume');
+      'the tclean restoring-beam volume; restoring beam may exceed the ' +
+      'core half-power width for two-scale PSFs, see the PSF inspector');
     addCell(tr, fmtSig(Number(p.eta)));
     addCell(tr, Number.isFinite(Number(p.skirt)) ? fmtSig(100 * Number(p.skirt)) + '%' : '—');
     addCell(tr, tcleanText(p, request.freq));
@@ -1917,6 +1919,18 @@ function renderPsfParams(saName, point, entry, sample, el) {
       (Number.isFinite(bpa) ? bpa.toFixed(1) + '°' : '—') +
       ', axis ratio ' + (bmaj / bmin).toFixed(2) +
       ', geo-mean FWHM ' + fmtRes(Math.sqrt(bmaj * bmin) * 1e3));
+    const measuredFwhm = Number(entry.measured_fwhm_arcsec);
+    if (finitePositive(measuredFwhm)) {
+      const ratio = Number.isFinite(Number(entry.restoring_to_halfpower_ratio))
+        ? Number(entry.restoring_to_halfpower_ratio)
+        : Math.sqrt(bmaj * bmin) / measuredFwhm;
+      let note = 'radial half-power FWHM ' + fmtRes(measuredFwhm * 1e3) +
+        ' (restoring/core ' + ratio.toFixed(2) + ')';
+      if (ratio > 1.10)
+        note += '; two-scale PSF: the psfcutoff=0.35 beam fit includes the ' +
+          'shoulder, so the restoring beam is wider than the core';
+      parts.push(note);
+    }
   } else {
     parts.push('no restoring beam recorded; Ω ratios unavailable');
   }
@@ -1987,7 +2001,8 @@ function renderPsfChart(chart, saName, entry, sample) {
     stroke: 'var(--axis)', 'stroke-width': 1}));
   const xTitle = svgEl('text', {x: (M.l + W - M.r) / 2, y: H - 6,
     'text-anchor': 'middle'});
-  xTitle.textContent = 'r / FWHM (piecewise linear; scale changes at 3)';
+  xTitle.textContent = 'r / FWHM (tclean restoring-beam geo-mean FWHM; ' +
+    'piecewise linear; scale changes at 3)';
   svg.append(xTitle);
   const yTitle = svgEl('text', {x: 12, y: (H - M.b + M.t) / 2,
     'text-anchor': 'middle',
@@ -2107,7 +2122,7 @@ function renderPsfChart(chart, saName, entry, sample) {
       opacity: 0.55, dash: '4 3'});
   }
   if (drewGaussian)
-    legendRows.push({label: 'restoring beam (geo-mean FWHM)', stroke: 'var(--ink)',
+    legendRows.push({label: 'tclean restoring beam (psfcutoff 0.35)', stroke: 'var(--ink)',
       width: 1.6, dash: '7 4'});
   if (sample && Number.isFinite(Number(sample.skirt)))
     legendRows.push({label: 'measured skirt at r=1 FWHM', stroke: css(saName), dot: true});
@@ -2214,13 +2229,14 @@ function renderQaTable() {
   const t = document.getElementById('qa-table');
   t.innerHTML = '<tr><th>subarray</th><th>N ant</th><th>native beam, sim (mas)</th>' +
     '<th>native beam, calc pkl (mas)</th><th>diff</th><th>natural skirt</th>' +
-    '<th>ΩPSF / ΩGaussian</th><th>LAS @30 GHz</th></tr>' +
+    '<th>ΩPSF / ΩGaussian</th><th>beam/core</th><th>LAS @30 GHz</th></tr>' +
     DATA.qa.map(r => {
       const las = DATA.las[r.sa];
       const naturalRows = DATA.psf_metrics && DATA.psf_metrics[r.sa];
       const natural = Array.isArray(naturalRows)
         ? naturalRows.find(row => row[0] === 'natural_2.00_0.000') : null;
       const volumeRatio = natural ? Number(natural[4]) : NaN;
+      const beamCoreRatio = natural ? Number(natural[6]) : NaN;
       const diff = (r.nat_sim && r.nat_calc)
         ? ((r.nat_sim / r.nat_calc - 1) * 100).toFixed(1) + '%' : '—';
       const flag = r.nat_sim && r.nat_calc && Math.abs(r.nat_sim/r.nat_calc - 1) > 0.1;
@@ -2231,9 +2247,10 @@ function renderQaTable() {
         `<td class="${flag ? 'flag' : 'ok'}">${diff}${flag ? ' ⚠' : ''}</td>` +
         `<td>${r.skirt_nat === null ? '—' : (100*r.skirt_nat).toFixed(1) + '%'}</td>` +
         `<td>${Number.isFinite(volumeRatio) ? fmtSig(volumeRatio) : '—'}</td>` +
+        `<td>${Number.isFinite(beamCoreRatio) ? beamCoreRatio.toFixed(2) : '—'}</td>` +
         `<td>${las ? fmtRes(las.mas) + (las.provisional ? ' †' : '') : ''}</td></tr>`;
     }).join('') +
-    `<tr><td colspan="8" style="text-align:left;color:var(--muted);font-size:12px">ΩPSF is the signed radial-profile volume to the first zero; where a composite-array radial average stays positive, the first sustained radial minimum is explicitly used as a null proxy. ΩGaussian is the tclean restoring-beam volume (π·bmaj·bmin/(4 ln 2)); confusion scaling is sqrt(∫B²dΩ / ∫G²dΩ), Condon γ=3. LAS = 0.80 λ/b<sub>min</sub> uniformly for the 18-m subarrays (memo-67 core value); per-subarray disk-sim measurements pending</td></tr>`;
+    `<tr><td colspan="9" style="text-align:left;color:var(--muted);font-size:12px">ΩPSF is the signed radial-profile volume to the first zero; where a composite-array radial average stays positive, the first sustained radial minimum is explicitly used as a null proxy. ΩGaussian is the tclean restoring-beam volume (π·bmaj·bmin/(4 ln 2)); confusion scaling is sqrt(∫B²dΩ / ∫G²dΩ), Condon γ=3. beam/core is the restoring-beam geo-mean FWHM over the radial half-power FWHM; values well above 1 mark two-scale PSFs where tclean's psfcutoff=0.35 fit includes the shoulder. All FWHM units and res_geo are the tclean restoring beam. LAS = 0.80 λ/b<sub>min</sub> uniformly for the 18-m subarrays (memo-67 core value); per-subarray disk-sim measurements pending</td></tr>`;
 }
 
 // full data table -----------------------------------------------------------------

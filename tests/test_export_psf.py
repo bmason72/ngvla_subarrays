@@ -85,6 +85,8 @@ class TestDerivedPsfMetrics(unittest.TestCase):
         self.assertEqual(metrics["restoring_bmin_arcsec"], 1.0)
         self.assertAlmostEqual(metrics["restoring_fwhm_geo_arcsec"], 1.0,
                                delta=1e-9)
+        self.assertAlmostEqual(metrics["restoring_to_halfpower_ratio"], 1.0,
+                               delta=0.02)
         arcsec_to_rad = math.pi / (180.0 * 3600.0)
         expected_volume_sr = (math.pi / (4.0 * math.log(2.0))
                               * arcsec_to_rad ** 2)
@@ -129,6 +131,7 @@ class TestDerivedPsfMetrics(unittest.TestCase):
         self.assertNotIn("restoring_bmaj_arcsec", metrics)
         self.assertNotIn("restoring_bmin_arcsec", metrics)
         self.assertNotIn("restoring_fwhm_geo_arcsec", metrics)
+        self.assertNotIn("restoring_to_halfpower_ratio", metrics)
         self.assertNotIn("gaussian_volume_sr", metrics)
         self.assertNotIn("psf_to_gaussian_volume_ratio", metrics)
         self.assertNotIn("psf_to_gaussian_squared_volume_ratio", metrics)

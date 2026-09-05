@@ -62,6 +62,33 @@ follow-on campaign samples a subspace of the grid along the optimum curves
 (not the full exploratory lattice) and retains PSFs, and possibly MSs, for
 that reduced set.
 
+**Restoring beam vs. core half-power width (4 Sep, bmason decision).** For
+two-scale PSFs — composite subarrays such as core+spiral, main, main+long,
+spiral+mid+long, mostly at Briggs+taper points — the tclean restoring beam is
+systematically wider than the radial profile's half-power width, by up to
+1.25-1.6x. Mechanism: tclean's beam fit uses every pixel above
+`psfcutoff=0.35` in a 41x41 box, and a two-scale PSF's shoulder stays above
+0.35 out to ~0.75 FWHM, so shoulder pixels broaden the Gaussian fit. The
+tclean call in `curvegen/sweep.py` uses CASA's default `psfcutoff` (confirmed
+by `grep -rn "tclean(" curvegen/*.py`: the sole call site, `sweep.py`'s
+`run_tclean`, passes no `psfcutoff` kwarg). Measured Rev F track numbers:
+single-scale arrays (core, core_inner, mid, spiral) have a median ratio
+&approx;1.00 and max 1.07, none above 1.10; core_spiral has 25 of 276 points
+above 1.10 (max 1.29); main 70/403 (max 1.42); long 128/354 (max 1.57);
+spiral_mid_long 115/315 (max 1.59); main_long 99/359 (max 1.50).
+
+The report now exposes this rather than hiding it: `derive_psf_metrics` adds
+`restoring_to_halfpower_ratio` (restoring FWHM over measured half-power FWHM)
+alongside the existing beam metrics, `build_psf_metric_summary`'s compact row
+carries it as index 6, and the PSF inspector, its chart legend/x-axis title,
+and the QA table's new "beam/core" column all surface it. Because `res_geo`
+throughout the pipeline is the restoring beam (never the core half-power
+width), the reported resolution at an affected point is coarser than the true
+core — readers should treat res_geo as the restoring-beam figure it always
+was. The confusion estimate is insensitive to which width is used as the
+reference: Condon's γ=3 scaling has the source-count model going as θ and the
+correction as 1/θ, so they cancel to first order.
+
 ## 17 Aug release wave — COMPLETE (harvested 18 Aug; see PLAN.md 18-Aug delta)
 
 Outcome (all 11 jobs exit 0): retrofit wave 2 tracks (3415615_{0,2}) +
