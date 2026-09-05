@@ -20,11 +20,14 @@ optionally, passes matching --rev / --sim-mode:
 import argparse
 import base64
 import csv
+import datetime
 import gzip
+import html as html_lib
 import json
 import math
 import os
 import re
+import subprocess
 import sys
 
 import numpy as np
@@ -902,8 +905,51 @@ def main(out_path, title_label=None):
                          "%s taperability" % title_label)
                 .replace("simulations of each Rev&thinsp;F",
                          "simulations of each %s" % title_label))
+    html = inject_report_provenance(html)
     _atomic_write(out_path, html)
     print("wrote", out_path)
+
+
+def report_provenance(now=None):
+    """Return (git signature, local build time) for an HTML report.
+
+    The signature names the exact HEAD and marks tracked modifications.  An
+    untracked output report (or any other untracked file) does not make the
+    source tree dirty.  Git failures should never prevent report generation.
+    """
+    if now is None:
+        now = datetime.datetime.now().astimezone()
+    generated_at = now.astimezone().isoformat(timespec="seconds")
+    try:
+        commit = subprocess.check_output(
+            ["git", "-C", REPO, "rev-parse", "HEAD"],
+            stderr=subprocess.DEVNULL, text=True).strip()
+        tracked_changes = subprocess.check_output(
+            ["git", "-C", REPO, "status", "--porcelain",
+             "--untracked-files=no"],
+            stderr=subprocess.DEVNULL, text=True)
+        signature = commit + ("-dirty" if tracked_changes else "")
+    except (OSError, subprocess.SubprocessError):
+        signature = "unknown"
+    return signature, generated_at
+
+
+def inject_report_provenance(html, signature=None, generated_at=None):
+    """Fill the template's provenance marker with escaped build metadata."""
+    if signature is None or generated_at is None:
+        actual_signature, actual_time = report_provenance()
+        signature = actual_signature if signature is None else signature
+        generated_at = actual_time if generated_at is None else generated_at
+    provenance = "Generated %s &middot; Git commit %s" % (
+        html_lib.escape(generated_at, quote=True),
+        html_lib.escape(signature, quote=True))
+    marker = ('<footer class="report-provenance">'
+              '__REPORT_PROVENANCE__</footer>')
+    if html.count(marker) != 1:
+        raise ValueError("report template has no provenance marker")
+    return html.replace(
+        marker, '<footer class="report-provenance">%s</footer>' % provenance,
+        1)
 
 
 def _atomic_write(out_path, html):
@@ -1103,7 +1149,6 @@ def build_combined(out_path, release=False):
     campaign dropdown the page uses to swap its contents.  release=True
     builds the public page instead (combos restricted / flagged per
     combined_combo_plan, plain "NGVLA subarray curves" title)."""
-    import subprocess
     import tempfile
 
     reg = os.path.join(DATA_DIR, "config_registry.csv")
@@ -1170,6 +1215,7 @@ def build_combined(out_path, release=False):
         mb = sum(len(b) for b in blocks) / 1e6
         print("release: embedded %d PSF payload blocks (%.1f MB base64)"
               % (len(blocks), mb))
+    html = inject_report_provenance(html)
     _atomic_write(out_path, html)
     print("wrote", out_path)
 
