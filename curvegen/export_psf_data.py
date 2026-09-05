@@ -102,53 +102,22 @@ def _first_null_or_radial_minimum(points, start_radius):
     return None
 
 
-def _robust_gaussian_fwhm(points, hwhm):
-    """Huber-IRLS fit of a unit-peak Gaussian inside the measured HWHM.
-
-    With a peak-normalized PSF, ``log(PSF) = slope * r**2``.  Keeping the
-    intercept fixed at zero preserves the beam solid-angle convention while
-    the Huber weights stop a bad radial bin from controlling the core width.
-    """
-    xy = [(radius * radius, math.log(value))
-          for radius, value in points
-          if 0 < radius <= hwhm and 0 < value <= 1.25]
-    if len(xy) < 3:
-        return None
-    slopes = sorted(y / x for x, y in xy if x > 0)
-    slope = slopes[len(slopes) // 2]
-    for _iteration in range(20):
-        residuals = [y - slope * x for x, y in xy]
-        centre = sorted(residuals)[len(residuals) // 2]
-        deviations = sorted(abs(value - centre) for value in residuals)
-        scale = 1.4826 * deviations[len(deviations) // 2]
-        cutoff = 1.345 * scale
-        weights = ([1.0] * len(xy) if cutoff <= 1e-14 else
-                   [1.0 if abs(value - centre) <= cutoff
-                    else cutoff / abs(value - centre)
-                    for value in residuals])
-        denominator = sum(weight * x * x
-                          for weight, (x, _y) in zip(weights, xy))
-        if denominator <= 0:
-            return None
-        updated = sum(weight * x * y
-                      for weight, (x, y) in zip(weights, xy)) / denominator
-        if abs(updated - slope) <= 1e-10 * max(1.0, abs(slope)):
-            slope = updated
-            break
-        slope = updated
-    if not math.isfinite(slope) or slope >= 0:
-        return None
-    return math.sqrt(-4.0 * math.log(2.0) / slope)
-
-
 def derive_psf_metrics(record):
-    """Measure core width, first-null volume, and Gaussian-volume ratio.
+    """Measure half-power width, first-null volume, and volume ratios.
 
     All angular radii in the returned mapping are arcsec and volumes are sr.
     Missing crossings are represented by absent fields, rather than treating
     a profile's capture boundary as a physical null. A resolved positive
     minimum in a composite-array profile is retained and explicitly flagged
-    as a null proxy.
+    as a null proxy. Omega_G (``gaussian_volume_sr``) is the volume of the
+    tclean restoring beam (an elliptical Gaussian of the record's bmaj/bmin),
+    not a fit to the PSF -- CASA already produces it as part of imaging.
+    Azimuthal averaging conserves the integral of B, so the first-null volume
+    ratio against Omega_G is exact; the same average's integral of B^2
+    slightly underestimates the true 2-D value for an elongated beam (Cauchy-
+    Schwarz: the squared azimuthal average is <= the true 2-D integral), so
+    the squared-volume ratio -- and the confusion scaling built on it -- is a
+    mild underestimate in that case.
     """
     points = _profile_points(record)
     if len(points) < 2:
@@ -157,16 +126,22 @@ def derive_psf_metrics(record):
     if hwhm is None or not math.isfinite(hwhm) or hwhm <= 0:
         return {}
     measured_fwhm = 2.0 * hwhm
-    fit_fwhm = _robust_gaussian_fwhm(points, hwhm)
     metrics = {
         "hwhm_arcsec": hwhm,
         "measured_fwhm_arcsec": measured_fwhm,
     }
-    if fit_fwhm is not None:
-        metrics["gaussian_fit_fwhm_arcsec"] = fit_fwhm
-        fit_rad = fit_fwhm * ARCSEC_TO_RAD
+    bmaj = record.get("bmaj_arcsec")
+    bmin = record.get("bmin_arcsec")
+    if (isinstance(bmaj, (int, float)) and isinstance(bmin, (int, float))
+            and math.isfinite(bmaj) and math.isfinite(bmin)
+            and bmaj > 0 and bmin > 0):
+        metrics["restoring_bmaj_arcsec"] = bmaj
+        metrics["restoring_bmin_arcsec"] = bmin
+        metrics["restoring_fwhm_geo_arcsec"] = math.sqrt(bmaj * bmin)
+        bmaj_rad = bmaj * ARCSEC_TO_RAD
+        bmin_rad = bmin * ARCSEC_TO_RAD
         metrics["gaussian_volume_sr"] = (
-            math.pi * fit_rad * fit_rad / (4.0 * math.log(2.0)))
+            math.pi * bmaj_rad * bmin_rad / (4.0 * math.log(2.0)))
 
     null_result = _first_null_or_radial_minimum(points, hwhm)
     if null_result is None:

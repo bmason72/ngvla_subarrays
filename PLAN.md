@@ -957,6 +957,16 @@ wave-3 status + harvest checklist).**
    (idev), not a login node**.  A squeue-polling monitor started this
    session on a login node was killed on bmason's request.
 
+**SESSION DELTA (4 Sep 2026, Fable — PSF Gaussian reference switched to the
+restoring beam; range-classification/legacy-warning logic reverted).**
+bmason decision: legacy ~3-FWHM captures are pre-18-Aug data left as is (no
+range-classification, no legacy warnings — see `PSF_REPORT_FIX_PLAN.md`, which
+supersedes `PSF_PLOT_FIX_HANDOFF.md` §3). ΩGaussian is now the tclean
+restoring-beam volume (π·bmaj·bmin/(4 ln 2)); exporter/report/template/tests
+updated; Rev F/Rev C track points nearly all have a beam, but ~1,750 Rev D
+track exploratory points and most snapshot points (Rev F ~2,470/3,830, Rev D
+~1,560/2,380) lack one and get no ratio ("—").
+
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)
 
 **Status 16 Jul 2026:** P3 (`curvegen/export_psf_data.py` + collect-stage

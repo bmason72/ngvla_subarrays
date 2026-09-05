@@ -1,6 +1,7 @@
 """Tests for the CASA-free PSF profile payload transform."""
 
 import json
+import math
 import unittest
 
 from curvegen.export_psf_data import (parse_profile_line,
@@ -66,18 +67,29 @@ class TestTransformProfileLines(unittest.TestCase):
 
 
 class TestDerivedPsfMetrics(unittest.TestCase):
-    def test_gaussian_core_fit_and_first_null_volume(self):
+    def test_restoring_beam_volume_and_first_null_volume(self):
         # Unit Gaussian with FWHM 1 arcsec, followed by an artificial first
         # null at 2 FWHM.  The enclosed volume is effectively the full
-        # Gaussian volume at that radius.
+        # Gaussian volume at that radius.  A circular 1"x1" restoring beam
+        # is attached so Omega_G matches the profile's own FWHM.
         radii = [i * 0.05 for i in range(41)] + [2.05]
         values = [2.0 ** (-4.0 * radius * radius) for radius in radii[:-1]]
         values.append(-0.01)
-        metrics = derive_psf_metrics({"r_arcsec": radii, "psf": values})
+        metrics = derive_psf_metrics({
+            "r_arcsec": radii, "psf": values,
+            "bmaj_arcsec": 1.0, "bmin_arcsec": 1.0,
+        })
         self.assertAlmostEqual(metrics["measured_fwhm_arcsec"], 1.0,
                                delta=0.01)
-        self.assertAlmostEqual(metrics["gaussian_fit_fwhm_arcsec"], 1.0,
-                               delta=0.01)
+        self.assertEqual(metrics["restoring_bmaj_arcsec"], 1.0)
+        self.assertEqual(metrics["restoring_bmin_arcsec"], 1.0)
+        self.assertAlmostEqual(metrics["restoring_fwhm_geo_arcsec"], 1.0,
+                               delta=1e-9)
+        arcsec_to_rad = math.pi / (180.0 * 3600.0)
+        expected_volume_sr = (math.pi / (4.0 * math.log(2.0))
+                              * arcsec_to_rad ** 2)
+        self.assertAlmostEqual(metrics["gaussian_volume_sr"],
+                               expected_volume_sr, delta=1e-18)
         self.assertAlmostEqual(metrics["first_null_arcsec"], 2.0,
                                delta=0.06)
         self.assertAlmostEqual(metrics["psf_to_gaussian_volume_ratio"], 1.0,
@@ -88,14 +100,40 @@ class TestDerivedPsfMetrics(unittest.TestCase):
         self.assertAlmostEqual(
             metrics["confusion_beam_sqrt_sr"] ** 2,
             metrics["psf_squared_volume_first_null_sr"])
+        self.assertNotIn("gaussian_fit_fwhm_arcsec", metrics)
+        self.assertNotIn("reference_gaussian_fwhm_arcsec", metrics)
 
-    def test_huber_fit_resists_one_bad_core_bin(self):
+    def test_elliptical_restoring_beam_uses_bmaj_bmin_product(self):
         radii = [i * 0.05 for i in range(13)]
         values = [2.0 ** (-4.0 * radius * radius) for radius in radii]
         values[7] = 0.9
+        metrics = derive_psf_metrics({
+            "r_arcsec": radii, "psf": values,
+            "bmaj_arcsec": 1.2, "bmin_arcsec": 0.8,
+        })
+        self.assertAlmostEqual(metrics["restoring_fwhm_geo_arcsec"],
+                               math.sqrt(1.2 * 0.8), delta=1e-9)
+        arcsec_to_rad = math.pi / (180.0 * 3600.0)
+        expected_volume_sr = (math.pi * 1.2 * 0.8 / (4.0 * math.log(2.0))
+                              * arcsec_to_rad ** 2)
+        self.assertAlmostEqual(metrics["gaussian_volume_sr"],
+                               expected_volume_sr, delta=1e-18)
+        self.assertNotIn("gaussian_fit_fwhm_arcsec", metrics)
+        self.assertNotIn("reference_gaussian_fwhm_arcsec", metrics)
+
+    def test_missing_beam_omits_gaussian_volume_and_ratios(self):
+        radii = [i * 0.05 for i in range(41)] + [2.05]
+        values = [2.0 ** (-4.0 * radius * radius) for radius in radii[:-1]]
+        values.append(-0.01)
         metrics = derive_psf_metrics({"r_arcsec": radii, "psf": values})
-        self.assertAlmostEqual(metrics["gaussian_fit_fwhm_arcsec"], 1.0,
-                               delta=0.08)
+        self.assertNotIn("restoring_bmaj_arcsec", metrics)
+        self.assertNotIn("restoring_bmin_arcsec", metrics)
+        self.assertNotIn("restoring_fwhm_geo_arcsec", metrics)
+        self.assertNotIn("gaussian_volume_sr", metrics)
+        self.assertNotIn("psf_to_gaussian_volume_ratio", metrics)
+        self.assertNotIn("psf_to_gaussian_squared_volume_ratio", metrics)
+        self.assertNotIn("gaussian_fit_fwhm_arcsec", metrics)
+        self.assertNotIn("reference_gaussian_fwhm_arcsec", metrics)
 
     def test_capture_edge_is_not_treated_as_a_null(self):
         metrics = derive_psf_metrics({

@@ -595,7 +595,7 @@ function psfMetricForPoint(saName, point) {
   const key = nearestPsfKey(byKey, point);
   const row = key ? rows.find(candidate => candidate[0] === key) : null;
   return row ? {
-    gaussian_fit_fwhm_arcsec: row[2],
+    restoring_fwhm_geo_arcsec: row[2],
     psf_squared_volume_first_null_sr: row[3],
     psf_to_gaussian_volume_ratio: row[4],
     first_null_is_proxy: Boolean(row[5]),
@@ -623,15 +623,15 @@ function interpolateConfusionModel(thetaArcsec) {
 
 function confusionForMetric(metric, freqGhz) {
   if (!metric || !finitePositive(freqGhz)) return null;
-  const fitFwhm = Number(metric.gaussian_fit_fwhm_arcsec);
+  const restoringFwhm = Number(metric.restoring_fwhm_geo_arcsec);
   const omega2 = Number(metric.psf_squared_volume_first_null_sr);
-  if (!finitePositive(fitFwhm) || !finitePositive(omega2)) return null;
+  if (!finitePositive(restoringFwhm) || !finitePositive(omega2)) return null;
   // Mono profiles are measured in their 30-GHz reference frame.  A fixed
   // MFS profile is already native to the registered spectral window.
   const refFreq = finitePositive(Number(DATA.ref_freq_ghz))
     ? Number(DATA.ref_freq_ghz) : 30;
   const angularScale = DATA.fixed_window ? 1 : refFreq / freqGhz;
-  const theta = fitFwhm * angularScale;
+  const theta = restoringFwhm * angularScale;
   const omega2AtFreq = omega2 * angularScale * angularScale;
   const thetaRad = theta * Math.PI / (180 * 3600);
   const gaussianOmega2 = 0.5 * Math.PI * thetaRad * thetaRad / (4 * Math.log(2));
@@ -1118,14 +1118,16 @@ function renderCalcTable(table, feasible, request) {
       'Classical source confusion from sqrt(∫B² dΩ) to the first ' +
       (row.psfMetric && row.psfMetric.first_null_is_proxy
         ? 'radial-minimum null proxy; ' : 'null; ') +
-      'kept separate from thermal sensitivity');
+      'scaled by sqrt(∫B²dΩ / ∫G²dΩ) against ΩGaussian, the tclean ' +
+      'restoring-beam volume (Condon 1974 γ=3); kept separate from ' +
+      'thermal sensitivity');
     const volumeRatio = row.psfMetric
       ? Number(row.psfMetric.psf_to_gaussian_volume_ratio) : NaN;
     addCell(tr, Number.isFinite(volumeRatio) ? fmtSig(volumeRatio) : '—',
       'Signed PSF volume to the first ' +
       (row.psfMetric && row.psfMetric.first_null_is_proxy
-        ? 'radial-minimum null proxy' : 'null') + ' divided by the fitted ' +
-      'unit-peak Gaussian total volume');
+        ? 'radial-minimum null proxy' : 'null') + ' divided by ΩGaussian, ' +
+      'the tclean restoring-beam volume');
     addCell(tr, fmtSig(Number(p.eta)));
     addCell(tr, Number.isFinite(Number(p.skirt)) ? fmtSig(100 * Number(p.skirt)) + '%' : '—');
     addCell(tr, tcleanText(p, request.freq));
@@ -1911,18 +1913,18 @@ function renderPsfParams(saName, point, entry, sample, el) {
   const bmaj = Number(entry.bmaj_arcsec), bmin = Number(entry.bmin_arcsec);
   if (bmaj > 0 && bmin > 0) {
     const bpa = Number(entry.bpa_deg);
-    parts.push(fmtRes(bmaj * 1e3) + ' × ' + fmtRes(bmin * 1e3) + ' @ ' +
+    parts.push('restoring beam ' + fmtRes(bmaj * 1e3) + ' × ' + fmtRes(bmin * 1e3) + ' @ ' +
       (Number.isFinite(bpa) ? bpa.toFixed(1) + '°' : '—') +
-      ', axis ratio ' + (bmaj / bmin).toFixed(2));
+      ', axis ratio ' + (bmaj / bmin).toFixed(2) +
+      ', geo-mean FWHM ' + fmtRes(Math.sqrt(bmaj * bmin) * 1e3));
+  } else {
+    parts.push('no restoring beam recorded; Ω ratios unavailable');
   }
   if (sample) {
     const skirt = Number.isFinite(Number(sample.skirt))
       ? (100 * Number(sample.skirt)).toFixed(1) + '%' : '—';
     parts.push('eta ' + Number(sample.eta).toFixed(2) + ', skirt ' + skirt);
   }
-  const fitFwhm = Number(entry.gaussian_fit_fwhm_arcsec);
-  if (finitePositive(fitFwhm))
-    parts.push('robust core Gaussian FWHM ' + fmtRes(fitFwhm * 1e3));
   const firstNull = Number(entry.first_null_arcsec);
   if (finitePositive(firstNull))
     parts.push((entry.first_null_is_proxy ? 'first radial minimum (null proxy) '
@@ -1950,14 +1952,6 @@ function renderPsfChart(chart, saName, entry, sample) {
   const finiteValues = values.filter(v => v !== null && v !== undefined)
     .map(Number).filter(Number.isFinite);
   const ymin = Math.min(0, finiteValues.length ? Math.min(...finiteValues) : 0);
-  // per-entry display range: an old (3-FWHM) capture stays at 3, a new
-  // (10-FWHM) capture at 10, and an edge-clamped capture lands wherever its
-  // actual radius reached -- a payload mixing old and new points renders
-  // each point with its own range.
-  const radiiArcsec = radialR.map(Number).filter(Number.isFinite);
-  if (hasCuts) radiiArcsec.push(...entry.cut_r_arcsec.map(r => Math.abs(Number(r)))
-    .filter(Number.isFinite));
-  const maxRadiusArcsec = radiiArcsec.length ? Math.max(...radiiArcsec) : 0;
   // Two joined linear scales keep both the core and outer PSF readable:
   // 0--3 FWHM uses the left half and 3--10 FWHM uses the right half.  Always
   // retain the full 10-FWHM domain so legacy 3-FWHM captures honestly stop at
@@ -2028,22 +2022,22 @@ function renderPsfChart(chart, saName, entry, sample) {
   svg.append(svgEl('path', {d: radialPath, fill: 'none', stroke: css(saName),
     'stroke-width': 2, 'stroke-linejoin': 'round'}));
 
-  const drawGaussian = (gaussianFwhm, stroke, dash, width) => {
-    if (!finitePositive(gaussianFwhm) || !finitePositive(fwhm)) return;
-    const points = [];
+  const restoringFwhm = Number(entry.restoring_fwhm_geo_arcsec);
+  const drewGaussian = finitePositive(restoringFwhm) && finitePositive(fwhm);
+  if (drewGaussian) {
+    const gaussianPoints = [];
     for (let i = 0; i <= 120; i += 1) {
-      const radius = maxRadiusArcsec * i / 120;
+      const x = rmax * i / 120;
+      const radiusArcsec = x * fwhm;
       const value = Math.exp(-4 * Math.log(2) *
-        Math.pow(radius / gaussianFwhm, 2));
-      points.push([radius / fwhm, value]);
+        Math.pow(radiusArcsec / restoringFwhm, 2));
+      gaussianPoints.push([x, value]);
     }
-    const path = points.map((p, i) => (i ? 'L' : 'M') +
+    const gaussianPath = gaussianPoints.map((p, i) => (i ? 'L' : 'M') +
       X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1)).join('');
-    svg.append(svgEl('path', {d: path, fill: 'none', stroke,
-      'stroke-width': width, 'stroke-dasharray': dash,
-      'stroke-linejoin': 'round'}));
-  };
-  drawGaussian(Number(entry.gaussian_fit_fwhm_arcsec), 'var(--ink)', '7 4', 1.6);
+    svg.append(svgEl('path', {d: gaussianPath, fill: 'none', stroke: 'var(--ink)',
+      'stroke-width': 1.6, 'stroke-dasharray': '7 4', 'stroke-linejoin': 'round'}));
+  }
 
   const firstNull = Number(entry.first_null_arcsec);
   if (finitePositive(firstNull) && finitePositive(fwhm) && firstNull / fwhm <= rmax) {
@@ -2112,8 +2106,9 @@ function renderPsfChart(chart, saName, entry, sample) {
     legendRows.push({label: 'minor-axis cuts', stroke: css(saName), width: 1.2,
       opacity: 0.55, dash: '4 3'});
   }
-  legendRows.push({label: 'robust core Gaussian', stroke: 'var(--ink)',
-    width: 1.6, dash: '7 4'});
+  if (drewGaussian)
+    legendRows.push({label: 'restoring beam (geo-mean FWHM)', stroke: 'var(--ink)',
+      width: 1.6, dash: '7 4'});
   if (sample && Number.isFinite(Number(sample.skirt)))
     legendRows.push({label: 'measured skirt at r=1 FWHM', stroke: css(saName), dot: true});
 
@@ -2238,7 +2233,7 @@ function renderQaTable() {
         `<td>${Number.isFinite(volumeRatio) ? fmtSig(volumeRatio) : '—'}</td>` +
         `<td>${las ? fmtRes(las.mas) + (las.provisional ? ' †' : '') : ''}</td></tr>`;
     }).join('') +
-    `<tr><td colspan="8" style="text-align:left;color:var(--muted);font-size:12px">ΩPSF is the signed radial-profile volume to the first zero; where a composite-array radial average stays positive, the first sustained radial minimum is explicitly used as a null proxy. ΩGaussian is the total volume of the robust core fit. LAS = 0.80 λ/b<sub>min</sub> uniformly for the 18-m subarrays (memo-67 core value); per-subarray disk-sim measurements pending</td></tr>`;
+    `<tr><td colspan="8" style="text-align:left;color:var(--muted);font-size:12px">ΩPSF is the signed radial-profile volume to the first zero; where a composite-array radial average stays positive, the first sustained radial minimum is explicitly used as a null proxy. ΩGaussian is the tclean restoring-beam volume (π·bmaj·bmin/(4 ln 2)); confusion scaling is sqrt(∫B²dΩ / ∫G²dΩ), Condon γ=3. LAS = 0.80 λ/b<sub>min</sub> uniformly for the 18-m subarrays (memo-67 core value); per-subarray disk-sim measurements pending</td></tr>`;
 }
 
 // full data table -----------------------------------------------------------------

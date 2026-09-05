@@ -85,11 +85,13 @@ class TestReportCalculatorControls(unittest.TestCase):
         self.assertIn("goalMicroJy < confusionMicroJy", self.text)
         self.assertIn("never added", self.text)
 
-    def test_psf_gaussian_and_volume_ratio_are_reported(self):
-        self.assertIn("gaussian_fit_fwhm_arcsec", self.text)
+    def test_psf_restoring_beam_and_volume_ratio_are_reported(self):
+        self.assertIn("restoring_fwhm_geo_arcsec", self.text)
+        self.assertNotIn("reference_gaussian_fwhm_arcsec", self.text)
+        self.assertNotIn("gaussian_fit_fwhm_arcsec", self.text)
         self.assertNotIn("double_measured_fwhm_arcsec", self.text)
         self.assertIn("psf_to_gaussian_volume_ratio", self.text)
-        self.assertIn("robust core Gaussian", self.text)
+        self.assertIn("tclean restoring-beam volume", self.text)
 
     def test_single_channel_visibility_estimate_is_in_ranked_listing(self):
         self.assertIn("const CALC_CORRELATOR_DUMP_SECONDS = 5", self.text)

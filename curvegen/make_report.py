@@ -607,16 +607,17 @@ def build_psf_metric_summary(profile_dir=None):
             profiles, _warnings = transform_profile_lines(handle)
         compact = []
         for key, profile in profiles.items():
-            required = ("res_geo_arcsec", "gaussian_fit_fwhm_arcsec",
+            required = ("res_geo_arcsec", "restoring_fwhm_geo_arcsec",
                         "psf_squared_volume_first_null_sr")
             if not all(field in profile for field in required):
                 continue
             # Compact positional schema used only by report_template.html:
-            # key, resolution, fitted FWHM, integral(B^2), volume ratio,
-            # whether the radial-minimum fallback supplied the null.
+            # key, resolution, restoring-beam geo-mean FWHM, integral(B^2),
+            # volume ratio, and whether the radial-minimum fallback supplied
+            # the null.
             compact.append([
                 key, profile["res_geo_arcsec"],
-                profile["gaussian_fit_fwhm_arcsec"],
+                profile["restoring_fwhm_geo_arcsec"],
                 profile["psf_squared_volume_first_null_sr"],
                 profile.get("psf_to_gaussian_volume_ratio"),
                 bool(profile.get("first_null_is_proxy")),

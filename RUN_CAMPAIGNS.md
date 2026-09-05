@@ -33,6 +33,33 @@ convergence and noise-policy pilots, record bmason's nchan/noise decision, and
 land the MFS-4 fresh adaptive wave runner. The current registry therefore
 keeps production `nchan` blank.
 
+## 4 Sep PSF audit — report rebuilt; legacy coverage remains
+
+The release report was regenerated on 4 Sep and embeds current payload files.
+Plots ending near r=3 are genuine pre-upgrade compact profiles captured before
+the 18 Aug `CAPTURE_RMAX_FWHM` change; bmason's decision (4 Sep) is to leave
+them as is — the chart already shows them honestly — rather than add
+range-classification or legacy-warning logic to the report.
+
+The former fixed-intercept “robust core Gaussian” is removed: it was visibly
+and quantitatively poor for multi-scale composite arrays. ΩGaussian is now the
+**tclean restoring-beam volume** (π·bmaj·bmin/(4 ln 2)), a genuine 2-D fit CASA
+already produced during imaging, not a fit to the radial profile. Essentially
+all Rev F and Rev C track points (the release tracks) carry a restoring beam;
+about 1,750 Rev D track exploratory points and most snapshot-campaign points
+(Rev F ~2,470 of 3,830; Rev D ~1,560 of 2,380) lack one and get no ΩPSF/ΩG or
+confusion ratio; the report says so ("—", "no restoring beam recorded").
+
+For a future reduced final-point campaign, retain a 2-D PSF (compressed FITS or
+an equivalent float array) for every curve anchor, plus the derived radial and
+axis profiles, weighted uv-radius histogram/moments, effective frequency,
+weight/noise totals, MS/config hash, imaging parameters, and CASA version.
+Full 2-D products need only be retained for this small final set; exploratory
+lattice points can continue using compact profiles. bmason's intent: this
+follow-on campaign samples a subspace of the grid along the optimum curves
+(not the full exploratory lattice) and retains PSFs, and possibly MSs, for
+that reduced set.
+
 ## 17 Aug release wave — COMPLETE (harvested 18 Aug; see PLAN.md 18-Aug delta)
 
 Outcome (all 11 jobs exit 0): retrofit wave 2 tracks (3415615_{0,2}) +
