@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > engine) + `curvegen/` (CASA curve generation + campaigns + HTML reports) — see
 > `WRAPUP.md` for bmason's current release scope, `RELEASE_PLAN.md` for the live plan,
 > `README.md` for layout/commands, `PLAN.md` for status/decisions/gotchas,
-> `NEXT_AGENT.md` for the hand-off, and `RUN_CAMPAIGNS.md` for the Slurm run sheet.
+> `NEXT_AGENT.md` for the hand-off, `RUN_CAMPAIGNS.md` for the Slurm run sheet,
+> and `PSF_DIAGNOSTICS.md` for how the reports measure and present PSF quality.
 > Where this file and those disagree (environment especially), trust them.
 > bmason launches all Slurm jobs himself — agents prepare command lines only.
 

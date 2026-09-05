@@ -21,7 +21,7 @@ half-power width and added capture-range preference/warning logic. bmason decide
 - MFS `nchan=27,54` edits in the same worktree are separate; second commit.
 - Future intent (do not design out): a small sim campaign over a subspace of the
   grid sampling the optimum curves, retaining PSFs and possibly MSs. Codex's
-  follow-on paragraph in RUN_CAMPAIGNS.md already describes this; keep it.
+  follow-on paragraph in PSF_DIAGNOSTICS.md already describes this; keep it.
 
 ## Changes
 
@@ -72,9 +72,9 @@ half-power width and added capture-range preference/warning logic. bmason decide
   restoring-beam wording.
 
 ### Docs
-- `RUN_CAMPAIGNS.md` "4 Sep PSF audit": rewrite to the decisions above (short
-  captures are pre-upgrade data, left as is; Ω_G now restoring beam; Rev D
-  exploratory points lack beams). Keep the follow-on reduced-final-point paragraph,
+- `PSF_DIAGNOSTICS.md`: rewrite to the decisions above (short captures are
+  pre-upgrade data, left as is; Ω_G now restoring beam; Rev D exploratory
+  points lack beams). Keep the follow-on reduced-final-point paragraph,
   adding bmason's note about sampling optimum curves and retaining PSFs/MSs.
 - `PLAN.md`: 4-Sep delta (three lines).
 - `PSF_PLOT_FIX_HANDOFF.md`: replace §3 with a short "superseded 4 Sep by bmason

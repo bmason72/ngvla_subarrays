@@ -973,9 +973,9 @@ half-power width (up to 1.25-1.6x, mostly at Briggs+taper points) — tclean's
 `psfcutoff=0.35` fit picks up the PSF shoulder. Added
 `restoring_to_halfpower_ratio` to `derive_psf_metrics`/the compact summary
 (index 6) and surfaced it in the PSF inspector, chart legend/x-axis title,
-and a new QA-table "beam/core" column; see RUN_CAMPAIGNS.md's "Restoring beam
-vs. core half-power width" note for the measured per-subarray ratios and the
-confirmed default-`psfcutoff` tclean call.
+and a new QA-table "beam/core" column; see PSF_DIAGNOSTICS.md's "Restoring
+beam versus core half-power width" section for the measured per-subarray
+ratios and the confirmed default-`psfcutoff` tclean call.
 
 **Follow-up (4 Sep, same session): nearest-PSF lookup bug fixed.**
 `nearestPsfKey` picked the resolution-nearest captured lattice PSF instead of
@@ -983,7 +983,7 @@ the one nearest in (weighting, robust, taper), so an interpolated curve point
 often displayed a PSF from the wrong weighting family (MAIN skirt excess
 median +0.05/p90 +0.16/max +0.38). Fixed to rank by weighting family first,
 then normalized robust/taper distance, resolution as tie-break only; see
-RUN_CAMPAIGNS.md's "Nearest-PSF lookup fixed" note and
+PSF_DIAGNOSTICS.md's "Which captured PSF the calculator shows" section and
 `tests/test_psf_lookup_replay.py`.
 
 ### PSF inspector plan (15 Jul 2026 — designed; P3+P4 BUILT 16 Jul; P1+P2 BUILT 21 Jul)

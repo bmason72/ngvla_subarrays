@@ -17,7 +17,9 @@ imaging), **Rev D 4-h track** (point-source), and **Rev C.01 4-h track**
 **Start here:** `RELEASE_PLAN.md` (current plan) → `PLAN.md` (history, decisions,
 gotchas §13) → `RUN_CAMPAIGNS.md` (Slurm run sheet). `CLAUDE.md` is the task
 statement and repo map for coding agents; the memo (`memo/ngvla_sa_selection.tex`)
-documents the method, the runbook, and the Python interface.
+documents the method, the runbook, and the Python interface. `PSF_DIAGNOSTICS.md`
+covers how the reports measure and present PSF quality (half-power width,
+restoring beam, confusion, nearest-PSF lookup).
 
 ## Layout
 

@@ -35,81 +35,40 @@ convergence and noise-policy pilots, record bmason's nchan/noise decision, and
 land the MFS-4 fresh adaptive wave runner. The current registry therefore
 keeps production `nchan` blank.
 
-## 4 Sep PSF audit — report rebuilt; legacy coverage remains
+## PSF backfill (cut-bearing anchors)
 
-The release report was regenerated on 4 Sep and embeds current payload files.
-Plots ending near r=3 are genuine pre-upgrade compact profiles captured before
-the 18 Aug `CAPTURE_RMAX_FWHM` change; bmason's decision (4 Sep) is to leave
-them as is — the chart already shows them honestly — rather than add
-range-classification or legacy-warning logic to the report.
+See `PSF_DIAGNOSTICS.md` for what the PSF metrics (half-power width,
+restoring beam, confusion, nearest-PSF lookup) mean; this section is the
+commands only.
 
-The former fixed-intercept “robust core Gaussian” is removed: it was visibly
-and quantitatively poor for multi-scale composite arrays. ΩGaussian is now the
-**tclean restoring-beam volume** (π·bmaj·bmin/(4 ln 2)), a genuine 2-D fit CASA
-already produced during imaging, not a fit to the radial profile. Essentially
-all Rev F and Rev C track points (the release tracks) carry a restoring beam;
-about 1,750 Rev D track exploratory points and most snapshot-campaign points
-(Rev F ~2,470 of 3,830; Rev D ~1,560 of 2,380) lack one and get no ΩPSF/ΩG or
-confusion ratio; the report says so ("—", "no restoring beam recorded").
+`curvegen/backfill_psf.sbatch` is a Slurm job array, one task per
+`(rev, sim_mode)` combo:
 
-For a future reduced final-point campaign, retain a 2-D PSF (compressed FITS or
-an equivalent float array) for every curve anchor, plus the derived radial and
-axis profiles, weighted uv-radius histogram/moments, effective frequency,
-weight/noise totals, MS/config hash, imaging parameters, and CASA version.
-Full 2-D products need only be retained for this small final set; exploratory
-lattice points can continue using compact profiles. bmason's intent: this
-follow-on campaign samples a subspace of the grid along the optimum curves
-(not the full exploratory lattice) and retains PSFs, and possibly MSs, for
-that reduced set.
+| array index | combo |
+|---|---|
+| 0 | revF track |
+| 1 | revF snapshot |
+| 2 | revD track |
+| 3 | revD snapshot |
+| 4 | revC track |
 
-**Restoring beam vs. core half-power width (4 Sep, bmason decision).** For
-two-scale PSFs — composite subarrays such as core+spiral, main, main+long,
-spiral+mid+long, mostly at Briggs+taper points — the tclean restoring beam is
-systematically wider than the radial profile's half-power width, by up to
-1.25-1.6x. Mechanism: tclean's beam fit uses every pixel above
-`psfcutoff=0.35` in a 41x41 box, and a two-scale PSF's shoulder stays above
-0.35 out to ~0.75 FWHM, so shoulder pixels broaden the Gaussian fit. The
-tclean call in `curvegen/sweep.py` uses CASA's default `psfcutoff` (confirmed
-by `grep -rn "tclean(" curvegen/*.py`: the sole call site, `sweep.py`'s
-`run_tclean`, passes no `psfcutoff` kwarg). Measured Rev F track numbers:
-single-scale arrays (core, core_inner, mid, spiral) have a median ratio
-&approx;1.00 and max 1.07, none above 1.10; core_spiral has 25 of 276 points
-above 1.10 (max 1.29); main 70/403 (max 1.42); long 128/354 (max 1.57);
-spiral_mid_long 115/315 (max 1.59); main_long 99/359 (max 1.50).
+```bash
+# dry-run first (counts anchors, images nothing); 4 Sep: revF track 3, revD track 10, revD snapshot 524
+cd /home1/10240/bmason72/Code/ngvla_subarrays/curvegen
+NGVLA_REV=revD NGVLA_SIM_MODE=track /work2/10240/bmason72/stampede3/casaenv/bin/casapy backfill_psf.py --dry-run
+sbatch --array=0 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch   # revF track
+sbatch --array=2 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch   # revD track
+sbatch --array=3 /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/backfill_psf.sbatch   # revD snapshot (524 anchors; long)
+```
 
-The report now exposes this rather than hiding it: `derive_psf_metrics` adds
-`restoring_to_halfpower_ratio` (restoring FWHM over measured half-power FWHM)
-alongside the existing beam metrics, `build_psf_metric_summary`'s compact row
-carries it as index 6, and the PSF inspector, its chart legend/x-axis title,
-and the QA table's new "beam/core" column all surface it. Because `res_geo`
-throughout the pipeline is the restoring beam (never the core half-power
-width), the reported resolution at an affected point is coarser than the true
-core — readers should treat res_geo as the restoring-beam figure it always
-was. The confusion estimate is insensitive to which width is used as the
-reference: Condon's γ=3 scaling has the source-count model going as θ and the
-correction as 1/θ, so they cancel to first order.
+Backfill is resumable (cut-bearing anchors are skipped on the next run), so a
+task that hits the 47-hour walltime ceiling continues on resubmit rather than
+losing progress.
 
-**Nearest-PSF lookup fixed to rank by parameter space, not resolution (4
-Sep).** `nearestPsfKey` in `curvegen/report_template.html` — used by the
-calculator's ΩPSF/ΩGaussian and confusion columns, the PSF inspector, and the
-per-row "PSF" inline expander — picked the captured lattice PSF nearest to a
-curve/calculator point by resolution alone (weighting/robust were only
-exact-tie breaks). Curve points are interpolated (e.g. Briggs robust -0.221,
-taper 40.2 mas), so the resolution-nearest capture frequently came from a
-different weighting family entirely: for MAIN at 87 mas the curve point is
-Briggs -0.22 (skirt 10%) but the old lookup returned `natural_2.00_7.245`
-(skirt 45%). Replayed over all MAIN curve points, the displayed PSF's skirt
-exceeded the curve point's skirt by median +0.05, p90 +0.16, max +0.38. Fixed
-by ranking candidates first by weighting family (natural and Briggs
-robust&ge;1.99 count as the same family; same-family candidates always beat
-the other family, which is used only when no same-family capture exists),
-then within a family by normalized robust/taper distance, with resolution as
-the final tie-break. Same MAIN replay after the fix: skirt excess 0.00/+0.01/
-+0.04 (median/p90/max) — at the cost of a median 7%, p90 17% resolution
-offset between the displayed PSF and the curve point, now stated explicitly
-in the inspector text and calculator tooltips. See
-`tests/test_psf_lookup_replay.py` for a standalone Python mirror of the
-ranking and its regression cases.
+After a backfill run, regenerate the reports (see "Reports" below for the
+full commands): `export_psf_data.py --all`, then
+`make_report.py --combined reports/ngvla-curves.html` and
+`make_report.py --combined --release`.
 
 ## 17 Aug release wave — COMPLETE (harvested 18 Aug; see PLAN.md 18-Aug delta)
 
