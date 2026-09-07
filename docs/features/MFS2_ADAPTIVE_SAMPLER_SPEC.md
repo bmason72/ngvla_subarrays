@@ -1,5 +1,9 @@
 # MFS-2 adaptive sampler — design spec v2.1 (build contract)
 
+**Parked 6 Sep 2026 for MFS v1 (bmason); replay findings in
+`curvegen/reports/v1_replay/INVESTIGATION.md`; revive against snapshot MFS
+full grids if needed.**
+
 **Status: v2.1, reviewed against the worktree 1 Sep 2026.**  This remains the
 normative MFS build contract, now with the mono-sampler work completed since the
 original 21 Jul v2 separated from the MFS work still to be implemented.  Every

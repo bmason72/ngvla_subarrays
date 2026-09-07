@@ -4,6 +4,37 @@ Standalone summary for resuming this workstream.  The authoritative, fuller
 version lives in `docs/plans/PLAN.md` § "MFS broadband continuum campaigns"; the codex
 gpt-5.6-sol design consult (question + full critique) is in
 `tmp/mfs_campaign_consult.md` / `tmp/mfs_campaign_consult_out.md`.
+**Status update (5 Sep 2026):** simulation half of pilot 2 DONE (job 3470012, nchan 27/54 core+main snapshot MSes, ~15 s and <330 MB each); imaging-half launcher built (`curvegen/submit_mfs_imaging_pilot.sh`, run sheet in docs/ops/RUN_CAMPAIGNS.md) but NOT launched; MFS-2d V1 replay harness built (`curvegen/replay_v1.py`) and the gate FAILS as specified at the 140-eval fresh budget (0/10 maps converge; accuracy bar met by most maps at ~280) — decisions pending bmason, see docs/plans/NEXT_AGENT.md.  Specs: docs/plans/mfs-imaging-pilot-spec.md, docs/plans/mfs-v1-replay-spec.md.
+
+**Scope and nchan decisions (bmason, 6 Sep 2026):** production nchan for
+Band 4 is pinned at 32 (0.5 GHz channels across the 13.5 GHz Band-4 window,
+rounded up to the next power of two); the 27-vs-54 snapshot pilot becomes a
+confirmation run that 0.5 GHz channels are converged, not a gate on the
+value. The MFS campaigns are Band 4 only for now; curves for the other
+bands are obtained by scaling the Band-4 curves with wavelength (resolution
+and LAS), an approximation because the shape of eta versus taper also
+depends on fractional bandwidth (Band 4 is 0.50; Bands 1 and 2 are about
+0.96 and 1.10; Band 6 is about 0.22), with the largest expected effect at
+the fine, negative-robust end. No per-band infrastructure beyond the
+existing band label is being built; a cheap check is queued later (one
+Band-2 snapshot run on core and main compared against the scaled Band-4
+curve).
+
+**Sampler set aside, snapshot full grid (bmason, 6 Sep 2026):** D3: the
+adaptive quadtree sampler is set aside for MFS v1 (parked, not abandoned).
+This parks MFS-2b/2c/2d/2e, the V1 replay gate, and MFS-4 (the PyLauncher
+wave runner). Reasoning: the sampler was designed on the assumption that a
+full MFS grid is unaffordable, and that assumption is being dropped for
+snapshot mode; also, multi-channel uv coverage very likely changes how eta
+and resolution respond to robust relative to the mono simulations the
+sampler was tuned and tested on, so a mono-based certification tests the
+wrong surface. D4: no MFS track campaign and no further timing benchmark
+now. Band-4 snapshot mode only. The production path is the proven mono
+pipeline on the full fixed grid (11 robust values by the canonical 14 tapers
+plus the natural row), revF, 7 subarrays (core-inner, core, spiral, mid,
+core+spiral, spiral+mid, main), nchan 32, equal per-channel noise. Snapshot
+timing at 32 channels is judged fine without a benchmark.
+
 **Status: IMPLEMENTATION IN PROGRESS (4 Sep 2026) — MFS-2a's Ka-band routing,
 required-nchan checks, immutable manifest, multi-channel simulation setup, and
 pinned MFS tclean setup are implemented. MFS-2b is substantially hardened;
@@ -32,6 +63,7 @@ combos.
    27±6.75, 41±10, 93±10 GHz.  Band 6 uses the 20 GHz max instantaneous
    bandwidth, NOT its 70–116 GHz RF span.  Fractional bandwidths:
    0.96, 1.10, 0.51, 0.50, 0.49, 0.215.
+   [Deferred 6 Sep 2026: Band 4 only; see scope paragraph above]
 3. **Channel count via a convergence pilot** (analytic floor first, min 16;
    details below).  The pilot is the tractability gate.
 4. **Lattice = complete coarse tensor product** (~68–84 pts, ~40% of full):
@@ -43,6 +75,8 @@ combos.
    design in `docs/features/MFS2_ADAPTIVE_SAMPLER_SPEC.md` (tolerances, loss, cliff
    localization, V1 replay gate).  MFS-2 in the task table below is
    replaced by that spec's MFS-2a..2e breakdown.
+   [6 Sep 2026: the adaptive sampler is parked for v1; production uses the
+   full fixed grid in snapshot mode]
 
 ## Key assumptions (and how each is protected)
 
@@ -61,6 +95,7 @@ combos.
   for bands 1–6.  We must NOT describe the full 4096–15000-px image as
   smearing-safe.  Production nchan = max(floor, pilot result), scaled per
   band ∝ f_bw (pow2-rounded), bands 1+6 validated as endpoints.
+  [Deferred 6 Sep 2026: Band 4 only; see scope paragraph above]
 - **A3 — the reduced lattice preserves the ptsrc envelope.**  Hybrid
   robust+taper solutions can form a lower-eta interior branch (memo 76),
   and refine.py can only chase jumps in the envelope it already sees —
@@ -81,12 +116,14 @@ combos.
   labeled).  The pilot A/Bs this against per-channel inverse-variance
   weighting from `receiver_data.pkl` (receiver Tsys varies strongly across
   bands 1–2); **bmason decides after seeing the A/B numbers.**
+  [Deferred 6 Sep 2026: Band 4 only; see scope paragraph above]
 - **A6 — cost/storage stay bounded.**  With pilot-scale nchan: whole track
   wave ~150–400 node-h (snapshot wave ~free); RR-LL MSes ~50–200 GB.
   *Protected by:* a FITTED cost model (per-point T = A(imsize) +
   B·N_bl·N_dump·N_chan·N_corr, benchmarked at nchan 1/16/64/prod ×
   imsize 4096/15000 × mode) before sizing the wave; sm.corrupt MaxRSS
   benchmarked at 64/128 chans before any 512-chan sim.
+  [Deferred 6 Sep 2026: Band 4 only; see scope paragraph above]
 - **A7 — the 8-queued-jobs cap is the binding constraint.**  Solution: one
   multi-node allocation per wave = **1 queue slot** (vs ~8–10 for the
   current 3-job chain + array).
@@ -135,14 +172,17 @@ combos.
 ## Pilots (gate production; ~1–2 queue slots, few node-hours)
 
 1. **Cost/packing benchmark:** fit the cost model; pick node packing;
-   sm.corrupt MaxRSS check.
+   sm.corrupt MaxRSS check. [Dropped 6 Sep 2026]
 2. **nchan convergence:** core + main, Band 4 snapshot first, using
    nchan ∈ {27,54} (0.5 and 0.25 GHz channels), 10–12 lattice points (natural ×
    {0, mid, coarse taper}; robust {−2, 0, +1.2} × {0, mid, coarse}).
-   Adopt 27 if 27→54 gives |Δeta|/eta < 0.5%, |Δb|/b < 1%, envelope
+   Production nchan is pinned at 32 (bmason, 6 Sep 2026); the 27→54
+   comparison now confirms that 0.5 GHz channels are converged, using the
+   same numeric criteria: |Δeta|/eta < 0.5%, |Δb|/b < 1%, envelope
    p95 |Δeta|/eta < 1% (max 2%), and endpoints stable to 1%. Expand the
    trial set only if this focused comparison fails.
 3. **Noise A/B** (equal vs receiver-weighted channels) at band 2.
+   [Deferred 6 Sep 2026: Band 4 only; see scope paragraph above]
    → **bmason checkpoint** on nchan rule + noise policy before the wave.
 
 The first, simulation-only half of items 1–2 is launchable without pinning the
@@ -164,9 +204,9 @@ gate production.
 | # | Task | Who/effort |
 |---|------|------------|
 | MFS-1 | Retrospective reduced-lattice validation (envelope replay, no CASA) | Sonnet 5 / GPT-5, medium |
-| MFS-2 | Band axis: config/simulate/sweep + manifest + schema/registry | Fable 5 spec, codex gpt-5.6-sol build, high |
-| MFS-3 | Benchmarks + pilots + analysis (bmason checkpoint after); isolated snapshot simulation/RSS launcher built 4 Sep | Sonnet driver, Fable analysis, med/high |
-| MFS-4 | PyLauncher wave runner (in-job prep→caps→sweep→collect) | Fable spec, codex build, high |
+| MFS-2 | Band axis: config/simulate/sweep + manifest + schema/registry (sampler parts PARKED 6 Sep 2026, see D3) | Fable 5 spec, codex gpt-5.6-sol build, high |
+| MFS-3 | Benchmarks + pilots + analysis (bmason checkpoint after); isolated snapshot simulation/RSS launcher built 4 Sep; nchan pinned 32 on 6 Sep; timing benchmark dropped; 27-vs-54 confirmation optional | Sonnet driver, Fable analysis, med/high |
+| MFS-4 | PyLauncher wave runner (in-job prep→caps→sweep→collect) — PARKED 6 Sep 2026, see D3 | Fable spec, codex build, high |
 | MFS-5 | collect/report/registry band routing + combined-report keys | initial native point-source path built 4 Sep; review/QA remains |
 | MFS-6 | Docs (RUN_CAMPAIGNS wave sheet, README, memo) + QA | small model, low |
 

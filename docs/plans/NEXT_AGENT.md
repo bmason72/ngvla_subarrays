@@ -1,11 +1,82 @@
-# NEXT_AGENT — start here (updated 19 Aug 2026)
+# NEXT_AGENT — start here (updated 6 Sep 2026)
 
 Hand-off sheet for whoever (human or agent) picks this up.  Read order:
 `docs/plans/WRAPUP.md` (bmason's 17 Aug scope — the authority) → `docs/plans/RELEASE_PLAN.md`
 (the live plan) → `CLAUDE.md` → `README.md` → `docs/plans/PLAN.md` (18-Aug delta
-first) → `docs/ops/RUN_CAMPAIGNS.md` → `docs/ops/casaLocation.md`.
+first) → `docs/ops/RUN_CAMPAIGNS.md` → `docs/ops/casaLocation.md` → `docs/worklog/`
+for the rolling status of any feature currently under active development.
 
-## Where things stand (19 Aug 2026)
+## Where things stand (5 Sep 2026) — MFS workstream
+
+Rolling status now lives in `docs/worklog/mfs-campaigns.md`; this section is
+a snapshot.
+
+- **Mono release (WRAPUP scope):** all Aug/Sep retrofit + backfill jobs done and
+  harvested (results committed 4 Sep); reports rebuilt 4 Sep after the
+  reconstruction RecursionError fix.  Remaining: T6 memo/editorial + release
+  tag (unchanged).
+- **MFS-3 pilot:** simulation half DONE (job 3470012; 4 MSes on $SCRATCH).
+  Imaging half launcher BUILT, not launched: `curvegen/submit_mfs_imaging_pilot.sh`
+  (see docs/ops/RUN_CAMPAIGNS.md first section).  bmason launches.
+- **MFS-2d V1 replay:** BUILT (`curvegen/replay_v1.py --suite`; reports in
+  `curvegen/reports/v1_replay/`).  **Gate FAILS as specified** — see the 5 Sep
+  session delta.  Decision needed from bmason (below) before MFS-4.
+- **MFS-4 (wave runner):** not built.  pylauncher/5.3.1 is available on
+  Stampede3.  Design requirement learned from the replay + mono retrofits:
+  waves must evaluate their 8-16 proposals IN PARALLEL (the driver is serial
+  today), because realistic per-map budgets are ~300+ evals, not 140.
+- **Scope (6 Sep 2026):** Band 4 only; other bands are obtained by scaling
+  the Band-4 curves with wavelength, not by running per-band campaigns.
+- **D3/D4 (bmason, 6 Sep 2026):** the adaptive quadtree sampler is set aside
+  (parked, not abandoned) for MFS v1, parking MFS-2b/2c/2d/2e, the V1
+  replay gate, and MFS-4; production uses the standard mono-style campaign
+  chain on the full fixed grid (11 robust values by the canonical 14
+  tapers plus the natural row) in Band-4 snapshot mode only, revF, 7
+  subarrays, nchan 32, equal noise. No MFS track campaign and no further
+  timing benchmark for now. See `docs/worklog/mfs-campaigns.md` for the
+  reasoning and what was learned.
+
+## Decisions for bmason (5 Sep, updated 6 Sep)
+
+1. V1 gate: **DECIDED 6 Sep (D3)** — moot; the adaptive sampler is parked
+   for v1, so the V1 replay gate does not block production. Investigation
+   DONE 6 Sep, report at `curvegen/reports/v1_replay/INVESTIGATION.md`: no
+   sampler defect found; the anomalies were a metric bug (fixed), a
+   seed-vs-historical-lattice coverage artifact, and sparse-subset
+   aliasing; the one traced track map genuinely needed ~560 evals. If the
+   sampler is revived later, the recommendation is a continuous surrogate
+   oracle (interpolated legacy surfaces) or certification against the
+   cheap snapshot MFS full grids.
+2. Fresh seed tapers: **moot while parked (D3)** — this only matters if the
+   sampler is revived.
+3. nchan + noise policy: **DECIDED 6 Sep** — nchan pinned at 32 for band4
+   (see `docs/plans/MFS_CAMPAIGN_PLAN.md`); noise policy stays `equal`, no
+   decision needed. Noise A/B at band 2 remains moot while MFS is Band-4
+   only (config hard-pins `equal`).
+
+Open questions (bmason, 6 Sep 2026):
+
+4. Point-source curves only, or both point-source and imaging curves, from
+   the full grid?
+5. Keep the 7-subarray set (core-inner, core, spiral, mid, core+spiral,
+   spiral+mid, main)?
+6. Whether Band-4 results enter the combined release page and calculator, or
+   stay as per-combo CSVs and reports for now.
+7. When to make the milestone commit of the MFS code.
+
+## Immediate queue (in order)
+
+1. Optional: bmason launches the 27-vs-54 snapshot confirmation run (not a
+   gate) to confirm 0.5 GHz channels are converged.
+2. Scout and spec what the standard campaign chain (prep, sweep, refine,
+   fill_grid, collect, report) needs to run for revF/snapshot/band4 at
+   nchan 32, including removing adaptive-only guards that reject full-grid
+   MFS.
+3. `fill_beam_caps` for band4 (main's cap is blank).
+4. bmason launches the snapshot full-grid wave.
+5. Milestone commit of the MFS code + specs once bmason has reviewed.
+
+## Where things stand (19 Aug 2026) — mono release (historical)
 
 - **Wave 3 is IN FLIGHT — do not trust the current release page's PSF
   range.**  Retrofits 3418621_{0,2} completed 19 Aug exit 0; the two

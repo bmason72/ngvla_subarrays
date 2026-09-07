@@ -4,6 +4,11 @@ history: git log --follow docs/plans/PLAN.md
 ---
 ### MFS broadband continuum campaigns (16 Jul 2026 — IMPLEMENTATION IN PROGRESS)
 
+*The MFS-3 pilot definition below is superseded by `docs/plans/MFS_CAMPAIGN_PLAN.md`
+(Band 4 snapshot, core+main, nchan 27 vs 54); rolling status is in
+`docs/worklog/mfs-campaigns.md`. Band 4 only, nchan 32 pinned 6 Sep 2026,
+other bands scaled from Band 4.*
+
 **4 Sep 2026 status:** Ka/band4 routing, channelized RR/LL simulation and MS
 validation, immutable manifests, pinned MFS tclean settings, fresh adaptive
 sampler foundations, native-schema collect/report routing, and CASA-free tests
@@ -27,6 +32,7 @@ below (all accepted except where noted).
    2.4±1.15, 8±4.4, 16±4.1, 27±6.75, 41±10, 93±10 GHz.  Band 6 uses the
    20 GHz instantaneous bw, NOT its 70-116 RF span.  Fractional bandwidths
    f_bw = 0.96, 1.10, 0.51, 0.50, 0.49, 0.215.
+   [Deferred 6 Sep 2026: Band 4 only; see the italic note above]
 3. **Point-source curves only** initially; both sim modes (track 4 h /
    snapshot, 60 s dumps as now).  nchan set by a convergence PILOT (below),
    analytic floor first, minimum 16.
@@ -40,7 +46,8 @@ below (all accepted except where noted).
 
 **Channel-count criterion (the tractability question, settled):** the
 analytic "no grating artifacts anywhere in the image" criterion
-(nchan ≈ f_bw·imsize/OVERSAMPLE ≈ 900-3300 for band 2) is the WRONG
+(nchan ≈ f_bw·imsize/OVERSAMPLE ≈ 900-3300 for band 2)
+[Deferred 6 Sep 2026: Band 4 only; see the italic note above] is the WRONG
 yardstick — eta is a global weights functional dominated by well-filled
 inner uv cells, the beam/skirt/profile use ≤3 FWHM, and even the real
 correlator is discrete.  The sim also does NOT model intra-channel
@@ -59,7 +66,8 @@ end / document; reconvene with bmason.
 
 **Noise-weighting decision (NEW, codex):** equal 1-Jy-per-channel noise
 isolates geometric uv filling but ignores receiver Tsys/eta_A variation
-across wide bands (worst: bands 1-2).  Pilot A/Bs equal-weight vs
+across wide bands (worst: bands 1-2).
+[Deferred 6 Sep 2026: Band 4 only; see the italic note above]  Pilot A/Bs equal-weight vs
 per-channel inverse-variance (from receiver_data.pkl) at band 2; bmason
 decides after.  v1 default = equal-weight, explicitly labeled in schema +
 report ("geometric uv-filling convention").

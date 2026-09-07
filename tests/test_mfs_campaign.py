@@ -63,9 +63,23 @@ class TestMFSBandAxis(unittest.TestCase):
             self.assertTrue(all(not row["beam_cap_arcsec_30ghz"] for row in rows))
 
     def test_mfs_config_requires_explicit_nchan(self):
-        proc = run_config("import config")
+        # Registry nchan is pinned to 32 for band4 (bmason, 6 Sep 2026), so
+        # config.py now resolves nchan from the registry with no env var set;
+        # confirm that resolution rather than the old blank-registry failure.
+        proc = run_config("import config; assert config.NCHAN == 32")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_mfs_config_nchan_override_needs_variant(self):
+        # Production must match the pinned registry nchan (32); a named
+        # pilot variant may override it (27-vs-54 confirmation pilot).
+        proc = run_config("import config", NGVLA_NCHAN="27")
         self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("requires nchan", proc.stderr)
+        self.assertIn("disagrees with registry nchan=32", proc.stderr)
+        proc = run_config("import config; assert config.NCHAN == 27; "
+                          "assert config.RESULTS_DIR.endswith('_pilot-nchan027-equal')",
+                          NGVLA_NCHAN="27",
+                          NGVLA_CAMPAIGN_VARIANT="pilot-nchan027-equal")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
 
     def test_mfs_config_routes_fixed_window_and_separate_paths(self):
         code = """

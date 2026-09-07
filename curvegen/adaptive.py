@@ -615,9 +615,15 @@ class QuadTree:
     takes the coarsest all-hit dyadic grid.  `mode` may be forced, else it is
     auto-detected (empty -> fresh, populated -> retrofit)."""
 
-    def __init__(self, table, mode=None):
+    def __init__(self, table, mode=None, seed_tapers=None):
         self.table = table
         self.mode = mode or self.detect_mode(table)
+        # V1 replay override (docs/plans/mfs-v1-replay-spec.md): when given, a
+        # fresh-mode tree uses this EXACT taper list instead of the 7
+        # log-uniform levels, so a replay's seed can be pinned to the map's
+        # own canonical lattice.  None (default) is today's behaviour,
+        # byte-for-byte; the manifest is not a function of this argument.
+        self._seed_tapers_override = seed_tapers
         self.seed_robusts, self.seed_tapers = self._seed_nodes()
         self.seed_leaves = self._build_seed_leaves()
         self._reconstruct()
@@ -631,6 +637,8 @@ class QuadTree:
     def _seed_nodes(self):
         t = self.table
         if self.mode == "fresh":
+            if self._seed_tapers_override is not None:
+                return list(SEED_ROBUSTS), list(self._seed_tapers_override)
             if not t.has_anchors:
                 return SEED_ROBUSTS, []          # need the two anchors first
             tapers = [round(v_to_taper(k / (N_SEED_TAPERS - 1), t.t_min, t.t_max), 3)
@@ -895,7 +903,7 @@ class Sampler:
     Read-only: nothing here measures or mutates the table (that is task 2e)."""
 
     def __init__(self, subarray, table=None, mode=None, audit_budget=None,
-                 beam_cap_mas=None):
+                 beam_cap_mas=None, seed_tapers=None):
         self.subarray = subarray
         # The broadband campaign is a new measurement campaign, never a
         # retrofit of the legacy 30-GHz lattice.  Pin this before constructing
@@ -913,7 +921,7 @@ class Sampler:
             table = PointTable.from_csv(path, subarray=subarray,
                                         beam_cap_mas=cap)
         self.table = table
-        self.tree = QuadTree(table, mode=mode)
+        self.tree = QuadTree(table, mode=mode, seed_tapers=seed_tapers)
         self.mode = self.tree.mode
         if self.mode == "fresh":
             self.plan_cap, self.audit_cap = PLAN_FRESH, AUDIT_FRESH
@@ -1539,19 +1547,21 @@ def plan_only_report(sampler, waves=1, out=sys.stdout):
 UNLIMITED_CAP = 1 << 30       # "no cap" probe -- see _has_more_work
 
 
-def _rebuild_sampler(subarray, sweep, mode, budget, beam_cap_mas):
+def _rebuild_sampler(subarray, sweep, mode, budget, beam_cap_mas,
+                     seed_tapers=None):
     """Sampler + fresh PointTable straight from the sweep's CURRENT rows (no
     CSV round-trip needed: sweep.run_point already keeps sweep.rows up to
     date, whether `sweep` is the real resumable Sweep or an injected
     FakeSweep).  `mode` must be the PINNED run mode (see run_wave_loop), never
-    None here -- see the mode-pinning note below."""
+    None here -- see the mode-pinning note below.  `seed_tapers` is the V1
+    replay override (None = today's default fresh seed); see QuadTree."""
     table = PointTable(list(sweep.rows.values()), subarray=subarray,
                        beam_cap_mas=beam_cap_mas)
     return Sampler(subarray, table=table, mode=mode, audit_budget=budget,
-                  beam_cap_mas=beam_cap_mas)
+                  beam_cap_mas=beam_cap_mas, seed_tapers=seed_tapers)
 
 
-def _has_more_work(subarray, sweep, run_mode, beam_cap_mas):
+def _has_more_work(subarray, sweep, run_mode, beam_cap_mas, seed_tapers=None):
     """Cheap unconstrained probe: would plan_wave() admit ANY unit given
     effectively unlimited room?  Used only when a wave has just proposed
     nothing, to tell "the run's own tracked budget is the reason" (audit cap
@@ -1570,7 +1580,7 @@ def _has_more_work(subarray, sweep, run_mode, beam_cap_mas):
     rebuilt here so `ceiling = min(cap, audit_room)` cannot silently clamp
     back down to the exhausted real cap."""
     probe = _rebuild_sampler(subarray, sweep, run_mode, UNLIMITED_CAP,
-                             beam_cap_mas)
+                             beam_cap_mas, seed_tapers=seed_tapers)
     return probe.plan_wave(batch=B_MAX, cap=UNLIMITED_CAP).n_new > 0
 
 
@@ -1631,7 +1641,7 @@ def _log_new_classifications(sampler, logged, p):
 
 
 def run_wave_loop(subarray, sweep=None, mode=None, budget=None, waves=None,
-                  beam_cap_mas=None, out=sys.stdout):
+                  beam_cap_mas=None, out=sys.stdout, seed_tapers=None):
     """The measuring driver (task 2e): plan the next wave, measure it point by
     point through `sweep.Sweep.run_point` (constructing ONE Sweep for
     `subarray` and reusing it for every wave -- the SAME resumable keyed
@@ -1678,7 +1688,13 @@ def run_wave_loop(subarray, sweep=None, mode=None, budget=None, waves=None,
     +N points total, stopped: <reason>".
 
     Returns dict(n_new, n_waves, n_failed, stopped, sampler) -- `sampler` is
-    the final rebuilt Sampler."""
+    the final rebuilt Sampler.
+
+    `seed_tapers` (V1 replay override, docs/plans/mfs-v1-replay-spec.md):
+    forwarded to every Sampler rebuilt across the whole run, so a fresh-mode
+    replay's seed stays pinned to the map's own canonical taper lattice
+    instead of the default 7 log-uniform levels.  None (default) reproduces
+    today's behaviour exactly."""
     p = lambda *a: print(*a, file=out)
     if sweep is None:
         sweep_cls = Sweep
@@ -1689,7 +1705,8 @@ def run_wave_loop(subarray, sweep=None, mode=None, budget=None, waves=None,
     if cap_mas is None and subarray in BEAM_CAP_ARCSEC:
         cap_mas = BEAM_CAP_ARCSEC[subarray] * 1e3
 
-    sampler = _rebuild_sampler(subarray, sweep, mode, budget, cap_mas)
+    sampler = _rebuild_sampler(subarray, sweep, mode, budget, cap_mas,
+                               seed_tapers=seed_tapers)
     run_mode = sampler.mode                      # pinned for the whole run
     base_cap = sampler.audit_cap                 # the hard cap this run targets
     total_new = n_failed = wave_no = 0
@@ -1703,7 +1720,8 @@ def run_wave_loop(subarray, sweep=None, mode=None, budget=None, waves=None,
         room = max(0, base_cap - total_new)
         plan = sampler.plan_wave(cap=room)
         if plan.n_new == 0:
-            more = _has_more_work(subarray, sweep, run_mode, cap_mas)
+            more = _has_more_work(subarray, sweep, run_mode, cap_mas,
+                                  seed_tapers=seed_tapers)
             stop_reason = ("audit cap reached" if more
                            else "no proposals (converged/classified)")
             break
@@ -1715,7 +1733,8 @@ def run_wave_loop(subarray, sweep=None, mode=None, budget=None, waves=None,
                 wave_failed += 1
         total_new += len(plan.proposals)
         n_failed += wave_failed
-        sampler = _rebuild_sampler(subarray, sweep, run_mode, budget, cap_mas)
+        sampler = _rebuild_sampler(subarray, sweep, run_mode, budget, cap_mas,
+                                   seed_tapers=seed_tapers)
         fc = _feature_counts(sampler)
         p("wave %d: %d evals (%d active leaves, features: step %d, ridge %d, "
           "unresolved %d)" % (wave_no, len(plan.proposals),

@@ -508,3 +508,140 @@ then normalized robust/taper distance, resolution as tie-break only; see
 docs/architecture/PSF_DIAGNOSTICS.md's "Which captured PSF the calculator shows" section and
 `tests/test_psf_lookup_replay.py`.
 
+
+**SESSION DELTA (5 Sep 2026, Fable orchestrator + sonnet workers — MFS
+pilot imaging launcher + V1 replay harness built; V1 gate FAILS as specified).**
+1. *Late-Aug mono work, recovered from logs (not previously logged):* retrofit
+   waves 3436514_4/3436656_4/3436682_4 (revC/track), 3436521_2/3436668_2
+   (revD/track), 3436525_0 (revF/track) all MEASURED to completion (every map
+   "audit cap reached", ~80 evals/wave); their report tails failed with a
+   RecursionError in `adaptive._reconstruct_leaf` (key-aliasing below the
+   point_key precision), fixed 4 Sep (distinct-3x3 key-grid guard) and
+   verified today: `adaptive.py main --plan-only` (revF/track) reconstructs
+   363 leaves in <1 s.  revF/snapshot retrofit 3456893_1 + backfill 3456900_1
+   and revD/track backfill 3470047_2 (10 anchors) completed clean.
+2. *MFS-3 pilot, simulation half DONE:* job 3470012 (4 Sep 21:46) created
+   core/main Band-4 snapshot MSes for nchan 27 and 54 in ~15 s each, MaxRSS
+   236-327 MB (memory is a non-issue at these nchan).  MSes on $SCRATCH under
+   `ms-revF_snapshot_band4_pilot-nchan0NN-equal/`; manifests in
+   `curvegen/results-revF_snapshot_band4_pilot-nchan0NN-equal/` (untracked).
+3. *MFS-3 imaging half — launcher BUILT (sonnet_worker, spec
+   `docs/plans/mfs-imaging-pilot-spec.md`):* `curvegen/submit_mfs_imaging_pilot.sh`
+   + `mfs_imaging_pilot.sbatch` (one slot: seeds -> pinned points -> points-file
+   sweeps -> compare), `mfs_pilot_points.py` (10 non-seed points: natural x
+   {mid, coarse} + robust {-2,-0.4,1.2} x {0, mid, coarse}, mid/coarse =
+   canonical taper_list_mas indices 6 and 8 from the nchan-27 seeds, shared
+   verbatim across variants so keys match), `mfs_pilot_compare.py` (per-point
+   |d eta|/eta < 0.5 %, |d res|/res < 1 %, endpoint checks, p95/max, timing
+   table; exit 3 on criteria fail), 21 tests.  `--sim-mode track --nchan-list 27`
+   doubles as the cost benchmark (sweep auto-simulates the track MS).  NB
+   band-4 `main` beam cap is blank (fill_beam_caps not yet run for band4) —
+   harmless for the pilot, REQUIRED before production.
+4. *MFS-2d V1 replay harness BUILT (sonnet_worker, spec
+   `docs/plans/mfs-v1-replay-spec.md`):* `curvegen/replay_v1.py` (+19 tests;
+   `adaptive.py` gained an optional, default-None `seed_tapers` override).
+   Architecture finding: the fresh seed's 7 log-uniform tapers do NOT
+   coincide with the 14-level canonical lattice, so an exact-hit replay needs
+   the seed pinned to canonical[::2]+rim (retrofit's grid); with that, exact-hit
+   fractions are 0.95-1.00.  **Verdict at the spec budget (audit 140): 0/10
+   maps converge, all FAIL on budget exhaustion; p90 sample fraction 0.78.**
+   Budget sweep (`curvegen/reports/v1_replay/sweep/`): with a fail-on-miss
+   oracle convergence goes 0 -> 4 -> 6 -> 10 of 10 at budgets 140/280/560/1120,
+   but at 1120 the replay has sampled 99.9 % of the legacy lattice (replay
+   ceiling, not a production estimate); median regret_max_covered drops below
+   0.1 at budget ~280 (0.051) and 6-7/10 maps meet it thereafter.  Persistent
+   cut disagreements at every budget: ~4 false + 4 missed cuts across the suite
+   (revD/track spiral+mid false; revF/track core+spiral missed) — to
+   investigate.  The nearest-row fallback oracle poisons certification (plateaus
+   at 3-4/10 converged) — `--on-miss fail` is the honest oracle.
+5. *Consistency check:* the mono retrofits also spent 80 evals/wave for 2-5
+   waves per map without converging, so the replay is telling the truth about
+   the certification criterion, not about the replay.
+6. Tests: 402 green (1 skipped).  Nothing committed this session; pending
+   bmason review of items 3-4 and the decisions in NEXT_AGENT.
+
+**SESSION DELTA (6 Sep 2026, Fable orchestrator + haiku scout + sonnet
+worker — MFS status review; docs/worklog/ created).**
+1. Verified the MFS-3 imaging pilot has still NOT been launched: checked
+   for `/work2/10240/bmason72/stampede3/mfs_imaging_pilot_*.log`,
+   `/scratch/10240/bmason72/ngvla_curvegen/mfs_imaging_pilot/`, and any
+   `nchan_convergence_vs_*.md`/`timing_track.md` — none exist.  Only the
+   simulation half (Slurm job 3470012) and the CPU-only V1 replay have run;
+   `sacct` for 4-6 Sep shows just 3470012, backfill 3470047_2, and idev
+   sessions.
+2. Created `docs/worklog/` as a new documentation area (convention in
+   `docs/worklog/README.md`) and `docs/worklog/mfs-campaigns.md` as the
+   first rolling-status file for it, plus `docs/archive/worklog/README.md`
+   for the eventual retirement path.  Added rows for all three to
+   `docs/INDEX.md`.
+3. Flagged a doc inconsistency: `docs/plans/mfs-campaigns-detail.md` still
+   describes the MFS-3 convergence pilot as band 2, both modes, nchan
+   16..512 with two consecutive doublings; `docs/plans/MFS_CAMPAIGN_PLAN.md`
+   (authoritative, 5 Sep status) narrowed it to Band 4 snapshot, core+main,
+   nchan 27 vs 54.  Added a one-line superseded pointer under the detail
+   doc's title rather than rewriting its body.
+4. Re-confirmed tests green: `casapy -m unittest discover -s tests -t .` ->
+   402 tests, OK (skipped=1).
+5. Confirmed nothing MFS-related is committed (git status/diff against last
+   commit `c264af4`, 5 Sep doc cleanup only).  This session made
+   documentation-only edits and did not commit.
+6. bmason decided D1 (production nchan for Band 4 = 32, 0.5 GHz channels
+   across the 13.5 GHz Band-4 window rounded up to the next power of two;
+   the 27-vs-54 pilot becomes a confirmation run, not a gate) and D2 (Band 4
+   only is in scope for the MFS campaigns now; other bands are obtained by
+   scaling the Band-4 curves with wavelength, an approximation, largest
+   expected effect at the fine, negative-robust end; a Band-2 vs scaled-
+   Band-4 check on core and main is queued).  Pinned `nchan` to 32 on both
+   band4 rows in `sa_select/data/config_registry.csv`; ran the full test
+   suite afterward (`casapy -m unittest discover -s tests -t .` -> 402
+   tests, OK (skipped=1)), updating one test
+   (`test_mfs_config_requires_explicit_nchan`) that had asserted the old
+   blank-registry failure.
+7. Doc files touched recording D1/D2: `docs/plans/MFS_CAMPAIGN_PLAN.md`,
+   `docs/plans/mfs-campaigns-detail.md`, `docs/ops/RUN_CAMPAIGNS.md`,
+   `docs/plans/NEXT_AGENT.md`, `docs/worklog/mfs-campaigns.md`, and this
+   file.
+8. Replay anomaly investigation done (`curvegen/reports/v1_replay/INVESTIGATION.md`):
+   sample_fraction>1 was a numerator/denominator status mismatch (fixed in
+   `replay_v1.py` + regression test); converged-but-FAIL maps are a
+   seed-vs-historical-lattice coverage artifact; false/missed cuts are
+   sparse-subset aliasing; the one traced track map genuinely needs ~560
+   evals.  No sampler defect found; relaxing to an accuracy gate at 280 is
+   NOT supported.  Recommended next: a continuous surrogate oracle for the
+   replay.  Also fixed `config.py` so pilot variants may override the pinned
+   registry nchan (27-vs-54 confirmation pilot preflights again).
+9. bmason decided D3 and D4. D3: the adaptive quadtree sampler is set aside
+   for MFS v1 (parked, not abandoned). This parks MFS-2b/2c/2d/2e, the V1
+   replay gate, and MFS-4 (the PyLauncher wave runner). Reasoning: the
+   sampler was designed on the assumption that a full MFS grid is
+   unaffordable, and that assumption is being dropped for snapshot mode;
+   also, multi-channel uv coverage very likely changes how eta and
+   resolution respond to robust relative to the mono simulations the
+   sampler was tuned and tested on, so a mono-based certification tests the
+   wrong surface. D4: no MFS track campaign and no further timing benchmark
+   now. Band-4 snapshot mode only. The production path is the proven mono
+   pipeline on the full fixed grid (11 robust values by the canonical 14
+   tapers plus the natural row), revF, 7 subarrays (core-inner, core,
+   spiral, mid, core+spiral, spiral+mid, main), nchan 32, equal
+   per-channel noise. Snapshot timing at 32 channels is judged fine without
+   a benchmark.
+10. What was learned (from `curvegen/reports/v1_replay/INVESTIGATION.md`):
+    the replay's failures were a metric bug (fixed), a coverage artifact of
+    the fresh seed versus the historical multi-campaign taper lattices, and
+    sparse-subset aliasing; the one traced track map genuinely needed about
+    560 evaluations; no sampler defect was found. If the sampler is revived
+    later, the cheap snapshot MFS full grids are the right oracle for
+    certifying it (real multi-channel surfaces, grid built to coincide with
+    its bisection points). The 27-vs-54 snapshot confirmation pilot stays
+    available (MSes exist; launcher preflights cleanly) as an optional
+    check that 0.5 GHz channels are converged; it is not a gate.
+11. Open questions for bmason: point-source curves only or both curves from
+    the full grid; keep the 7-subarray set; whether Band-4 results enter
+    the combined release page and calculator or stay as per-combo CSVs and
+    reports for now; when to make the milestone commit of the MFS code.
+12. Next step (agent side): scout and spec what the standard campaign chain
+    (prep, sweep, refine, fill_grid, collect, report) needs to run for
+    revF/snapshot/band4 at nchan 32, including removing adaptive-only
+    guards that reject full-grid MFS, and fill_beam_caps for band4 (main's
+    cap is blank). A scout is doing that inventory now; its findings will
+    be added later.

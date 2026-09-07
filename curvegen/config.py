@@ -109,9 +109,14 @@ if MFS:
                           "NGVLA_NCHAN" if _env_nchan else "registry nchan")
     if _env_nchan and _reg_nchan:
         registered = _positive_int(_reg_nchan, "registry nchan")
-        if NCHAN != registered:
+        # Production (no NGVLA_CAMPAIGN_VARIANT) must agree with the pinned
+        # registry value.  A named variant is a pilot with its own isolated
+        # MS/results/work dirs and manifest, so it may override nchan (the
+        # 27-vs-54 convergence check against the pinned 32, 6 Sep 2026).
+        if NCHAN != registered and not CAMPAIGN_VARIANT:
             raise ValueError("NGVLA_NCHAN=%d disagrees with registry nchan=%d "
-                             "for %s/%s/%s"
+                             "for %s/%s/%s (set NGVLA_CAMPAIGN_VARIANT for a "
+                             "pilot with a different nchan)"
                              % (NCHAN, registered, REV, SIM_MODE, BAND))
     _band = BANDS[BAND]
     REF_FREQ_GHZ = _band["ref_freq_ghz"]

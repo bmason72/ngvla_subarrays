@@ -13,9 +13,14 @@ on any path below to see its full history.
 | [plans/mfs-campaigns-detail.md](plans/mfs-campaigns-detail.md) | Long-form MFS broadband continuum campaign design and implementation status (split from PLAN.md lines 1083-1324) | active, in progress |
 | [plans/RELEASE_PLAN.md](plans/RELEASE_PLAN.md) | MVP release plan per WRAPUP: scope, T0-T6 task list, progress notes | active |
 | [plans/WRAPUP.md](plans/WRAPUP.md) | bmason's 17 Aug 2026 release scope and working guidelines; supersedes PLAN.md on conflicts | active, scope authority |
-| [plans/NEXT_AGENT.md](plans/NEXT_AGENT.md) | Hand-off sheet: where things stand, immediate queue, working agreements, sharp edges | active, last updated 19 Aug 2026 |
+| [plans/NEXT_AGENT.md](plans/NEXT_AGENT.md) | Hand-off sheet: where things stand, immediate queue, working agreements, sharp edges | active, last updated 6 Sep 2026 |
 | [plans/MFS_CAMPAIGN_PLAN.md](plans/MFS_CAMPAIGN_PLAN.md) | Summary plan for Ka-band MFS taperability campaigns: scope, assumptions, pilots, task sequence | active, implementation in progress |
-| [features/MFS2_ADAPTIVE_SAMPLER_SPEC.md](features/MFS2_ADAPTIVE_SAMPLER_SPEC.md) | Spec v2.1 for the MFS-2 adaptive (quadtree) sampler: constants, cell lifecycle, validation gates | active |
+| [plans/mfs-imaging-pilot-spec.md](plans/mfs-imaging-pilot-spec.md) | Worker spec for the Band-4 imaging pilot launcher, points generator and nchan-convergence compare (built 5 Sep 2026) | completed, reference |
+| [plans/mfs-v1-replay-spec.md](plans/mfs-v1-replay-spec.md) | Worker spec for the MFS-2d V1 retrospective replay harness (built 5 Sep 2026; gate result in the 5 Sep session delta; investigation findings in `curvegen/reports/v1_replay/INVESTIGATION.md`) | completed, reference |
+| [features/MFS2_ADAPTIVE_SAMPLER_SPEC.md](features/MFS2_ADAPTIVE_SAMPLER_SPEC.md) | Spec v2.1 for the MFS-2 adaptive (quadtree) sampler: constants, cell lifecycle, validation gates | parked 6 Sep 2026 |
+| [worklog/README.md](worklog/README.md) | Convention for rolling, time-stamped status notes on in-flight features | active, convention |
+| [worklog/mfs-campaigns.md](worklog/mfs-campaigns.md) | Rolling status of the MFS broadband continuum campaigns workstream | active, in progress |
+| [archive/worklog/README.md](archive/worklog/README.md) | Where retired worklog files land, with retirement convention | active |
 | [architecture/selection-tool-design.md](architecture/selection-tool-design.md) | Original design: objective, definitions, two-phase architecture, frequency scaling, selection algorithm (split from PLAN.md lines 14-208) | reference; scope superseded by WRAPUP |
 | [architecture/PSF_DIAGNOSTICS.md](architecture/PSF_DIAGNOSTICS.md) | How reports measure and present PSF quality: captures, Gaussian reference, restoring beam, lookup | active |
 | [architecture/ETA_JUMPS.md](architecture/ETA_JUMPS.md) | Why eta curves jump: sampling, skirt crossings, interpolation limits; when jumps are real | active |

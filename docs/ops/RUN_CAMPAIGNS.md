@@ -28,12 +28,54 @@ The two nchan values test whether the derived beam/skirt/eta quantities have
 already converged at the proposed 0.5-GHz spacing while also measuring memory;
 there is no plan to continue to 128--512 unless 27 versus 54 fails that test.
 
-This is **not** the production MFS snapshot campaign. Do not use
-`submit_campaign.sh` for MFS: its full-grid/fill path violates the adaptive
-MFS contract. Before production, finish MFS-2d/V1 replay, run the tclean
-convergence and noise-policy pilots, record bmason's nchan/noise decision, and
-land the MFS-4 fresh adaptive wave runner. The current registry therefore
-keeps production `nchan` blank.
+This is **not** the production MFS snapshot campaign. As of 6 Sep 2026 the
+adaptive MFS contract is parked (D3/D4): the full-grid/fill path of
+`submit_campaign.sh` IS the intended production path for Band-4 snapshot
+(11 robust values by the canonical 14 tapers plus the natural row, nchan
+32), replacing the adaptive sampler and MFS-4 wave runner for v1. The chain
+has not yet been adapted or tested for band4, though (prep, sweep, refine,
+fill_grid, collect, report need review; `fill_beam_caps` has not been run
+for band4; a spec for this is pending). **Until that work lands, do not
+launch `submit_campaign.sh` for MFS.** The registry now pins production
+`nchan` at 32 (bmason, 6 Sep 2026), but production still waits on the
+band4-chain work above.
+
+## MFS imaging pilot (nchan convergence + timing)
+
+The imaging half of the same Band-4 pilot: seeds -> pilot points (10
+non-seed lattice points, shared verbatim across nchan variants) ->
+points-file sweep -> nchan-convergence compare (>=2 `--nchan-list` values) or
+a timing-only cost benchmark (1 value). It reuses the MSes the simulation
+pilot above already created (same `pilot-nchan0NN-equal` variant naming), and
+also works standalone for `--sim-mode track` (simulates the missing MS
+itself). One Slurm queue slot; never runs `submit_campaign.sh`'s
+full-grid/fill path.
+
+```bash
+# nchan 32 is pinned (bmason, 6 Sep 2026); the 27-vs-54 run confirms
+# convergence at 0.5 GHz channels using the criteria in
+# MFS_CAMPAIGN_PLAN.md "Pilots" item 2
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_mfs_imaging_pilot.sh
+
+# track 27 cost/timing benchmark only (no convergence criteria evaluated)
+# [Dropped 6 Sep 2026 (D4): no MFS track campaign is planned; not needed. Command left in place for reference.]
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_mfs_imaging_pilot.sh \
+  --sim-mode track --nchan-list 27
+
+# dry-run either command first to see the exact sbatch line without submitting
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_mfs_imaging_pilot.sh --dry-run
+
+# Monitor and inspect per-phase logs (seeds / points / sweep per variant+subarray).
+squeue -u bmason72 -o "%.18i %.22j %.10T %.12M %.6D %R"
+grep -E "launching |FAILED|beam .*eta|Result: |Maximum resident set size" \
+  /work2/10240/bmason72/stampede3/mfs_imaging_pilot_<JOBID>_*.log
+```
+
+Success: every phase-1/phase-3 per-run log shows the point measured (no
+`FAILED` lines), and the job log's embedded `nchan_convergence_vs_*.md` (or
+`timing_*.md` in single-variant mode) ends `## Result: PASS`. Exit codes:
+0 = pass/timing-only, 3 = sweeps clean but nchan-convergence criteria failed,
+non-zero (1) = a sweep itself failed (compare still runs and reports both).
 
 ## PSF backfill (cut-bearing anchors)
 

@@ -1,0 +1,123 @@
+{
+  "campaign": {
+    "band": "band4",
+    "curve_types": "ptsrc",
+    "rev": "revF",
+    "run_mode": "fresh",
+    "sim_mode": "snapshot",
+    "subarrays": [
+      "core-inner",
+      "core",
+      "spiral",
+      "mid",
+      "core+spiral",
+      "spiral+mid",
+      "main"
+    ],
+    "variant": "pilot-nchan027-equal"
+  },
+  "casa_version": "6.7.5-18",
+  "imaging": {
+    "cell_policy": "imager-advise/5 scaled ref_freq/freq_hi; MFS seeds require minor axis >= 5 pixels",
+    "deconvolver": "hogbom",
+    "nterms": 1,
+    "parallel": false,
+    "reffreq_ghz": 27.0,
+    "specmode": "mfs",
+    "stokes": "I"
+  },
+  "sampler": {
+    "audit": [
+      140,
+      80
+    ],
+    "balance_closure": "full coarser-neighbor stencil (budget-accounted fallback)",
+    "batch": [
+      8,
+      16
+    ],
+    "campaign": {
+      "band": "band4",
+      "curve_types": "ptsrc",
+      "freq_hi_ghz": 33.75,
+      "freq_lo_ghz": 20.25,
+      "nchan": 27,
+      "noise_policy": "equal",
+      "ref_freq_ghz": 27.0,
+      "variant": "pilot-nchan027-equal"
+    },
+    "canonicalization": {
+      "negative_zero": "fold-to-positive-zero",
+      "robust_decimals": 2,
+      "taper_mas_decimals": 3
+    },
+    "classifier": "adaptive-classify-1",
+    "dominance": 1.0,
+    "e_max": 4.0,
+    "eta_cap": 5.0,
+    "freeze": [
+      1.05,
+      0.1
+    ],
+    "gap_ratio": 1.35,
+    "jitter_estimator": "pooled-within-point sample sigma; component fallback",
+    "kappa": 2.0,
+    "lam": 0.05,
+    "localize_k": 4,
+    "loss": "adaptive-loss-1",
+    "n_seed_tapers": 7,
+    "plan": [
+      110,
+      40
+    ],
+    "retire_e": 1.0,
+    "seed_leaves": 30,
+    "seed_robusts": [
+      -2.0,
+      -1.2,
+      -0.4,
+      0.4,
+      1.2,
+      2.0
+    ],
+    "seed_total": 56,
+    "sigma": [
+      0.005,
+      0.02,
+      0.005
+    ],
+    "skirt_band": [
+      0.05,
+      0.2
+    ],
+    "spec": "MFS2-adaptive-sampler v2 (21 Jul 2026)",
+    "taper_hi_x": 20.0,
+    "taper_lo_x": 0.3,
+    "tau": [
+      0.04879016416943205,
+      0.1,
+      0.02
+    ],
+    "tie_break": "lexicographic point_key",
+    "topology_key_floor": "distinct-3x3-point-key-grid",
+    "w_goal": [
+      3.0,
+      1.0,
+      0.25
+    ]
+  },
+  "schema": 1,
+  "spectral_window": {
+    "channel_width_ghz": 0.5,
+    "correlations": [
+      "RR",
+      "LL"
+    ],
+    "first_channel_center_ghz": 20.5,
+    "freq_hi_ghz": 33.75,
+    "freq_lo_ghz": 20.25,
+    "nchan": 27,
+    "noise_policy": "equal",
+    "ref_freq_ghz": 27.0
+  }
+}
