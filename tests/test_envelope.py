@@ -14,7 +14,8 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sa_select.envelope import (Envelope, build_points, build_segments,
-                                build_leaf_families, ETA_CAP)
+                                build_leaf_families, derive_robust_gap_limit,
+                                MAX_ROBUST_GAP, ETA_CAP)
 from sa_select.curves import CurveLibrary
 
 REVF_CSV = os.path.join(os.path.dirname(os.path.dirname(
@@ -436,6 +437,51 @@ class TestColumnSegments(unittest.TestCase):
                         pt(12.0, 1.2, 0.25, weighting="natural", robust=None,
                            taper=0.0)])
         self.assertIsNone(env.solve(11.0, margin=0.0))
+
+
+class TestRobustGapDerivation(unittest.TestCase):
+    """Per-table robust-gap tolerance (C1, 6 Sep 2026): derived from the
+    measured lattice step instead of the hardcoded MAX_ROBUST_GAP constant,
+    so a denser MFS robust grid (e.g. 0.2 step) gets a tighter tolerance than
+    the mono 0.4 step."""
+
+    def _lattice(self, step, lo=-2.0, hi=2.0):
+        n = round((hi - lo) / step) + 1
+        robusts = [round(lo + i * step, 6) for i in range(n)]
+        return [pt(10.0 / (1 + abs(r)), 1.0, 0.1, robust=r, taper=0.0)
+                for r in robusts]
+
+    def test_mono_full_lattice_gives_legacy_constant(self):
+        points = build_points(self._lattice(0.4))
+        self.assertAlmostEqual(derive_robust_gap_limit(points), 0.45)
+
+    def test_denser_lattice_gives_tighter_limit(self):
+        points = build_points(self._lattice(0.2))
+        self.assertAlmostEqual(derive_robust_gap_limit(points), 0.225)
+
+    def test_single_gap_falls_back_to_legacy_constant(self):
+        # one column, one gap: no statistic can recover a "nominal step"
+        # from a single number, so the conservative legacy bound applies.
+        points = build_points([pt(10.0, 1.5, 0.2, robust=0.8, taper=0.0),
+                               pt(12.0, 1.2, 0.25, robust=1.6, taper=0.0)])
+        self.assertEqual(derive_robust_gap_limit(points), MAX_ROBUST_GAP)
+
+    def test_uneven_refinement_across_columns_recovers_nominal_step(self):
+        # One taper column refined down to 0.1 steps near robust 0; another
+        # left at the original 0.4 step.  The nominal step (0.4) must still
+        # be recovered from the pooled per-column gaps (the accumulated Rev F
+        # data has exactly this pattern -- see derive_robust_gap_limit's
+        # docstring), not dragged down by the refined column's tiny gaps.
+        refined_robusts = [-2.0, -1.6, -1.2, -0.8, -0.4, -0.3, -0.2, -0.1,
+                           0.0, 0.4, 0.8, 1.2, 1.6, 2.0]
+        coarse_robusts = [round(r, 2) for r in
+                          [-2.0 + 0.4 * i for i in range(11)]]
+        samples = ([pt(10.0 / (1 + abs(r)), 1.0, 0.1, robust=r, taper=0.05)
+                   for r in refined_robusts]
+                  + [pt(10.0 / (1 + abs(r)), 1.0, 0.1, robust=r, taper=0.5)
+                     for r in coarse_robusts])
+        points = build_points(samples)
+        self.assertAlmostEqual(derive_robust_gap_limit(points), 0.45)
 
 
 class TestAdaptiveLeafFamilies(unittest.TestCase):

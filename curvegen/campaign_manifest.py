@@ -11,7 +11,8 @@ import os
 from config import (BAND, CAMPAIGN_VARIANT, MFS, REV, SIM_MODE, NCHAN, REF_FREQ_GHZ,
                     FREQ_LO_GHZ, FREQ_HI_GHZ, CHANNEL_WIDTH_GHZ,
                     FIRST_CHANNEL_CENTER_GHZ, CURVE_TYPES, NOISE_POLICY,
-                    RESULTS_DIR, OVERSAMPLE, MFS_SUBARRAYS)
+                    RESULTS_DIR, OVERSAMPLE, MFS_SUBARRAYS, ROBUST_STEP,
+                    ROBUST_LIST)
 
 MANIFEST_NAME = "campaign_manifest.json"
 MANIFEST_SCHEMA = 1
@@ -45,6 +46,7 @@ def expected_manifest(casa_version=None):
             "variant": CAMPAIGN_VARIANT,
             "subarrays": list(MFS_SUBARRAYS), "curve_types": CURVE_TYPES,
             "run_mode": "fresh",
+            "robust_step": ROBUST_STEP, "n_robust": len(ROBUST_LIST),
         },
         "spectral_window": {
             "ref_freq_ghz": REF_FREQ_GHZ,

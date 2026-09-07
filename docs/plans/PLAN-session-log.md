@@ -653,3 +653,12 @@ worker — MFS status review; docs/worklog/ created).**
     gap from data; report label/note; run-sheet launch section; tests).
     Sonnet worker dispatched to build it; see NEXT_AGENT "RESUME HERE" if the
     session ended before it reported.
+
+**SESSION DELTA (7 Sep 2026, Fable — MFS snapshot production chain landed).**
+The overnight worker build of `docs/plans/mfs-snapshot-production-spec.md`
+(C1-C5) was reviewed and completed after the reservation reset: registry
+`robust_step` (0.2 for band4, mono unchanged), `curve_types both`, per-table
+envelope gap limit, "Rev F — MFS snapshot" report view with a registry-built
+note, `submit_campaign.sh --band/--noise-policy`, band-suffixed per-combo
+report file, run-sheet launch section.  414 tests green (1 skipped).  Details
+in `docs/worklog/mfs-campaigns.md` (2026-09-07 entry).  bmason launches.

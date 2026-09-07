@@ -80,6 +80,26 @@ class TestCombinedComboPlan(unittest.TestCase):
         self.assertEqual(len(keys), len(set(keys)))
         self.assertFalse(plan[-1][1]["calculator_omitted"])
 
+    def test_mfs_snapshot_combo_entry_has_no_user_facing_band_string(self):
+        # C3 (6 Sep 2026, D7): the MFS view reads "MFS snapshot", never
+        # "band 4"/"BAND4"; note_html numbers come from the REGISTRY ROW
+        # (this combo's own nchan/window), not the current process env.
+        entry = mr.combo_entry("revF", "snapshot", "band4",
+                               ref_freq_ghz="27.0", freq_lo_ghz="20.25",
+                               freq_hi_ghz="33.75", nchan="32",
+                               curve_types="both", noise_policy="equal")
+        self.assertIn("MFS snapshot", entry["label"])
+        blob = (entry["label"] + entry["h1_html"] + entry["sub_html"]
+               + entry["note_html"])
+        # the only place "band4" may appear is the explicit internal-key
+        # callout in note_html (spec-mandated, e.g. "(internal key: band4)")
+        self.assertNotIn("BAND4", blob)
+        visible = blob.replace("internal key: band4", "")
+        self.assertNotIn("band4", visible)
+        self.assertIn("32", entry["note_html"])
+        self.assertIn("20.25", entry["note_html"])
+        self.assertFalse(entry["imaging_omitted"])   # curve_types=both
+
     def test_release_flags_exactly_the_ptsrc_only_combos(self):
         plan = mr.combined_combo_plan(ROWS, release=True)
         flags = {entry["key"]: entry.get("imaging_omitted")

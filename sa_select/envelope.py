@@ -259,11 +259,54 @@ def build_points(samples: Sequence[dict]) -> List[Point]:
     return pts
 
 
-def build_segments(points: Sequence[Point]) -> List[Segment]:
+def derive_robust_gap_limit(points: Sequence[Point]) -> float:
+    """Per-table column-segment gap tolerance, derived from the measured
+    Briggs robust values instead of hardcoding the mono 0.4 step (bmason D8,
+    6 Sep 2026: MFS campaigns sample robust more densely, e.g. 0.2).
+
+    Gaps are measured WITHIN each taper column separately (fixed taper,
+    consecutive Briggs robusts at that exact taper), because the campaigns
+    this engine reads from accumulate refinement unevenly: some taper
+    columns get bisected by refine.py's secant targeting
+    (curvegen/refine.py:secant_on_slice, which CAN write a probe at an
+    off-grid robust bracketed between two adjacent lattice rows) while
+    others keep the original, coarser lattice step.  A table-wide "smallest
+    gap" or "smallest gap over the union of all tapers' robusts" is blind to
+    this -- a single heavily-refined column can make the whole table look
+    finer than an untouched column really is.  Pooling every column's own
+    gaps and taking the 75th percentile recovers the campaign's NOMINAL
+    lattice step even when a fraction of columns have been locally refined
+    to a finer step (verified against the accumulated Rev F track table,
+    where refine has densified some regions to 0.2/0.1 while others remain
+    at the original 0.4: the pooled 75th percentile is exactly 0.4 for every
+    subarray checked).  Falls back to MAX_ROBUST_GAP (the legacy constant)
+    when fewer than two gap measurements exist (e.g. seeds only, or a
+    single column with a single gap -- there is no statistic to recover a
+    "nominal step" from one number, so the conservative legacy bound wins)."""
+    cols: Dict[float, List[float]] = {}
+    for p in points:
+        if p.weighting == "briggs" and p.robust is not None:
+            cols.setdefault(round(p.taper, 6), []).append(round(p.robust, 6))
+    gaps = []
+    for robs in cols.values():
+        robs = sorted(set(robs))
+        gaps.extend(round(b - a, 6) for a, b in zip(robs, robs[1:]))
+    if len(gaps) < 2:
+        return MAX_ROBUST_GAP
+    gaps.sort()
+    step = gaps[min(int(len(gaps) * 0.75), len(gaps) - 1)]
+    return 1.125 * step
+
+
+def build_segments(points: Sequence[Point],
+                   gap_limit: float = MAX_ROBUST_GAP) -> List[Segment]:
     """Group points into rows (weighting, robust), sort by taper, and connect
     adjacent pairs whose taper/resolution steps are lattice-like; then do the
     same along COLUMNS (fixed taper, adjacent Briggs robust values) so the
-    envelope is continuous in the robust direction too."""
+    envelope is continuous in the robust direction too.  `gap_limit` is the
+    max adjacent-robust spacing a column segment may span (see
+    derive_robust_gap_limit); it defaults to the legacy constant for callers
+    that do not derive it per-table."""
     rows: Dict[Tuple, List[Point]] = {}
     for p in points:
         rows.setdefault((p.weighting, p.robust), []).append(p)
@@ -291,7 +334,7 @@ def build_segments(points: Sequence[Point]) -> List[Segment]:
     for col in cols.values():
         col.sort(key=lambda p: p.robust)
         for a, b in zip(col, col[1:]):
-            if b.robust - a.robust > MAX_ROBUST_GAP:
+            if b.robust - a.robust > gap_limit:
                 continue
             if max(a.res, b.res) / min(a.res, b.res) > MAX_RES_STEP_COLUMN:
                 continue
@@ -536,7 +579,8 @@ class Cell:
                 out.append(c)
 
 
-def build_cells(points: Sequence[Point]) -> List["Cell"]:
+def build_cells(points: Sequence[Point],
+               gap_limit: float = MAX_ROBUST_GAP) -> List["Cell"]:
     """Bilinear cells from briggs points.  A cell spans (robust r0<r1) x
     (taper t0<t1) with all four corners measured.  To stay EXACTLY consistent
     with the 1-D row/column interpolants (so a cell can never undercut a more
@@ -568,7 +612,7 @@ def build_cells(points: Sequence[Point]) -> List["Cell"]:
     cells = []
     for i, r0 in enumerate(robusts):
         for r1 in robusts[i + 1:]:
-            if r1 - r0 > MAX_ROBUST_GAP:
+            if r1 - r0 > gap_limit:
                 break                                # robusts are sorted
             shared = sorted(set(tapers_of[r0]) & set(tapers_of[r1]))
             for t0, t1 in zip(shared, shared[1:]):
@@ -602,7 +646,8 @@ def _leaf_attr(leaf, name, default=None):
         else getattr(leaf, name, default)
 
 
-def build_leaf_families(points: Sequence[Point], leaves: Sequence
+def build_leaf_families(points: Sequence[Point], leaves: Sequence,
+                        gap_limit: float = MAX_ROBUST_GAP
                         ) -> Tuple[List[Segment], List["Cell"]]:
     """Build adaptive leaf edges and bilinear interiors.
 
@@ -624,7 +669,7 @@ def build_leaf_families(points: Sequence[Point], leaves: Sequence
     # Preserve only the 1-D families outside the adaptive domain from the
     # regular enumerator.  Positive-taper Briggs edges are reconstructed below
     # from the explicit leaves.
-    segments = [s for s in build_segments(usable)
+    segments = [s for s in build_segments(usable, gap_limit)
                 if s.a.weighting == "natural"
                 or (s.a.weighting == "briggs"
                     and (s.a.taper == 0.0 or s.b.taper == 0.0))]
@@ -642,7 +687,7 @@ def build_leaf_families(points: Sequence[Point], leaves: Sequence
                              else (lambda p: p.taper))
         for a, b in zip(edge_points, edge_points[1:]):
             if column:
-                if b.robust - a.robust > MAX_ROBUST_GAP:
+                if b.robust - a.robust > gap_limit:
                     continue
                 limit = MAX_RES_STEP_COLUMN
             else:
@@ -692,11 +737,17 @@ class Envelope:
 
     def __init__(self, samples: Sequence, leaves: Optional[Sequence] = None):
         self.points = build_points(samples)
+        # Per-table (per-subarray) robust-gap tolerance: this ONE subarray's
+        # samples dictate its own campaign's robust step (see
+        # derive_robust_gap_limit), so a mono table's 0.4 step and a denser
+        # MFS table's 0.2 step each get the right tolerance.
+        self.gap_limit = derive_robust_gap_limit(self.points)
         if leaves is None:
-            self.segments = build_segments(self.points)
-            self.cells = build_cells(self.points)
+            self.segments = build_segments(self.points, self.gap_limit)
+            self.cells = build_cells(self.points, self.gap_limit)
         else:
-            self.segments, self.cells = build_leaf_families(self.points, leaves)
+            self.segments, self.cells = build_leaf_families(
+                self.points, leaves, self.gap_limit)
 
     def coverage(self) -> Optional[Tuple[float, float]]:
         if not self.points:

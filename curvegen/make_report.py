@@ -34,7 +34,7 @@ import numpy as np
 
 from config import (REPO, RESULTS_DIR, ROBUST_LIST, BEAM_CAP_ARCSEC, grid_rows,
                     REV, SIM_MODE, BAND, MFS, REF_FREQ_GHZ, FREQ_LO_GHZ,
-                    FREQ_HI_GHZ, CURVE_TYPES, PROFILE_DIR)
+                    FREQ_HI_GHZ, CURVE_TYPES, NCHAN, NOISE_POLICY, PROFILE_DIR)
 
 sys.path.insert(0, REPO)                    # for the shared curve engine
 from sa_select.envelope import Envelope, ETA_CAP   # noqa: E402
@@ -997,31 +997,52 @@ _SUB_TAIL_HTML = (
 
 
 def combo_entry(rev, sim_mode, band="", ref_freq_ghz=None,
-                freq_lo_ghz=None, freq_hi_ghz=None):
-    """Dropdown metadata + per-combo header HTML for the combined report."""
+                freq_lo_ghz=None, freq_hi_ghz=None, nchan=None,
+                curve_types=None, noise_policy=None):
+    """Dropdown metadata + per-combo header HTML for the combined report.
+
+    For MFS (band-tagged) combos every number in the header/note comes from
+    this combo's OWN config_registry.csv row (the arguments below), never
+    from the current process's `config` module -- combined_combo_plan() calls
+    this once per registry row while iterating every combo, so the active
+    process environment matches only ONE of them.  The band key (e.g.
+    "band4") is an internal identifier only; it must not appear in any
+    user-facing label or heading (bmason D7, 6 Sep 2026 -- the MFS view reads
+    "MFS snapshot", not "band 4")."""
     rev_html = _REV_HTML.get(rev, rev)
     snap = sim_mode == "snapshot"
     if band:
         ref = REF_FREQ_GHZ if ref_freq_ghz is None else float(ref_freq_ghz)
         flo = FREQ_LO_GHZ if freq_lo_ghz is None else float(freq_lo_ghz)
         fhi = FREQ_HI_GHZ if freq_hi_ghz is None else float(freq_hi_ghz)
+        nch = NCHAN if nchan is None else int(nchan)
+        ctypes = CURVE_TYPES if curve_types is None else curve_types
+        npolicy = NOISE_POLICY if noise_policy is None else noise_policy
+        both = ctypes == "both"
         mode_html = _SIM_DESC_HTML.get(sim_mode, sim_mode)
-        h1 = ("%s %s broadband MFS point-source taperability curves"
-              % (rev_html, band.upper()))
+        h1 = ("%s broadband MFS taperability %s curves"
+              % (rev_html, "&amp; sculptability" if both
+                 else "(point-source)"))
         sub = ("These plots show point-source sensitivity cost (&eta;) against "
                "the native MFS beam for the fixed %.3g&ndash;%.3g&thinsp;GHz "
                "spectral window (reference %.3g&thinsp;GHz). Sensitivity cost "
                "is the image rms divided by the same-window natural-weighting "
                "rms. The data come from %s noise simulations at declination "
                "+24&deg;. Fixed-window MFS curves are not monochromatic "
-               "30/f-scaled curves."
-               % (flo, fhi, ref, mode_html))
+               "30/f-scaled curves.%s"
+               % (flo, fhi, ref, mode_html, (" " + _SUB_TAIL_HTML) if both
+                  else ""))
+        note = ("<strong>MFS snapshot:</strong> broadband (MFS) continuum "
+                "results from %d channels across %g&ndash;%g&thinsp;GHz "
+                "(reference %g&thinsp;GHz), %s per-channel noise. Resolution "
+                "and &eta; are native to this fixed window and are not "
+                "frequency-scaled. (internal key: %s)"
+                % (nch, flo, fhi, ref, npolicy, band))
         return dict(key="%s_%s_%s" % (rev, sim_mode, band),
-                    label="%s — %s — %s" % (_REV_DISPLAY.get(rev, rev),
-                                             _SIM_LABEL.get(sim_mode, sim_mode),
-                                             band.upper()),
-                    h1_html=h1, sub_html=sub, note_html="",
-                    imaging_omitted=True, calculator_omitted=False)
+                    label="%s — MFS %s" % (_REV_DISPLAY.get(rev, rev),
+                                           _SIM_LABEL.get(sim_mode, sim_mode)),
+                    h1_html=h1, sub_html=sub, note_html=note,
+                    imaging_omitted=not both, calculator_omitted=False)
     h1 = "%s %staperability &amp; sculptability curves" % (
         rev_html, "snapshot " if snap else "")
     sub = ("These plots show sensitivity cost (&eta;) against angular "
@@ -1057,7 +1078,9 @@ def combined_combo_plan(reg_rows, release=False):
         entry = combo_entry(
             r["rev"].strip(), r["sim_mode"].strip(), band,
             r.get("ref_freq_ghz") or None, r.get("freq_lo_ghz") or None,
-            r.get("freq_hi_ghz") or None)
+            r.get("freq_hi_ghz") or None, r.get("nchan") or None,
+            (r.get("curve_types") or "").strip() or None,
+            (r.get("noise_policy") or "").strip() or None)
         if release:
             if entry["key"] not in RELEASE_COMBOS:
                 continue

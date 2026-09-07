@@ -119,17 +119,44 @@ None open as of 6 Sep evening. Decided today (D5 to D8, bmason):
 
 ### Next actions (in order)
 
-1. Optional: bmason launches the 27-vs-54 snapshot confirmation run (not a
-   gate) to confirm 0.5 GHz channels are converged.
-2. Scout and spec what the standard campaign chain (prep, sweep, refine,
-   fill_grid, collect, report) needs to run for revF/snapshot/band4 at
-   nchan 32, including removing adaptive-only guards that reject full-grid
-   MFS.
-3. `fill_beam_caps` for band4 (main's cap is blank).
-4. bmason launches the snapshot full-grid wave.
-5. Milestone commit of the MFS code + specs once bmason has reviewed.
+1. bmason launches the production chain (exact line at the top of
+   `docs/ops/RUN_CAMPAIGNS.md`):
+   `bash curvegen/submit_campaign.sh revF snapshot --band band4 --noise-policy equal --refine-budget 200 --refine-rounds 8 --time 24:00:00`.
+2. Harvest per the run-sheet checklist (prep QA, sweep exit codes, refine
+   log grep, `fill_beam_caps.py --verify`, tests).
+3. Review the per-combo report `curvegen/reports/revF-snapshot-band4-curves.html`
+   and the "Rev F — MFS snapshot" view of the combined report; check the
+   imaging curve and the robust-axis behaviour bmason is concerned about.
+4. Data commit after bmason's review.
+5. Optional: the 27-vs-54 confirmation pilot (still preflights cleanly).
 
 ## Log
+
+### 2026-09-07
+
+Production-chain build landed (sonnet worker on
+`docs/plans/mfs-snapshot-production-spec.md`, cut off by the reservation
+reset overnight; reviewed and completed by the orchestrator this morning).
+C1: registry column `robust_step` (blank = 0.4 for every mono row; 0.2 for
+both band4 rows) drives `config.ROBUST_STEP`/`ROBUST_LIST` (mono 11 values
+byte-identical, band4 21); manifest records `robust_step` and `n_robust`;
+`sa_select/envelope.py` derives the column gap limit per table from the
+75th percentile of per-column robust gaps times 1.125 (0.45 on mono tables
+including refine-densified Rev F track, 0.225 on a 0.2-step table).  C2:
+band4 rows `curve_types both`; config accepts `ptsrc` or `both`; the two
+pilot manifests regenerated (MS fields unchanged; pilot dry-run still
+preflights).  C3: combined-report label "Rev F — MFS snapshot" (no band tag
+in user-facing text), a note built from the combo's own registry row (32
+channels, 20.25 to 33.75 GHz, 27 GHz reference, equal noise, internal key),
+imaging curve shown when curve_types is both.  C4: `submit_campaign.sh`
+gained `--band` and `--noise-policy`, exported to every stage;
+`campaign_collect.sbatch` suffixes the band onto the per-combo report file
+(it would otherwise have overwritten the mono revF-snapshot report) and
+passes `--band` to make_report; run-sheet section "MFS snapshot production
+run" with launch line, preflight, expected outputs and harvest checklist.
+CASA-free preflight verified: nchan 32, step 0.2, 21 robusts, both, 7
+subarrays, narray 1.  C5: tests added; full suite 414 green (1 skipped).
+No job submitted.
 
 ### 2026-09-06
 

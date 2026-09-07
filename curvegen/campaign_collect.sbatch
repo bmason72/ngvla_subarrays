@@ -28,9 +28,14 @@ mkdir -p "$RUN_CWD"; cd "$RUN_CWD"
 echo "=== COLLECT + REPORT  rev=$NGVLA_REV  mode=$NGVLA_SIM_MODE ==="
 "$PY" "$CG/collect.py" || { echo "COLLECT FAILED"; exit 1; }
 
-REPORT="$CG/reports/${NGVLA_REV}-${NGVLA_SIM_MODE}-curves.html"
+# band-tagged combos get their OWN report file: without the band suffix this
+# would collide with (silently overwrite) the mono report of the same
+# rev/sim_mode -- e.g. revF/snapshot/band4 would both want
+# revF-snapshot-curves.html (found during the MFS snapshot production
+# readiness check, 6 Sep 2026).
+REPORT="$CG/reports/${NGVLA_REV}-${NGVLA_SIM_MODE}${NGVLA_BAND:+-$NGVLA_BAND}-curves.html"
 "$PY" "$CG/make_report.py" "$REPORT" \
-    --rev "$NGVLA_REV" --sim-mode "$NGVLA_SIM_MODE" \
+    --rev "$NGVLA_REV" --sim-mode "$NGVLA_SIM_MODE" --band "${NGVLA_BAND:-}" \
     || { echo "REPORT FAILED"; exit 1; }
 echo "collect + report done -> $REPORT"
 

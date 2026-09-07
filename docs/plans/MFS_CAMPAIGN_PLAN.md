@@ -35,6 +35,12 @@ plus the natural row), revF, 7 subarrays (core-inner, core, spiral, mid,
 core+spiral, spiral+mid, main), nchan 32, equal per-channel noise. Snapshot
 timing at 32 channels is judged fine without a benchmark.
 
+**Production chain adapted (7 Sep 2026):** the standard chain runs for
+revF/snapshot/band4 at nchan 32 with a registry-driven robust step of 0.2 (21
+values), both curve types, and an "MFS snapshot" view in the combined report;
+spec `docs/plans/mfs-snapshot-production-spec.md`, launch line in
+`docs/ops/RUN_CAMPAIGNS.md`.  Launch pending bmason.
+
 **Status: IMPLEMENTATION IN PROGRESS (4 Sep 2026) — MFS-2a's Ka-band routing,
 required-nchan checks, immutable manifest, multi-channel simulation setup, and
 pinned MFS tclean setup are implemented. MFS-2b is substantially hardened;

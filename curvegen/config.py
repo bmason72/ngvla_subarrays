@@ -5,9 +5,11 @@ and the (robust, taper) parameter grids.
 
 Grid design (v2, after bmason's 5 Jul 2026 review of the v1 curves):
   * The grid is a full 2-D (robust x taper) lattice: rows are natural
-    weighting plus Briggs robust -2..+2 in steps of 0.4, columns are taper 0
-    plus ~14 log-spaced tapers.  Natural+taper is then genuinely one edge of
-    the searched space, so the sculpted (imaging) curve can never sit above
+    weighting plus Briggs robust -2..+2 in steps of ROBUST_STEP (0.4 for the
+    mono campaigns; a registry row may set a denser step, e.g. 0.2 for MFS),
+    columns are taper 0 plus ~14 log-spaced tapers.  Natural+taper is then
+    genuinely one edge of the searched space, so the sculpted (imaging)
+    curve can never sit above
     an admissible natural point at the same resolution -- the v1 failure.
   * Tapers are anchored to the subarray's OWN measured resolutions: from
     0.3 x the robust=-2 beam (so every row samples smoothly down to its
@@ -138,8 +140,8 @@ if MFS:
     CURVE_TYPES = (REGISTRY_ROW.get("curve_types") or "ptsrc").strip()
     NOISE_POLICY = (os.environ.get("NGVLA_NOISE_POLICY")
                     or REGISTRY_ROW.get("noise_policy") or "equal").strip()
-    if CURVE_TYPES != "ptsrc":
-        raise ValueError("first MFS campaign requires curve_types=ptsrc, got %r"
+    if CURVE_TYPES not in ("ptsrc", "both"):
+        raise ValueError("MFS curve_types must be 'ptsrc' or 'both', got %r"
                          % CURVE_TYPES)
     if NOISE_POLICY != "equal":
         raise ValueError("MFS noise_policy=%r is not implemented; use 'equal'"
@@ -315,7 +317,15 @@ IMSIZE = _IMSIZE[REV]
 if MFS:
     IMSIZE = {name: IMSIZE[name] for name in MFS_SUBARRAYS}
 
-ROBUST_LIST = [round(r, 2) for r in np.arange(-2.0, 2.01, 0.4)]
+# ROBUST_STEP is registry-driven so a campaign can sample the robust axis
+# more densely than the mono default (bmason D8, 6 Sep 2026: MFS wants a
+# denser grid than 0.4 because broadband uv coverage may change how eta
+# responds to robust).  A blank/absent registry robust_step (every mono row)
+# keeps the original 0.4 step and 11-value ROBUST_LIST byte-identical.
+_robust_step_raw = (REGISTRY_ROW.get("robust_step") if REGISTRY_ROW else "") or ""
+ROBUST_STEP = float(_robust_step_raw.strip()) if _robust_step_raw.strip() else 0.4
+ROBUST_LIST = [round(r, 2) for r in
+              np.arange(-2.0, 2.0 + ROBUST_STEP / 2.0, ROBUST_STEP)]
 N_TAPERS = 14        # log-spaced taper count per row
 TAPER_LO_X = 0.3     # taper range: TAPER_LO_X * res(robust=-2) ...
 TAPER_HI_X = 20.0    # ... TAPER_HI_X * res(natural)

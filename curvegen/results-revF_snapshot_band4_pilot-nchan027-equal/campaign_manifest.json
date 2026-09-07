@@ -1,8 +1,10 @@
 {
   "campaign": {
     "band": "band4",
-    "curve_types": "ptsrc",
+    "curve_types": "both",
+    "n_robust": 21,
     "rev": "revF",
+    "robust_step": 0.2,
     "run_mode": "fresh",
     "sim_mode": "snapshot",
     "subarrays": [
@@ -38,7 +40,7 @@
     ],
     "campaign": {
       "band": "band4",
-      "curve_types": "ptsrc",
+      "curve_types": "both",
       "freq_hi_ghz": 33.75,
       "freq_lo_ghz": 20.25,
       "nchan": 27,
@@ -74,10 +76,15 @@
     "seed_leaves": 30,
     "seed_robusts": [
       -2.0,
+      -1.6,
       -1.2,
+      -0.8,
       -0.4,
+      -0.0,
       0.4,
+      0.8,
       1.2,
+      1.6,
       2.0
     ],
     "seed_total": 56,

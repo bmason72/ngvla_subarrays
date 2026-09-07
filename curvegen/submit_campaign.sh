@@ -7,20 +7,24 @@
 #   bash curvegen/submit_campaign.sh revF snapshot --time 24:00:00
 #   bash curvegen/submit_campaign.sh revD track     --time 48:00:00
 #   bash curvegen/submit_campaign.sh revD track     --prep-only   # QA gate first
+#   bash curvegen/submit_campaign.sh revF snapshot --band band4 --noise-policy equal \
+#       --refine-budget 200 --refine-rounds 8 --time 24:00:00    # MFS snapshot production
 #
-# Env (NGVLA_REV / NGVLA_SIM_MODE / NGVLA_SCRATCH) is exported to EVERY stage:
-# a Slurm dependency does NOT inherit the submitter's environment, so each
+# Env (NGVLA_REV / NGVLA_SIM_MODE / NGVLA_SCRATCH, plus NGVLA_BAND /
+# NGVLA_NOISE_POLICY when --band is given) is exported to EVERY stage: a
+# Slurm dependency does NOT inherit the submitter's environment, so each
 # sbatch gets it explicitly via --export.  Everything is resumable; re-running
 # this script (or resubmitting a single stage) continues where it left off.
 set -euo pipefail
 
 REV=${1:-}; MODE=${2:-}
 if [ -z "$REV" ] || [ -z "$MODE" ]; then
-    echo "usage: submit_campaign.sh <rev> <sim_mode> [--time HH:MM:SS] [--prep-only]" >&2
+    echo "usage: submit_campaign.sh <rev> <sim_mode> [--time HH:MM:SS] [--prep-only]" \
+         "[--band band4] [--noise-policy equal]" >&2
     exit 2
 fi
 shift 2
-WALL="48:00:00"; PREP_ONLY=0; RBUDGET=60; RROUNDS=3; RSCAN=8
+WALL="48:00:00"; PREP_ONLY=0; RBUDGET=60; RROUNDS=3; RSCAN=8; BAND=""; NOISE_POLICY=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --time) WALL=${2:?}; shift 2 ;;
@@ -28,6 +32,8 @@ while [ $# -gt 0 ]; do
         --refine-budget) RBUDGET=${2:?}; shift 2 ;;   # polish pass: e.g. 200
         --refine-rounds) RROUNDS=${2:?}; shift 2 ;;   # polish pass: e.g. 8
         --refine-scan-points) RSCAN=${2:?}; shift 2 ;;  # E2 taper levels: e.g. 12
+        --band) BAND=${2:?}; shift 2 ;;               # fixed-window MFS band, e.g. band4
+        --noise-policy) NOISE_POLICY=${2:?}; shift 2 ;;  # default: registry noise_policy
         *) echo "unknown arg: $1" >&2; exit 2 ;;
     esac
 done
@@ -43,15 +49,17 @@ fi
 CG=$HOME/Code/ngvla_subarrays/curvegen
 PY=/work2/10240/bmason72/stampede3/casaenv/bin/casapy
 ACCT="-A AST25010"      # TACC allocation (also in every .sbatch header)
-export NGVLA_REV=$REV NGVLA_SIM_MODE=$MODE
+export NGVLA_REV=$REV NGVLA_SIM_MODE=$MODE NGVLA_BAND=$BAND NGVLA_NOISE_POLICY=$NOISE_POLICY
 export NGVLA_SCRATCH="${NGVLA_SCRATCH:-$SCRATCH/ngvla_curvegen}"
 # MSes persist on $WORK (SCRATCH is purged; 15 Jul 2026); tclean work dirs
 # stay on scratch (disposable TempLattice churn)
 export NGVLA_MS_BASE="${NGVLA_MS_BASE:-$WORK/ngvla_curvegen}"
 # refine knobs are ALWAYS exported explicitly (defaults 60/3/8): with
 # --export=ALL a stale NGVLA_REFINE_* in the submitting shell would otherwise
-# silently turn a default campaign into a polish pass (codex review)
-EXP="ALL,NGVLA_REV=$REV,NGVLA_SIM_MODE=$MODE,NGVLA_SCRATCH=$NGVLA_SCRATCH,NGVLA_MS_BASE=$NGVLA_MS_BASE,NGVLA_REFINE_BUDGET=$RBUDGET,NGVLA_REFINE_ROUNDS=$RROUNDS,NGVLA_REFINE_SCAN_POINTS=$RSCAN"
+# silently turn a default campaign into a polish pass (codex review).  BAND
+# and NOISE_POLICY default to "" (mono, unchanged); a blank NGVLA_NOISE_POLICY
+# is harmless for config.py, which falls back to the registry's noise_policy.
+EXP="ALL,NGVLA_REV=$REV,NGVLA_SIM_MODE=$MODE,NGVLA_BAND=$BAND,NGVLA_NOISE_POLICY=$NOISE_POLICY,NGVLA_SCRATCH=$NGVLA_SCRATCH,NGVLA_MS_BASE=$NGVLA_MS_BASE,NGVLA_REFINE_BUDGET=$RBUDGET,NGVLA_REFINE_ROUNDS=$RROUNDS,NGVLA_REFINE_SCAN_POINTS=$RSCAN"
 
 # guard: the combo must be registered and its metadata CSV must exist
 "$PY" "$CG/campaign_tasks.py" narray >/dev/null || {

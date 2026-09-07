@@ -16,7 +16,8 @@ REGISTRY = ROOT / "sa_select" / "data" / "config_registry.csv"
 
 def run_config(code, **extra_env):
     env = dict(os.environ, NGVLA_REV="revF", NGVLA_SIM_MODE="track",
-               NGVLA_BAND="band4", **extra_env)
+               NGVLA_BAND="band4")
+    env.update(extra_env)
     return subprocess.run(
         [sys.executable, "-c", code], cwd=str(CURVEGEN), env=env,
         text=True, capture_output=True)
@@ -41,7 +42,7 @@ class TestMFSBandAxis(unittest.TestCase):
             self.assertEqual((row["ref_freq_ghz"], row["freq_lo_ghz"],
                               row["freq_hi_ghz"]),
                              ("27.0", "20.25", "33.75"))
-            self.assertEqual(row["curve_types"], "ptsrc")
+            self.assertEqual(row["curve_types"], "both")
             self.assertEqual(row["noise_policy"], "equal")
 
         from sa_select.curves import load_campaign_registry, load_registry
@@ -61,6 +62,76 @@ class TestMFSBandAxis(unittest.TestCase):
             self.assertEqual(len(rows), 7)
             self.assertTrue(all("beam_cap_arcsec_native" in row for row in rows))
             self.assertTrue(all(not row["beam_cap_arcsec_30ghz"] for row in rows))
+
+    def test_registry_has_robust_step_column_blank_for_mono_set_for_band4(self):
+        with REGISTRY.open(newline="") as f:
+            rows = list(csv.DictReader(f))
+        with REGISTRY.open(newline="") as f:
+            fieldnames = csv.DictReader(f).fieldnames
+        self.assertIn("robust_step", fieldnames)
+        self.assertEqual(fieldnames[-1], "robust_step")   # appended, stable order
+        for r in rows:
+            if r["band"]:
+                self.assertEqual(r["robust_step"], "0.2")
+            else:
+                self.assertEqual(r["robust_step"], "")
+
+    def test_mono_robust_list_is_byte_identical(self):
+        # C1 (6 Sep 2026): ROBUST_STEP is registry-driven, but every mono row
+        # has a blank robust_step, so the 11-value 0.4-step list must be
+        # unchanged.
+        proc = subprocess.run(
+            [sys.executable, "-c",
+             "import config as c\n"
+             "assert c.ROBUST_STEP == 0.4, c.ROBUST_STEP\n"
+             "assert c.ROBUST_LIST == [round(-2.0 + 0.4*i, 2) "
+             "for i in range(11)], c.ROBUST_LIST\n"],
+            cwd=str(CURVEGEN), text=True, capture_output=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_band4_robust_list_has_21_values_at_0_2_step(self):
+        proc = run_config(
+            "import config as c\n"
+            "assert c.ROBUST_STEP == 0.2, c.ROBUST_STEP\n"
+            "assert len(c.ROBUST_LIST) == 21, len(c.ROBUST_LIST)\n"
+            "assert c.ROBUST_LIST[0] == -2.0 and c.ROBUST_LIST[-1] == 2.0\n",
+            NGVLA_SIM_MODE="snapshot", NGVLA_NCHAN="32")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_manifest_records_robust_step(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code = ("""
+import campaign_manifest as cm
+cm.RESULTS_DIR = %r
+data = cm.ensure_manifest(create=True, casa_version='CASA-test')
+assert data['campaign']['robust_step'] == 0.2, data['campaign']
+assert data['campaign']['n_robust'] == 21, data['campaign']
+""" % tmp)
+            proc = run_config(code, NGVLA_SIM_MODE="snapshot",
+                             NGVLA_NCHAN="32")
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_mfs_curve_types_both_accepted_unknown_rejected(self):
+        proc = run_config("import config as c; assert c.CURVE_TYPES == 'both'")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        # Exercise the reject path with a genuinely bad registry value: a
+        # scratch copy of the registry with one extra row (a private scratch
+        # sim_mode so the real band4 rows are untouched), restored in
+        # `finally`.  band4 must stay a real BANDS key (config.py validates
+        # the band name before ever reading the registry row).
+        original = REGISTRY.read_text()
+        try:
+            REGISTRY.write_text(
+                original.rstrip("\n") + "\n"
+                "revF,test_curve_types,band4,27.0,20.25,33.75,32,nonsense,"
+                "equal,subarrays_revf_mfs_band4_track.csv,"
+                "revf_track_band4_curves.csv,0.2\n")
+            proc = run_config("import config", NGVLA_SIM_MODE="test_curve_types",
+                              NGVLA_NCHAN="32")
+        finally:
+            REGISTRY.write_text(original)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("curve_types must be", proc.stderr)
 
     def test_mfs_config_requires_explicit_nchan(self):
         # Registry nchan is pinned to 32 for band4 (bmason, 6 Sep 2026), so
@@ -203,7 +274,7 @@ assert mr.registry_paths('revF', 'track', 'band4')[1].endswith(
     'revf_track_band4_curves.csv')
 combo = mr.combo_entry('revF', 'track', 'band4')
 assert combo['key'] == 'revF_track_band4'
-assert combo['imaging_omitted'] and not combo['calculator_omitted']
+assert not combo['imaging_omitted'] and not combo['calculator_omitted']
 assert '30/f-scaled' in combo['sub_html']
 mr.ACTIVE_ORDER = ['main']
 sens = mr.build_mfs_sens_table()['main']

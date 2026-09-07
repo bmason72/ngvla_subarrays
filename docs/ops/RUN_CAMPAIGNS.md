@@ -1,6 +1,66 @@
 # Campaign run sheet (copy-paste, one command per step)
 
-## 4 Sep MFS snapshot simulation pilot — READY TO LAUNCH (production is not)
+## MFS snapshot production run (Band 4 internal key) — READY TO LAUNCH
+
+Built and tested (sonnet worker, 6 Sep 2026; spec
+`docs/plans/mfs-snapshot-production-spec.md`): the standard mono-style
+campaign chain (`submit_campaign.sh` prep -> sweep -> refine -> collect)
+now runs for revF / snapshot / band4 at nchan 32, both curve types (imaging
+and point-source), 7 subarrays, on a denser 21-value robust grid (step 0.2
+vs. the mono 0.4). This supersedes the "not yet adapted" note that used to
+be here. bmason launches; agents prepare command lines only.
+
+```bash
+# production chain: prep -> sweep (21-robust full grid) -> refine (200/8,
+# the mono polish settings -- snapshot points are cheap) -> collect + report.
+# --band/--noise-policy are new submit_campaign.sh options (this session);
+# nchan is NOT passed -- it is pinned to 32 in config_registry.csv.
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh \
+  revF snapshot --band band4 --noise-policy equal \
+  --refine-budget 200 --refine-rounds 8 --time 24:00:00
+
+# CASA-free preflight (no Slurm, no tclean): confirms the grid/curve-types/
+# paths the chain will use before submitting anything.
+cd /home1/10240/bmason72/Code/ngvla_subarrays/curvegen
+NGVLA_REV=revF NGVLA_SIM_MODE=snapshot NGVLA_BAND=band4 NGVLA_NOISE_POLICY=equal \
+  casapy -c "import config as c; print(c.NCHAN, c.ROBUST_STEP, len(c.ROBUST_LIST), c.CURVE_TYPES, c.RESULTS_DIR, c.MS_DIR)"
+# expect: 32 0.2 21 both .../results-revF_snapshot_band4 .../ms-revF_snapshot_band4
+
+# Monitor
+squeue -u bmason72 -o "%.18i %.22j %.10T %.12M %.6D %R"
+```
+
+Expected outputs:
+
+- Results CSV: `sa_select/data/revf_snapshot_band4_curves.csv` (registry
+  `samples_csv` for the `revF/snapshot/band4` row).
+- Per-combo report: `curvegen/reports/revF-snapshot-band4-curves.html`
+  (campaign_collect.sbatch now suffixes the band onto the report filename so
+  it cannot collide with the mono `revF-snapshot-curves.html` -- a genuine
+  collision found and fixed this session, `curvegen/campaign_collect.sbatch`).
+- Combined report rebuild: `curvegen/reports/ngvla-curves.html` (campaign
+  dropdown gains a "Rev F — MFS snapshot" entry, sorted after the mono
+  views; internal payload key `revF_snapshot_band4`).
+
+Harvest checklist:
+
+1. Prep job exit code 0; eyeball `prep_<JOBID>.log` seed beams (QA gate).
+2. Sweep array all exit 0 (`sacct -j <sweep_jobid>`); `sweep_<A>_<a>.log`
+   shows the 21-robust grid running per subarray.  NB `campaign_tasks.py
+   narray` is 1 for this combo: none of the 7 subarrays has baselines over
+   2600 km, so all 7 share one grouped sweep node (bmason's 8 Jul rule), and
+   `--array=0-0` is expected, not a bug.
+3. `grep -c "REFINE FAILED" sweep_<A>_*.log` should be 0 (non-blocking, but
+   worth checking); grep for refine round summaries ("round N: X jumps").
+4. `casapy curvegen/fill_beam_caps.py --verify` exits 0 (also runs inside
+   sweep as a preflight; re-run manually if in doubt).
+5. Full test suite green: `casapy -m unittest discover -s tests -t .` from
+   the repo root.
+6. Data commit: the routed curve CSV, updated
+   `subarrays_revf_mfs_band4_snapshot.csv` caps, the per-combo report, and
+   the rebuilt combined report -- only once bmason has reviewed.
+
+## 4 Sep MFS snapshot simulation pilot — optional (superseded by production above)
 
 The Band-4 snapshot simulator path is ready for the safe first half of the
 nchan/RSS pilot. It creates **only** core and main measurement sets, does not
@@ -28,19 +88,15 @@ The two nchan values test whether the derived beam/skirt/eta quantities have
 already converged at the proposed 0.5-GHz spacing while also measuring memory;
 there is no plan to continue to 128--512 unless 27 versus 54 fails that test.
 
-This is **not** the production MFS snapshot campaign. As of 6 Sep 2026 the
-adaptive MFS contract is parked (D3/D4): the full-grid/fill path of
-`submit_campaign.sh` IS the intended production path for Band-4 snapshot
-(11 robust values by the canonical 14 tapers plus the natural row, nchan
-32), replacing the adaptive sampler and MFS-4 wave runner for v1. The chain
-has not yet been adapted or tested for band4, though (prep, sweep, refine,
-fill_grid, collect, report need review; `fill_beam_caps` has not been run
-for band4; a spec for this is pending). **Until that work lands, do not
-launch `submit_campaign.sh` for MFS.** The registry now pins production
-`nchan` at 32 (bmason, 6 Sep 2026), but production still waits on the
-band4-chain work above.
+This is **not** the production MFS snapshot campaign; it is a lighter-weight
+confirmation of the 0.5-GHz channel spacing, not a gate on it (see the
+"MFS snapshot production run" section at the top of this file, which IS
+ready to launch via `submit_campaign.sh --band band4`). As of 6 Sep 2026 the
+adaptive MFS contract stays parked (D3/D4); production uses the full-grid
+`submit_campaign.sh` chain on a denser 21-value robust grid (step 0.2), not
+the adaptive sampler or the MFS-4 wave runner.
 
-## MFS imaging pilot (nchan convergence + timing)
+## MFS imaging pilot (nchan convergence + timing) — optional (not a gate)
 
 The imaging half of the same Band-4 pilot: seeds -> pilot points (10
 non-seed lattice points, shared verbatim across nchan variants) ->
