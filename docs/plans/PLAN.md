@@ -16,7 +16,8 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ⚠ blocked/nee
 
 **Plan reviewed against the raw materials 5 Jul 2026** — Rev F configs, memo-121 CSVs,
 taperability pipeline, and sensitivity-calculator pkl all spot-checked; findings folded into
-§6, §7, §12, §13. No coding started yet (M1 is next).
+§6, §7, §12, §13. (Historical note as of 5 Jul 2026: no coding had started; M1 was next.
+Current status lives in `docs/worklog/` and `docs/plans/NEXT_AGENT.md`.)
 
 ---
 

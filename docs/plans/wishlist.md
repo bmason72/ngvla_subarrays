@@ -10,6 +10,10 @@
    the user level limit of 8 jobs in the queue is a real pace setter for getting
    things done, and there are many nodes available here.
 
+-add spiral+5, spiral+10, SBA (fixed), LONG combos (filtering short baselines involving LONG at minimum).
+
+-run rest of subarrays on RevF MFS
+
 ===========
 actually maintenance tasks
 

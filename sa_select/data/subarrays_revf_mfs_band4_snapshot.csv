@@ -5,4 +5,4 @@ spiral,spiral,54,811.44,39270.01,0.8,,spiral,MFS Ka-band geometry; beam cap is m
 mid,mid,46,10121.09,1272904.19,0.8,,mid,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,
 core+spiral,core+spiral,168,42.15,39270.01,0.8,,spiral+core,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,
 spiral+mid,spiral+mid,100,811.44,1272904.19,0.8,,spiral+mid,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,
-main,core+spiral+mid,214,42.15,1272904.19,0.8,,main,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,
+main,core+spiral+mid,214,42.15,1272904.19,0.8,,main,MFS Ka-band geometry; beam cap is measured in this campaign's native 27-GHz frame.,0.7801

@@ -6,7 +6,15 @@ Hand-off sheet for whoever (human or agent) picks this up.  Read order:
 first) → `docs/ops/RUN_CAMPAIGNS.md` → `docs/ops/casaLocation.md` → `docs/worklog/`
 for the rolling status of any feature currently under active development.
 
-## START HERE (7 Sep 2026) — MFS snapshot production run ready to launch
+## START HERE (7 Sep 2026) — MFS snapshot production run LAUNCHED
+
+Launched by bmason 7 Sep 2026 ~12:15 CDT (prep 3475087, sweep 3475088, collect
+3475089).  Do NOT relaunch; live status in `docs/worklog/mfs-campaigns.md`.
+> **Campaign freeze:** while any campaign stage is queued or running, do not edit
+> `curvegen/`, `sa_select/`, or `sa_select/data/*.csv` on `main`: each Slurm stage
+> re-imports them from this checkout when it starts.  Code work goes in a separate
+> git worktree and merges after collect has finished and been checked.  Live freeze
+> window: `docs/worklog/mfs-campaigns.md`.
 
 - Commits `b52504d` (milestone), `ebde3bc` (docs), and the 7 Sep chain
   commit hold everything.  Rolling status: `docs/worklog/mfs-campaigns.md`.

@@ -39,7 +39,8 @@ timing at 32 channels is judged fine without a benchmark.
 revF/snapshot/band4 at nchan 32 with a registry-driven robust step of 0.2 (21
 values), both curve types, and an "MFS snapshot" view in the combined report;
 spec `docs/plans/mfs-snapshot-production-spec.md`, launch line in
-`docs/ops/RUN_CAMPAIGNS.md`.  Launch pending bmason.
+`docs/ops/RUN_CAMPAIGNS.md`.  Launched 7 Sep 2026 (prep job 3475087); status in
+`docs/worklog/mfs-campaigns.md`.
 
 **Status: IMPLEMENTATION IN PROGRESS (4 Sep 2026) — MFS-2a's Ka-band routing,
 required-nchan checks, immutable manifest, multi-channel simulation setup, and
@@ -53,7 +54,8 @@ remain.**
 ## What is being built
 
 A new campaign kind for `curvegen/`: per-band broad-band **MFS continuum**
-taperability curves — **point-source curves only** initially — for both sim
+taperability curves — **both point-source and imaging curves** (D5, 6 Sep 2026;
+originally point-source only) — for both sim
 modes (4 h track and snapshot, 60 s dumps as now), one simulation set per
 (subarray, band).  Results feed the same registry/collect/report machinery
 as the existing mono-30 GHz campaigns, as new (rev, sim_mode, **band**)

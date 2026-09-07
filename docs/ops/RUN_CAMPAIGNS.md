@@ -1,6 +1,16 @@
 # Campaign run sheet (copy-paste, one command per step)
 
-## MFS snapshot production run (Band 4 internal key) — READY TO LAUNCH
+## MFS snapshot production run (Band 4 internal key) — LAUNCHED 7 Sep 2026
+
+Launched by bmason 7 Sep 2026 ~12:15 CDT (prep 3475087 -> sweep 3475088 ->
+collect 3475089).  Do NOT relaunch while those jobs are queued or running; the
+command below is kept for reference and for future combos.
+
+> **Campaign freeze:** while any campaign stage is queued or running, do not edit
+> `curvegen/`, `sa_select/`, or `sa_select/data/*.csv` on `main`: each Slurm stage
+> re-imports them from this checkout when it starts.  Code work goes in a separate
+> git worktree and merges after collect has finished and been checked.  Live freeze
+> window: `docs/worklog/mfs-campaigns.md`.
 
 Built and tested (sonnet worker, 6 Sep 2026; spec
 `docs/plans/mfs-snapshot-production-spec.md`): the standard mono-style

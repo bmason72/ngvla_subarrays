@@ -1,5 +1,9 @@
 # RELEASE_PLAN — MVP release per docs/plans/WRAPUP.md (drafted 17 Aug 2026)
 
+> **Superseded for current status (7 Sep 2026):** see `docs/worklog/mfs-campaigns.md`
+> and `docs/plans/NEXT_AGENT.md`.  The MFS workstream (started 16 Jul) is separate from
+> the T0-T6 tasks below, which remain the Aug 2026 mono-release scope.
+
 > **Progress (18 Aug 2026):** T0 DONE (6332362).  **T1 DONE** — retrofit
 > wave 2 (tracks) + backfills completed 18 Aug, exit 0; revF/track 6/14
 > maps converged, revD/track 2/9, the rest still at the audit cap; all
