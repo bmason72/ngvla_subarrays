@@ -26,6 +26,7 @@ on any path below to see its full history.
 | [architecture/PSF_DIAGNOSTICS.md](architecture/PSF_DIAGNOSTICS.md) | How reports measure and present PSF quality: captures, Gaussian reference, restoring beam, lookup | active |
 | [architecture/ETA_JUMPS.md](architecture/ETA_JUMPS.md) | Why eta curves jump: sampling, skirt crossings, interpolation limits; when jumps are real | active |
 | [architecture/mstroh_comparison.md](architecture/mstroh_comparison.md) | Validation against Stroh's taper package; sqrt(2) beam-convention finding; what to adopt | active |
+| [architecture/curve-product-design.md](architecture/curve-product-design.md) | curveRefactor design note: versioned evaluated-envelope curve product, PSF attachment sizing, single Python/JS evaluation contract, additive migration | design note, 7 Sep 2026, implementation not started |
 | [ops/casaLocation.md](ops/casaLocation.md) | TACC Stampede3 CASA: casapy wrapper, quotas, MS and scratch layout | active |
 | [ops/RUN_CAMPAIGNS.md](ops/RUN_CAMPAIGNS.md) | Slurm campaign copy-paste run sheet with live commands and dated wave history | active |
 | [ops/POLISH_AND_STORAGE.md](ops/POLISH_AND_STORAGE.md) | How polish refinement samples; what moved from $SCRATCH to $WORK | active |
