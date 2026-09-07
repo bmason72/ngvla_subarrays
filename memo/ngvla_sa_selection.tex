@@ -74,7 +74,11 @@ memo focuses on the Rev F track case.
 
 This version of the calculator assumes, like Memo 121 and most other
 \ngvla\ imaging studies to date, a single channel, a single pointing, and a
-fixed field of view.
+fixed field of view.  ``Fixed'' here means a fixed image size in pixels; the
+pixel scale follows the finest beam and grows once the uv taper exceeds that
+beam, so the angular field of view grows at coarse tapers, and the Briggs
+weighting density grid, which is sized to the field of view, depends weakly
+on the taper at those coarse-taper points.
 
 \section{Definitions}
 
@@ -181,6 +185,16 @@ beam, dirty-image rms, and the Memo 65 skirt.  The skirt measurement uses
 annular means of a central PSF cutout and a cubic-spline interpolation to
 radius $1\,{\rm FWHM}$, so large images do not need to be read fully into
 memory.
+
+The image size in pixels is fixed per subarray.  The native cell comes from
+CASA's advise for the finest beam (about 5 pixels per beam), scaled for MFS
+runs to the top-of-band frequency.  At each lattice point the cell used is
+the larger of this native cell and the taper divided by the same
+oversampling factor, so the cell, and with it the angular field of view,
+grows once the uv taper exceeds the native beam; Briggs weighting's uv
+density grid, whose cell size is set by the field of view, is therefore
+evaluated on a wider field at coarse-taper Briggs points than at the fine
+end (\S\ref{sec:limitations}).
 
 \subsection{The robust--taper lattice}
 \label{sec:lattice}
@@ -610,7 +624,11 @@ realization, so noise-floor sensitivity of $\eta$ is not fully quantified.
 Frequency scaling assumes $\eta$ invariance and ignores fractional-bandwidth uv
 filling changes.  The Memo 121 fixed-FOV, single-pointing convention is assumed;
 PLAN section 12 identifies mosaics, field-of-view dependence, and spectral-line
-uv filling as open use cases \cite{plan}.  The Memo 67 LAS coefficient is
+uv filling as open use cases \cite{plan}.  This fixed-FOV convention is exact
+at the fine end of the lattice and for every natural-weighting point, and only
+approximate at coarse-taper Briggs points, where the taper dominates the pixel
+scale and the effect on $\eta$ is not yet quantified; the convention is shared
+by every campaign in this memo, mono and MFS alike.  The Memo 67 LAS coefficient is
 applied uniformly to all 18-m subarrays and is assumed independent of robust
 and taper.  SBA remains deferred (6-m dishes, no taper support in the
 sensitivity calculator).  Long is now included via the 178 m

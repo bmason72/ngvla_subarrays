@@ -113,9 +113,8 @@ itself). One Slurm queue slot; never runs `submit_campaign.sh`'s
 full-grid/fill path.
 
 ```bash
-# nchan 32 is pinned (bmason, 6 Sep 2026); the 27-vs-54 run confirms
-# convergence at 0.5 GHz channels using the criteria in
-# MFS_CAMPAIGN_PLAN.md "Pilots" item 2
+# nchan 32 is pinned (bmason, 6 Sep 2026); bmason decided 7 Sep 2026 this
+# confirmation is not needed; the launcher stays for reference
 bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_mfs_imaging_pilot.sh
 
 # track 27 cost/timing benchmark only (no convergence criteria evaluated)

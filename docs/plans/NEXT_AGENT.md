@@ -14,8 +14,9 @@ for the rolling status of any feature currently under active development.
   both curves, 7 subarrays, refine 200/8) is built, tested (419 green) and
   preflighted.  Launch: `bash curvegen/submit_campaign.sh revF snapshot --mode mfs
   --refine-budget 200 --refine-rounds 8 --time 24:00:00` (`--mode mfs|1chan`
-  replaced `--band`; the band key is internal).  Open decision: FOV at
-  coarse tapers (worklog "Decisions pending").  tclean consult saved in
+  replaced `--band`; the band key is internal).  FOV at coarse tapers is
+  decided (D9, bmason 7 Sep 2026): keep the convention, document it in the
+  memo and docs (worklog `docs/worklog/mfs-campaigns.md`).  tclean consult saved in
   `docs/worklog/mfs-tclean-consult-2026-09-07.md`.  Launch line and harvest checklist: top of
   `docs/ops/RUN_CAMPAIGNS.md`.  bmason launches; agents never sbatch.
 - After the run: harvest, review the "Rev F — MFS snapshot" report view and
@@ -81,8 +82,8 @@ Open questions (bmason, 6 Sep 2026):
 
 ## Immediate queue (in order)
 
-1. Optional: bmason launches the 27-vs-54 snapshot confirmation run (not a
-   gate) to confirm 0.5 GHz channels are converged.
+1. Not needed (bmason, 7 Sep): the 27-vs-54 snapshot confirmation run
+   (D10) will not be run.
 2. Scout and spec what the standard campaign chain (prep, sweep, refine,
    fill_grid, collect, report) needs to run for revF/snapshot/band4 at
    nchan 32, including removing adaptive-only guards that reject full-grid

@@ -148,4 +148,6 @@ return an integration time for the selected array + imaging parameters.
 - **Open question (no known solution yet):** how to adapt this approach to more varied and
   realistic use cases — mosaics, observation-specific / varying FOV (which changes how effective
   robust weighting is), and continuum vs. spectral line (fractional-bandwidth uv filling).
-  v1 assumes the memo-121 fixed-FOV, single-pointing convention; document as a limitation.
+  v1 assumes the memo-121 fixed-FOV, single-pointing convention (fixed image size in
+  pixels; the cell follows the taper beyond the native beam, so the angular field of view
+  grows at coarse tapers; see `docs/worklog/mfs-campaigns.md` 7 Sep); document as a limitation.

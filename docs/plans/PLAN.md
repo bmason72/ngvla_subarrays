@@ -77,6 +77,9 @@ adjust to whatever is current.)
    selection; very small FOV → large uv cells, whole core in one cell, per ccarilli); and
    continuum vs. spectral line (fractional-bandwidth uv filling). **v1 assumes the memo-121
    fixed-FOV single-pointing convention**; document as a known limitation in the memo.
+   The convention holds exactly at the fine end and for natural weighting, and only
+   approximately at coarse-taper Briggs points, where the cell grows with the taper
+   (D9, bmason 7 Sep 2026; `docs/worklog/mfs-campaigns.md`).
 7. ~~Vintage of the calculator's eta_w splines~~ — **resolved 5 Jul 2026**: the calculator's
    internal eta_w is a placeholder formula, never a real spline (see gotchas §13). The §7
    natural-rms approach is implemented in `sa_select/sensitivity.py`; its eta never enters.

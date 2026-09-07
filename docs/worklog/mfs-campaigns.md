@@ -25,8 +25,7 @@ All uncommitted (last commit `c264af4`, 5 Sep, is doc cleanup only):
 - MFS-2b hardened; MFS-2c leaf/segmented-edge foundation and band-native
   collect/report routing built and tested CASA-free (see
   `docs/plans/MFS_CAMPAIGN_PLAN.md` status block).
-- MFS-3 imaging pilot launcher — **available** (not a gate; the 27-vs-54
-  snapshot confirmation check may still be run) (spec
+- MFS-3 imaging pilot launcher — **available but not planned** (D10) (spec
   `docs/plans/mfs-imaging-pilot-spec.md`):
   `curvegen/submit_mfs_imaging_pilot.sh`, `curvegen/mfs_imaging_pilot.sbatch`,
   `curvegen/mfs_pilot_points.py` (10 non-seed points shared verbatim across
@@ -103,18 +102,7 @@ All uncommitted (last commit `c264af4`, 5 Sep, is doc cleanup only):
 
 ### Decisions pending (bmason)
 
-- **Field of view at coarse tapers (raised 7 Sep by the tclean consult).**
-  Briggs weighting depends on the image field of view (uv density-grid cell
-  = 1/FOV). `sweep.py` keeps imsize fixed per subarray but grows the cell
-  with the taper once the taper exceeds the native beam
-  (`cell_pt = max(cell, taper/OVERSAMPLE)`), so the FOV grows at coarse-taper
-  Briggs points. The docs and memo state a fixed-FOV convention; that holds
-  only at the fine end. Inherited from the mono campaigns. Options: (1) keep
-  for the MFS run so MFS and mono share one convention and correct the memo
-  wording (recommended now); (2) fix the FOV by shrinking imsize as the cell
-  grows (convention change vs the released mono curves); (3) quantify with a
-  few paired Briggs+taper snapshot points first (cheap; recommended as a side
-  pilot). Natural+taper points are unaffected.
+None currently open.
 
 Decided 6 Sep evening: Decided today (D5 to D8, bmason):
 
@@ -129,6 +117,15 @@ Decided 6 Sep evening: Decided today (D5 to D8, bmason):
   included). bmason wants the robust axis sampled more densely than the
   mono 0.4 step for MFS runs, on the concern that broadband uv coverage
   changes how eta responds to robust; exact step to be set in the spec.
+- D9: keep the fixed-imsize, taper-grown-cell convention for the MFS run,
+  the same one the released mono curves use. Document it accurately in the
+  memo and the docs rather than change the code. The convention is exact at
+  the fine end and for natural weighting, and only approximate at
+  coarse-taper Briggs points, where the effect on eta is unquantified. A
+  paired-point check to quantify it stays available as a possible later
+  pilot but is not scheduled.
+- D10: the 27-vs-54 channel confirmation pilot is not needed and will not
+  be run.
 
 ### Next actions (in order)
 
@@ -141,7 +138,6 @@ Decided 6 Sep evening: Decided today (D5 to D8, bmason):
    and the "Rev F — MFS snapshot" view of the combined report; check the
    imaging curve and the robust-axis behaviour bmason is concerned about.
 4. Data commit after bmason's review.
-5. Optional: the 27-vs-54 confirmation pilot (still preflights cleanly).
 
 ## Log
 
@@ -205,6 +201,17 @@ channel-sampling convergence check, i.e. the 27-vs-54 pilot. It also flagged
 the FOV dependence of Briggs weighting, now an open decision (above).
 Confirmed in code: `grep perchanweightdensity curvegen/` finds nothing;
 `cell_pt` grows with taper at fixed imsize.
+
+bmason decided D9 and D10 (7 Sep 2026). D9: keep the current image-geometry
+convention for the MFS run, since it is the one the released mono curves
+use, and document it accurately rather than change the code; the fixed-FOV
+statement in the memo and docs holds exactly at the fine end and for
+natural weighting, and only approximately at coarse-taper Briggs points, an
+effect that is not yet quantified. D10: the 27-vs-54 channel confirmation
+pilot is not needed and will not be run. Files touched:
+`memo/ngvla_sa_selection.tex`, `CLAUDE.md`, `docs/plans/PLAN.md`,
+`docs/plans/NEXT_AGENT.md`, `docs/ops/RUN_CAMPAIGNS.md`,
+`docs/plans/PLAN-session-log.md`, this file.
 
 ### 2026-09-06
 

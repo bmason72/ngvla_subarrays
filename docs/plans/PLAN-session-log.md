@@ -668,3 +668,11 @@ astra_seer tclean consult (nterms=1/hogbom at niter=0 correct;
 perchanweightdensity irrelevant for mfs; MT-MFS tt0 penalty ~0 for symmetric
 equal-noise channels; FOV dependence of Briggs weighting at coarse tapers is
 an open decision).  419 tests green.
+bmason decided D9 and D10 (7 Sep 2026): D9 keeps the current fixed-imsize,
+taper-grown-cell convention for the MFS run (the one the released mono
+curves use) and documents it, exact at the fine end and for natural
+weighting, approximate and unquantified at coarse-taper Briggs points
+(memo Definitions and Limitations sections, `CLAUDE.md`, `docs/plans/PLAN.md`,
+`docs/worklog/mfs-campaigns.md`, `docs/plans/NEXT_AGENT.md`,
+`docs/ops/RUN_CAMPAIGNS.md`); D10 drops the 27-vs-54 channel confirmation
+pilot as not needed.
