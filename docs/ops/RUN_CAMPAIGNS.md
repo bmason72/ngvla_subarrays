@@ -154,7 +154,8 @@ restoring beam, confusion, nearest-PSF lookup) mean; this section is the
 commands only.
 
 `curvegen/backfill_psf.sbatch` is a Slurm job array, one task per
-`(rev, sim_mode)` combo:
+`(rev, sim_mode)` combo (this table predates the `band` axis; `band4` has
+no PSF-backfill array slot yet):
 
 | array index | combo |
 |---|---|

@@ -120,7 +120,7 @@ sensitivity factor.
 
 ## Scope / caveats (v1)
 
-Fixed-FOV single-pointing convention (memo 121); no mosaics or varying FOV;
+Fixed-FOV single-pointing convention (memo 121; in practice a fixed image size in pixels whose cell follows the taper beyond the native beam, so the angular field grows at coarse tapers, see `docs/GLOSSARY.md`); no mosaics or varying FOV;
 continuum vs spectral-line fractional-bandwidth uv-filling not modelled. The
 imaging policy is threshold-relax: meet skirt ≤ s₀ (default 0.10) with the
 cheapest beam where achievable, else report the best achievable skirt (flagged).

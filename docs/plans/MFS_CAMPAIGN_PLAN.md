@@ -1,5 +1,8 @@
 # MFS broadband continuum campaigns — plan summary (16 Jul 2026)
 
+Per D7 (`docs/worklog/mfs-campaigns.md`, 6 Sep 2026), "Band 4"/"band4" below
+are internal shorthand; the user-facing name is "MFS snapshot".
+
 Standalone summary for resuming this workstream.  The authoritative, fuller
 version lives in `docs/plans/PLAN.md` § "MFS broadband continuum campaigns"; the codex
 gpt-5.6-sol design consult (question + full critique) is in
@@ -13,7 +16,7 @@ confirmation run that 0.5 GHz channels are converged, not a gate on the
 value. The MFS campaigns are Band 4 only for now; curves for the other
 bands are obtained by scaling the Band-4 curves with wavelength (resolution
 and LAS), an approximation because the shape of eta versus taper also
-depends on fractional bandwidth (Band 4 is 0.50; Bands 1 and 2 are about
+depends on fractional bandwidth (Band 4, 20.25-33.75 GHz, is 0.50; Bands 1 and 2 are about
 0.96 and 1.10; Band 6 is about 0.22), with the largest expected effect at
 the fine, negative-robust end. No per-band infrastructure beyond the
 existing band label is being built; a cheap check is queued later (one
@@ -62,6 +65,9 @@ as the existing mono-30 GHz campaigns, as new (rev, sim_mode, **band**)
 combos.
 
 ## Scope decisions (bmason, 16 Jul 2026)
+
+*(Reconfirmed as D6, 6 Sep 2026, in `docs/worklog/mfs-campaigns.md`; that is
+the current source of truth if this list ever drifts from it.)*
 
 1. **revF only; subarrays = homogeneous + main** (7 SAs: core-inner, core,
    spiral, mid, core+spiral, spiral+mid, main).  core+mid stays excluded;

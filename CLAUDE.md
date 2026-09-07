@@ -2,7 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Freshness (17 Aug 2026):** the task statement, domain concepts, and raw-materials map
+> **Freshness (17 Aug 2026; task statement only — see git log for edit history of the
+> rest of this file):** the task statement, domain concepts, and raw-materials map
 > below remain authoritative.  The *built* system now lives in `sa_select/` (selection
 > engine) + `curvegen/` (CASA curve generation + campaigns + HTML reports) — see
 > `docs/plans/WRAPUP.md` for bmason's current release scope, `docs/plans/RELEASE_PLAN.md` for the live plan,
@@ -45,6 +46,11 @@ sculpting part. Bonus points if the code interfaces with the sensitivity calcula
 return an integration time for the selected array + imaging parameters.
 
 ## Key domain concepts
+
+See `docs/GLOSSARY.md` for one-line definitions of terms used across the docs
+(eta, combo, anchor, canonical taper, and the rest), each pointing to the
+document that defines it in depth. The subsections below give the fuller
+domain-concept explanations for the core terms.
 
 - **eta (inefficiency factor):** image rms at a given resolution divided by the natural-weight
   rms (natural = 1.0, the sensitivity-optimal point). Taperability curves plot eta vs.

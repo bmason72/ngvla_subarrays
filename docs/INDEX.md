@@ -6,12 +6,13 @@ on any path below to see its full history.
 
 | Path | Summary | Status |
 | --- | --- | --- |
+| [GLOSSARY.md](GLOSSARY.md) | One-line definitions of recurring terms (eta, combo, anchor, canonical taper, etc.), each pointing to its defining document | active |
 | [../CLAUDE.md](../CLAUDE.md) | Task statement, domain concepts, repo map, environment for coding agents | active |
 | [../README.md](../README.md) | Project overview, layout, environment, commands | active |
 | [plans/PLAN.md](plans/PLAN.md) | Living plan core: task table, milestones, decisions and open questions, gotchas log | active |
 | [plans/PLAN-session-log.md](plans/PLAN-session-log.md) | Dated session deltas and hand-off state, 15 Jul to 4 Sep 2026; new deltas append here (split from PLAN.md lines 483-988) | active |
 | [plans/mfs-campaigns-detail.md](plans/mfs-campaigns-detail.md) | Long-form MFS broadband continuum campaign design and implementation status (split from PLAN.md lines 1083-1324) | active, in progress |
-| [plans/RELEASE_PLAN.md](plans/RELEASE_PLAN.md) | MVP release plan per WRAPUP: scope, T0-T6 task list, progress notes | active |
+| [plans/RELEASE_PLAN.md](plans/RELEASE_PLAN.md) | MVP release plan per WRAPUP: scope, T0-T6 task list, progress notes | active, status blocks stopped 18-19 Aug; see docs/worklog/mfs-campaigns.md for current state |
 | [plans/WRAPUP.md](plans/WRAPUP.md) | bmason's 17 Aug 2026 release scope and working guidelines; supersedes PLAN.md on conflicts | active, scope authority |
 | [plans/NEXT_AGENT.md](plans/NEXT_AGENT.md) | Hand-off sheet: where things stand, immediate queue, working agreements, sharp edges | active, last updated 6 Sep 2026 |
 | [plans/MFS_CAMPAIGN_PLAN.md](plans/MFS_CAMPAIGN_PLAN.md) | Summary plan for Ka-band MFS taperability campaigns: scope, assumptions, pilots, task sequence | active, implementation in progress |

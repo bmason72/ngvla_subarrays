@@ -6,7 +6,7 @@ history: git log --follow docs/plans/PLAN.md
 
 *The MFS-3 pilot definition below is superseded by `docs/plans/MFS_CAMPAIGN_PLAN.md`
 (Band 4 snapshot, core+main, nchan 27 vs 54); rolling status is in
-`docs/worklog/mfs-campaigns.md`. Band 4 only, nchan 32 pinned 6 Sep 2026,
+`docs/worklog/mfs-campaigns.md`. Band 4 only, nchan 32 pinned 6 Sep 2026 (D1),
 other bands scaled from Band 4.*
 
 **4 Sep 2026 status:** Ka/band4 routing, channelized RR/LL simulation and MS
@@ -24,7 +24,9 @@ New campaign kind: per-BAND broad-band MFS continuum taperability curves
 (`tmp/mfs_campaign_consult{,_out}.md`); its findings are adjudicated inline
 below (all accepted except where noted).
 
-**Scope decisions (bmason, AskUserQuestion 16 Jul):**
+**Scope decisions (bmason, AskUserQuestion 16 Jul):** *(reconfirmed as D6,
+6 Sep 2026, in `docs/worklog/mfs-campaigns.md`; that is the current source
+of truth if this list ever drifts from it.)*
 1. revF only, subarray set = homogeneous + main (7 SAs: core-inner, core,
    spiral, mid, core+spiral, spiral+mid, main; core+mid stays excluded, LONG
    combos + revD deferred to a later wave).
