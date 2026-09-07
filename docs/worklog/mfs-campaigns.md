@@ -213,6 +213,15 @@ pilot is not needed and will not be run. Files touched:
 `docs/plans/NEXT_AGENT.md`, `docs/ops/RUN_CAMPAIGNS.md`,
 `docs/plans/PLAN-session-log.md`, this file.
 
+Campaign launched by bmason (7 Sep, ~12:15 CDT): prep 3475087 running (32-channel
+snapshot MSes under `$WORK/ngvla_curvegen/ms-revF_snapshot_band4/`, seeds
+imaged in ~15 s each), sweep 3475088_[0] and collect 3475089 pending on
+dependencies. **Working-tree freeze:** each stage imports `curvegen/` and
+`sa_select/` from this checkout when it starts, so no code, registry or data
+edits on main until collect has finished and been checked; docs-only edits
+are safe; code work goes in a separate worktree. Wishlist prioritisation
+consult saved as `docs/worklog/wishlist-consult-2026-09-07.md`.
+
 ### 2026-09-06
 
 Evening: milestone commit `b52504d` (MFS code, tests, docs/worklog, registry
