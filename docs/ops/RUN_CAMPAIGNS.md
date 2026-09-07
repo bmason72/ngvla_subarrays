@@ -13,8 +13,10 @@ be here. bmason launches; agents prepare command lines only.
 ```bash
 # production chain: prep -> sweep (21-robust full grid) -> refine (200/8,
 # the mono polish settings -- snapshot points are cheap) -> collect + report.
-# --band/--noise-policy are new submit_campaign.sh options (this session);
-# nchan is NOT passed -- it is pinned to 32 in config_registry.csv.
+# --band IS the MFS switch: no --band = the single-channel 30 GHz campaign
+# (config.MFS false); --band band4 = the broadband fixed-window campaign, with
+# nchan (32), the window, correlations, robust step and curve types all read
+# from that registry row.  Nothing else on the line says "MFS".
 bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh \
   revF snapshot --band band4 --noise-policy equal \
   --refine-budget 200 --refine-rounds 8 --time 24:00:00
