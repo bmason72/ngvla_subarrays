@@ -645,3 +645,11 @@ worker — MFS status review; docs/worklog/ created).**
     guards that reject full-grid MFS, and fill_beam_caps for band4 (main's
     cap is blank). A scout is doing that inventory now; its findings will
     be added later.
+13. Evening: milestone commit `b52504d`.  bmason decisions D5 to D8 (both
+    curves; 7 subarrays; MFS snapshot as its own report view, no "band 4" in
+    user-facing text; chain = prep, sweep, refine, collect; denser robust
+    sampling for MFS).  Spec written: `docs/plans/mfs-snapshot-production-spec.md`
+    (robust_step registry column, 0.2 for band4; curve_types both; envelope
+    gap from data; report label/note; run-sheet launch section; tests).
+    Sonnet worker dispatched to build it; see NEXT_AGENT "RESUME HERE" if the
+    session ended before it reported.

@@ -6,6 +6,25 @@ Hand-off sheet for whoever (human or agent) picks this up.  Read order:
 first) → `docs/ops/RUN_CAMPAIGNS.md` → `docs/ops/casaLocation.md` → `docs/worklog/`
 for the rolling status of any feature currently under active development.
 
+## RESUME HERE (6 Sep 2026, evening) — MFS snapshot production build in flight
+
+- Milestone commit `b52504d` holds everything through the sampler-parked
+  decision.  bmason decisions D5 to D8 (both curves, 7 subarrays, "MFS
+  snapshot" report view, prep+sweep+refine+collect chain with a denser
+  robust grid) are in `docs/worklog/mfs-campaigns.md`.
+- A sonnet worker was building `docs/plans/mfs-snapshot-production-spec.md`
+  (sections C1 to C6: registry `robust_step` column with 0.2 for band4,
+  `curve_types both`, envelope gap derived from data, report label + note,
+  chain preflight + RUN_CAMPAIGNS launch section, tests, worklog).  If this
+  session ended before its report landed, the partial state is whatever
+  `git status --short` / `git diff` shows against `b52504d`.  To resume:
+  read the spec, diff the working tree, run
+  `casapy -m unittest discover -s tests -t .`, finish any unchecked section,
+  then update the worklog and hand bmason the launch line from
+  `docs/ops/RUN_CAMPAIGNS.md`.
+- Nothing is to be submitted to Slurm by an agent.  bmason launches the
+  production chain once the run sheet section exists and tests are green.
+
 ## Where things stand (5 Sep 2026) — MFS workstream
 
 Rolling status now lives in `docs/worklog/mfs-campaigns.md`; this section is

@@ -103,18 +103,19 @@ All uncommitted (last commit `c264af4`, 5 Sep, is doc cleanup only):
 
 ### Decisions pending (bmason)
 
-Open questions, per bmason's 6 Sep decision:
+None open as of 6 Sep evening. Decided today (D5 to D8, bmason):
 
-1. Point-source curves only, or both point-source and imaging curves, from
-   the full grid?
-2. Keep the 7-subarray set (core-inner, core, spiral, mid, core+spiral,
-   spiral+mid, main)?
-3. Whether Band-4 results enter the combined release page and calculator, or
-   stay as per-combo CSVs and reports for now.
-4. When to make the milestone commit of the MFS code.
-
-Scope confirmed 6 Sep: Band 4 only; other bands scaled (approximation, see
-MFS_CAMPAIGN_PLAN).
+- D5: both curves (point-source and imaging) from the full grid.
+- D6: the 7-subarray set stays for this run.
+- D7: the MFS snapshot combo enters the combined report as its own
+  selectable view (the top-right combo selector). Its user-facing label
+  says "MFS snapshot" (or similar), not "band 4": the band tag is an
+  under-the-hood key. The report notes the frequency window and channel
+  count (20.25 to 33.75 GHz, 32 channels) for that view.
+- D8: the production chain is prep, sweep, refine, collect (refine
+  included). bmason wants the robust axis sampled more densely than the
+  mono 0.4 step for MFS runs, on the concern that broadband uv coverage
+  changes how eta responds to robust; exact step to be set in the spec.
 
 ### Next actions (in order)
 
@@ -131,6 +132,11 @@ MFS_CAMPAIGN_PLAN).
 ## Log
 
 ### 2026-09-06
+
+Evening: milestone commit `b52504d` (MFS code, tests, docs/worklog, registry
+pin, config and replay fixes; 404 tests green). Decisions D5 to D8 recorded
+above; scout dispatched on the grid definition, the refine stage, and the
+report combo selector to ground the production-chain spec.
 
 Status review (Fable orchestrator + haiku scout + sonnet worker), no code
 changes. Verified against the filesystem and `sacct`: the imaging half of
