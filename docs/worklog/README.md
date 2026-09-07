@@ -29,3 +29,6 @@ and job logs.
 - **Retirement:** when the feature ships (or is abandoned), move the file with
   `git mv` to `docs/archive/worklog/`, add a final dated entry stating the
   outcome, and update `docs/INDEX.md`.
+- **Needs bmason:** anything requiring a decision, review, launch or manual step
+  from bmason goes in `docs/ACTION_ITEMS.md` (one row, with a pointer back to the
+  worklog); the worklog entry links to it rather than restating the ask.

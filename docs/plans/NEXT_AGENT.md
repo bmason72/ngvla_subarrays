@@ -8,6 +8,9 @@ for the rolling status of any feature currently under active development.
 
 ## START HERE (7 Sep 2026) — MFS snapshot production run LAUNCHED
 
+Anything that needs bmason (decision, review, launch, manual step) is listed in
+`docs/ACTION_ITEMS.md`; add rows there, not here.
+
 Launched by bmason 7 Sep 2026 ~12:15 CDT (prep 3475087, sweep 3475088, collect
 3475089).  Do NOT relaunch; live status in `docs/worklog/mfs-campaigns.md`.
 > **Campaign freeze:** while any campaign stage is queued or running, do not edit
@@ -40,8 +43,8 @@ Launched by bmason 7 Sep 2026 ~12:15 CDT (prep 3475087, sweep 3475088, collect
 Merge order: harvest and commit the campaign data first; then `feature/curve-limits`
 (pure code, inert until rows are added); then `feature/spiral-plus` (touches the
 subarray metadata CSVs, so re-check any downstream CSV row-count tests).  Run the
-full suite on main after each merge.  bmason still has to confirm the spiral+5/+10
-"closest antenna" interpretation (`docs/worklog/spiral-plus.md`).  Docs-only items
+full suite on main after each merge.  bmason confirmed the spiral+5/+10 selection 7 Sep (D11); update the branch's
+`docs/worklog/spiral-plus.md` wording at merge.  Docs-only items
 landed directly on main: glossary + audit fixes (5e18e3d), curve-product design note
 (263bd2e).
 

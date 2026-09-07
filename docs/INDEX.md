@@ -8,6 +8,7 @@ on any path below to see its full history.
 | --- | --- | --- |
 | [GLOSSARY.md](GLOSSARY.md) | One-line definitions of recurring terms (eta, combo, anchor, canonical taper, etc.), each pointing to its defining document | active |
 | [../CLAUDE.md](../CLAUDE.md) | Task statement, domain concepts, repo map, environment for coding agents | active |
+| [ACTION_ITEMS.md](ACTION_ITEMS.md) | The single list of items needing bmason (decision, review, launch); open and resolved | active, check every session |
 | [../README.md](../README.md) | Project overview, layout, environment, commands | active |
 | [plans/PLAN.md](plans/PLAN.md) | Living plan core: task table, milestones, decisions and open questions, gotchas log | active |
 | [plans/PLAN-session-log.md](plans/PLAN-session-log.md) | Dated session deltas and hand-off state, 15 Jul to 4 Sep 2026; new deltas append here (split from PLAN.md lines 483-988) | active |
