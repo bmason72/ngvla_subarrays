@@ -662,3 +662,9 @@ envelope gap limit, "Rev F — MFS snapshot" report view with a registry-built
 note, `submit_campaign.sh --band/--noise-policy`, band-suffixed per-combo
 report file, run-sheet launch section.  414 tests green (1 skipped).  Details
 in `docs/worklog/mfs-campaigns.md` (2026-09-07 entry).  bmason launches.
+Follow-up (7 Sep): launcher interface changed to `--mode mfs|1chan` (`--band`
+rejected; band resolved from the registry by `campaign_tasks.py mfs_band`);
+astra_seer tclean consult (nterms=1/hogbom at niter=0 correct;
+perchanweightdensity irrelevant for mfs; MT-MFS tt0 penalty ~0 for symmetric
+equal-noise channels; FOV dependence of Briggs weighting at coarse tapers is
+an open decision).  419 tests green.

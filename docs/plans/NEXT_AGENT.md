@@ -11,8 +11,12 @@ for the rolling status of any feature currently under active development.
 - Commits `b52504d` (milestone), `ebde3bc` (docs), and the 7 Sep chain
   commit hold everything.  Rolling status: `docs/worklog/mfs-campaigns.md`.
 - The production chain for revF/snapshot/band4 (nchan 32, robust step 0.2,
-  both curves, 7 subarrays, refine 200/8) is built, tested (414 green) and
-  preflighted.  Launch line and harvest checklist: top of
+  both curves, 7 subarrays, refine 200/8) is built, tested (419 green) and
+  preflighted.  Launch: `bash curvegen/submit_campaign.sh revF snapshot --mode mfs
+  --refine-budget 200 --refine-rounds 8 --time 24:00:00` (`--mode mfs|1chan`
+  replaced `--band`; the band key is internal).  Open decision: FOV at
+  coarse tapers (worklog "Decisions pending").  tclean consult saved in
+  `docs/worklog/mfs-tclean-consult-2026-09-07.md`.  Launch line and harvest checklist: top of
   `docs/ops/RUN_CAMPAIGNS.md`.  bmason launches; agents never sbatch.
 - After the run: harvest, review the "Rev F — MFS snapshot" report view and
   the robust-axis behaviour, then data commit.

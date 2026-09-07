@@ -103,7 +103,20 @@ All uncommitted (last commit `c264af4`, 5 Sep, is doc cleanup only):
 
 ### Decisions pending (bmason)
 
-None open as of 6 Sep evening. Decided today (D5 to D8, bmason):
+- **Field of view at coarse tapers (raised 7 Sep by the tclean consult).**
+  Briggs weighting depends on the image field of view (uv density-grid cell
+  = 1/FOV). `sweep.py` keeps imsize fixed per subarray but grows the cell
+  with the taper once the taper exceeds the native beam
+  (`cell_pt = max(cell, taper/OVERSAMPLE)`), so the FOV grows at coarse-taper
+  Briggs points. The docs and memo state a fixed-FOV convention; that holds
+  only at the fine end. Inherited from the mono campaigns. Options: (1) keep
+  for the MFS run so MFS and mono share one convention and correct the memo
+  wording (recommended now); (2) fix the FOV by shrinking imsize as the cell
+  grows (convention change vs the released mono curves); (3) quantify with a
+  few paired Briggs+taper snapshot points first (cheap; recommended as a side
+  pilot). Natural+taper points are unaffected.
+
+Decided 6 Sep evening: Decided today (D5 to D8, bmason):
 
 - D5: both curves (point-source and imaging) from the full grid.
 - D6: the 7-subarray set stays for this run.
@@ -121,7 +134,7 @@ None open as of 6 Sep evening. Decided today (D5 to D8, bmason):
 
 1. bmason launches the production chain (exact line at the top of
    `docs/ops/RUN_CAMPAIGNS.md`):
-   `bash curvegen/submit_campaign.sh revF snapshot --band band4 --noise-policy equal --refine-budget 200 --refine-rounds 8 --time 24:00:00`.
+   `bash curvegen/submit_campaign.sh revF snapshot --mode mfs --refine-budget 200 --refine-rounds 8 --time 24:00:00`.
 2. Harvest per the run-sheet checklist (prep QA, sweep exit codes, refine
    log grep, `fill_beam_caps.py --verify`, tests).
 3. Review the per-combo report `curvegen/reports/revF-snapshot-band4-curves.html`
@@ -157,6 +170,41 @@ run" with launch line, preflight, expected outputs and harvest checklist.
 CASA-free preflight verified: nchan 32, step 0.2, 21 robusts, both, 7
 subarrays, narray 1.  C5: tests added; full suite 414 green (1 skipped).
 No job submitted.
+
+Later: bmason found `--band band4` confusing (the mono campaign is also Ka
+band). `submit_campaign.sh` interface changed: `--band`/`--noise-policy` are
+gone from the user-facing launcher; the new switch is `--mode mfs|1chan`
+(default `1chan`). `--mode 1chan` behaves exactly like the old no-`--band`
+call (NGVLA_BAND unset). `--mode mfs` looks up the single registered MFS
+band for the given rev/sim_mode via a new `campaign_tasks.py mfs_band`
+subcommand (reads `config_registry.csv` directly, without importing
+`config`, so it works before NGVLA_BAND is decided) and sets NGVLA_BAND from
+that; zero or more than one MFS row for the combo is a hard error naming the
+registry as the fix, not a flag.  `--noise-policy` is dropped outright
+because `config.py` already falls back to the registry's `noise_policy` when
+the env var is blank.  `--band` is still accepted as an argument only to
+print an error pointing at `--mode mfs` and exit before anything is
+submitted.  The launcher's summary line now echoes `mode=... (registry
+band4)` so the internal key stays visible in logs without ever being typed.
+Updated: `curvegen/submit_campaign.sh`, `curvegen/campaign_tasks.py` (new
+`mfs_band` subcommand), `docs/ops/RUN_CAMPAIGNS.md`, this file's launch line
+above, `tests/test_mfs_campaign.py`.
+
+Astra_seer cross-check of the MFS tclean settings (codex bridge, gpt-6-astra;
+reply saved as `docs/worklog/mfs-tclean-consult-2026-09-07.md`). Verdict:
+niter=0 with hogbom and nterms=1 is correct for the PSF/rms/beam we measure
+(nterms only enters deconvolution; MT-MFS is NOT interchangeable even at
+niter=0 because its restoration rewrites residuals in Taylor space, so keep
+hogbom). No universal tt0 sensitivity penalty for two Taylor terms at 50 %
+fractional bandwidth with equal noise symmetric about 27 GHz (penalty appears
+only if the weighted band centre shifts; a few % to 12 % for 1 to 2 GHz);
+document as a caveat, optionally measure a small MT-MFS subset later.
+`perchanweightdensity` has no meaning for specmode mfs (the orchestrator's
+premise was wrong); leave unset. The consult independently recommends the
+channel-sampling convergence check, i.e. the 27-vs-54 pilot. It also flagged
+the FOV dependence of Briggs weighting, now an open decision (above).
+Confirmed in code: `grep perchanweightdensity curvegen/` finds nothing;
+`cell_pt` grows with taper at fixed imsize.
 
 ### 2026-09-06
 

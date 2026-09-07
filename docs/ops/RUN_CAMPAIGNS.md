@@ -13,18 +13,21 @@ be here. bmason launches; agents prepare command lines only.
 ```bash
 # production chain: prep -> sweep (21-robust full grid) -> refine (200/8,
 # the mono polish settings -- snapshot points are cheap) -> collect + report.
-# --band IS the MFS switch: no --band = the single-channel 30 GHz campaign
-# (config.MFS false); --band band4 = the broadband fixed-window campaign, with
-# nchan (32), the window, correlations, robust step and curve types all read
-# from that registry row.  Nothing else on the line says "MFS".
+# --mode mfs selects the registered broadband fixed-window campaign for this
+# rev/sim_mode: submit_campaign.sh looks up the (single) MFS band registered
+# for revF/snapshot in config_registry.csv (band4) and sets NGVLA_BAND from
+# it; nchan (32), the window, correlations, robust step and curve types are
+# all read from that registry row.  --mode 1chan or no --mode flag is the
+# single-channel 30 GHz campaign (config.MFS false).  The band key is
+# internal -- it never appears on the command line.
 bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh \
-  revF snapshot --band band4 --noise-policy equal \
+  revF snapshot --mode mfs \
   --refine-budget 200 --refine-rounds 8 --time 24:00:00
 
 # CASA-free preflight (no Slurm, no tclean): confirms the grid/curve-types/
 # paths the chain will use before submitting anything.
 cd /home1/10240/bmason72/Code/ngvla_subarrays/curvegen
-NGVLA_REV=revF NGVLA_SIM_MODE=snapshot NGVLA_BAND=band4 NGVLA_NOISE_POLICY=equal \
+NGVLA_REV=revF NGVLA_SIM_MODE=snapshot NGVLA_BAND=band4 \
   casapy -c "import config as c; print(c.NCHAN, c.ROBUST_STEP, len(c.ROBUST_LIST), c.CURVE_TYPES, c.RESULTS_DIR, c.MS_DIR)"
 # expect: 32 0.2 21 both .../results-revF_snapshot_band4 .../ms-revF_snapshot_band4
 
@@ -93,7 +96,7 @@ there is no plan to continue to 128--512 unless 27 versus 54 fails that test.
 This is **not** the production MFS snapshot campaign; it is a lighter-weight
 confirmation of the 0.5-GHz channel spacing, not a gate on it (see the
 "MFS snapshot production run" section at the top of this file, which IS
-ready to launch via `submit_campaign.sh --band band4`). As of 6 Sep 2026 the
+ready to launch via `submit_campaign.sh --mode mfs`). As of 6 Sep 2026 the
 adaptive MFS contract stays parked (D3/D4); production uses the full-grid
 `submit_campaign.sh` chain on a denser 21-value robust grid (step 0.2), not
 the adaptive sampler or the MFS-4 wave runner.

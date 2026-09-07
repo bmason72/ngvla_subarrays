@@ -299,5 +299,55 @@ assert sens['sigma_nat_ujy'][0] > 0
         self.assertIn("NGVLA_MFS_MS_BASE", submit)
 
 
+class TestSubmitCampaignModeSwitch(unittest.TestCase):
+    """`submit_campaign.sh --mode mfs|1chan` replaces `--band` (bmason,
+    7 Sep 2026): `--band` is confusing since the mono campaign is also Ka
+    band.  These are CASA-free: no sbatch is ever reached."""
+
+    def test_mfs_band_lookup_resolves_registered_combo(self):
+        proc = subprocess.run(
+            [sys.executable, "campaign_tasks.py", "mfs_band"],
+            cwd=str(CURVEGEN), text=True, capture_output=True,
+            env=dict(os.environ, NGVLA_REV="revF", NGVLA_SIM_MODE="snapshot"))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout.strip(), "band4")
+
+    def test_mfs_band_lookup_fails_closed_with_no_mfs_row(self):
+        proc = subprocess.run(
+            [sys.executable, "campaign_tasks.py", "mfs_band"],
+            cwd=str(CURVEGEN), text=True, capture_output=True,
+            env=dict(os.environ, NGVLA_REV="revC", NGVLA_SIM_MODE="track"))
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("no MFS combo registered for revC/track", proc.stderr)
+
+    def test_mfs_band_lookup_does_not_import_config(self):
+        # The lookup must work before NGVLA_BAND is decided, so it cannot go
+        # through config.py's module-level BAND validation: the mfs_band
+        # function body must not import config.
+        import re
+        text = (CURVEGEN / "campaign_tasks.py").read_text()
+        match = re.search(r"def mfs_band\(.*?\n(?=\ndef )", text, re.S)
+        self.assertIsNotNone(match, "mfs_band function not found")
+        self.assertNotIn("import config", match.group(0))
+
+    def test_submit_campaign_usage_mentions_mode_not_band(self):
+        proc = subprocess.run(["bash", str(CURVEGEN / "submit_campaign.sh")],
+                              cwd=str(ROOT), text=True, capture_output=True)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("--mode", proc.stderr)
+
+    def test_submit_campaign_rejects_band_before_any_submission(self):
+        # --prep-only would otherwise be the first thing that could reach
+        # sbatch; --band must be rejected before that, so put it first on
+        # the line and confirm nothing about sbatch is invoked.
+        proc = subprocess.run(
+            ["bash", str(CURVEGEN / "submit_campaign.sh"),
+             "revF", "snapshot", "--band", "band4", "--prep-only"],
+            cwd=str(ROOT), text=True, capture_output=True)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("--mode mfs", proc.stderr)
+        self.assertNotIn("prep job", proc.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
