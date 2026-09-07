@@ -222,6 +222,15 @@ edits on main until collect has finished and been checked; docs-only edits
 are safe; code work goes in a separate worktree. Wishlist prioritisation
 consult saved as `docs/worklog/wishlist-consult-2026-09-07.md`.
 
+Afternoon, while the sweep runs (docs-only on main; code in worktrees, see
+NEXT_AGENT "Pending merges"): doc audit findings applied + `docs/GLOSSARY.md`;
+curve-product design note (`docs/architecture/curve-product-design.md`);
+spiral+5/+10 built on `feature/spiral-plus` (figure and table on main,
+interpretation awaiting bmason); curveLimits built on `feature/curve-limits`
+(`docs/worklog/curve-limits.md`). Sweep at ~13:30 CDT: rows running in
+parallel shards, ~11 s per point, no failures; one marginal-sampling warning
+at the coarsest natural taper (bmin 2.7 cells) to look at during harvest.
+
 ### 2026-09-06
 
 Evening: milestone commit `b52504d` (MFS code, tests, docs/worklog, registry

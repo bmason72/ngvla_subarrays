@@ -30,6 +30,21 @@ Launched by bmason 7 Sep 2026 ~12:15 CDT (prep 3475087, sweep 3475088, collect
 - After the run: harvest, review the "Rev F — MFS snapshot" report view and
   the robust-axis behaviour, then data commit.
 
+## Pending merges (built 7 Sep 2026 in $WORK worktrees; merge AFTER collect 3475089 is checked)
+
+| Branch | Worktree | What | Tests there |
+| --- | --- | --- | --- |
+| `feature/spiral-plus` | `/work2/10240/bmason72/stampede3/ngvla_wt_spiral` | spiral+5 / spiral+10 Rev F subarrays (defined, not offered), `make_spiral_plus.py`, metadata rows, figure | 433 green |
+| `feature/curve-limits` | `/work2/10240/bmason72/stampede3/ngvla_wt_curvelimits` | manual per-curve valid range: `sa_select/data/curve_limits.csv` (header only), limits at `Envelope.solve`, report/calculator agreement | 458 green |
+
+Merge order: harvest and commit the campaign data first; then `feature/curve-limits`
+(pure code, inert until rows are added); then `feature/spiral-plus` (touches the
+subarray metadata CSVs, so re-check any downstream CSV row-count tests).  Run the
+full suite on main after each merge.  bmason still has to confirm the spiral+5/+10
+"closest antenna" interpretation (`docs/worklog/spiral-plus.md`).  Docs-only items
+landed directly on main: glossary + audit fixes (5e18e3d), curve-product design note
+(263bd2e).
+
 ## Where things stand (5 Sep 2026) — MFS workstream
 
 Rolling status now lives in `docs/worklog/mfs-campaigns.md`; this section is
