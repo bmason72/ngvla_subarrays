@@ -29,6 +29,7 @@ on any path below to see its full history.
 | [architecture/mstroh_comparison.md](architecture/mstroh_comparison.md) | Validation against Stroh's taper package; sqrt(2) beam-convention finding; what to adopt | active |
 | [architecture/curve-product-design.md](architecture/curve-product-design.md) | curveRefactor design note: versioned evaluated-envelope curve product, PSF attachment sizing, single Python/JS evaluation contract, additive migration | design note, 7 Sep 2026, implementation not started |
 | [ops/casaLocation.md](ops/casaLocation.md) | TACC Stampede3 CASA: casapy wrapper, quotas, MS and scratch layout | active |
+| [ops/SKILLS_INSTALL.md](ops/SKILLS_INSTALL.md) | How to install the ALMA, radio-analyst, and ngvla-imaging skills into Claude Code and Codex on this machine | active |
 | [ops/RUN_CAMPAIGNS.md](ops/RUN_CAMPAIGNS.md) | Slurm campaign copy-paste run sheet with live commands and dated wave history | active |
 | [ops/POLISH_AND_STORAGE.md](ops/POLISH_AND_STORAGE.md) | How polish refinement samples; what moved from $SCRATCH to $WORK | active |
 | [postmortems/2026-07-06-curve-anomaly.md](postmortems/2026-07-06-curve-anomaly.md) | Post-mortem of eta-curve pop-ups and drop-outs: three mechanisms, census, fix plan | completed; fixes landed in the v3 engine |
