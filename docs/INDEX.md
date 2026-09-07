@@ -7,6 +7,7 @@ on any path below to see its full history.
 | Path | Summary | Status |
 | --- | --- | --- |
 | [GLOSSARY.md](GLOSSARY.md) | One-line definitions of recurring terms (eta, combo, anchor, canonical taper, etc.), each pointing to its defining document | active |
+| [../skills/ngvla-imaging/SKILL.md](../skills/ngvla-imaging/SKILL.md) | Reusable Claude Code skill: essential ngVLA imaging-simulation knowledge (configs/subarrays, CASA `sm` simulation, tclean/PSF measurement, taperability/sculpting curves, sensitivity calculator, HPC hygiene) for use in any repo | draft, awaiting bmason review |
 | [../CLAUDE.md](../CLAUDE.md) | Task statement, domain concepts, repo map, environment for coding agents | active |
 | [ACTION_ITEMS.md](ACTION_ITEMS.md) | The single list of items needing bmason (decision, review, launch); open and resolved | active, check every session |
 | [../README.md](../README.md) | Project overview, layout, environment, commands | active |
