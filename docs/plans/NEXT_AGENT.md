@@ -6,34 +6,43 @@ Hand-off sheet for whoever (human or agent) picks this up.  Read order:
 first) → `docs/ops/RUN_CAMPAIGNS.md` → `docs/ops/casaLocation.md` → `docs/worklog/`
 for the rolling status of any feature currently under active development.
 
-## START HERE (7 Sep 2026) — MFS snapshot production run LAUNCHED
+## START HERE (8 Sep 2026) — MFS snapshot production run COMPLETE, harvested
 
 Anything that needs bmason (decision, review, launch, manual step) is listed in
 `docs/ACTION_ITEMS.md`; add rows there, not here.
 
 Launched by bmason 7 Sep 2026 ~12:15 CDT (prep 3475087, sweep 3475088, collect
-3475089).  Do NOT relaunch; live status in `docs/worklog/mfs-campaigns.md`.
-> **Campaign freeze:** while any campaign stage is queued or running, do not edit
-> `curvegen/`, `sa_select/`, or `sa_select/data/*.csv` on `main`: each Slurm stage
-> re-imports them from this checkout when it starts.  Code work goes in a separate
-> git worktree and merges after collect has finished and been checked.  Live freeze
-> window: `docs/worklog/mfs-campaigns.md`.
+3475089); all three exit 0.  Harvested 8 Sep 2026: 0 failures, refine found 0
+defects, 419 tests green (one harmless marginal-sampling warning); routed CSV
+`sa_select/data/revf_snapshot_band4_curves.csv` committed.  A band-blind PSF
+export bug was found during harvest and fixed on main (commit 7016330,
+`fix/psf-export-band` merged): reports now carry PSF panels.  A science
+finding on Briggs-robust leverage across track/MFS-snapshot/mono-snapshot is
+logged.  Full detail: `docs/worklog/mfs-campaigns.md` 8 Sep entry.  The
+campaign freeze is OVER (nothing queued or running); the freeze rule itself
+still applies whenever a stage IS queued or running.
 
 - Commits `b52504d` (milestone), `ebde3bc` (docs), and the 7 Sep chain
-  commit hold everything.  Rolling status: `docs/worklog/mfs-campaigns.md`.
+  commit hold the pre-harvest code.  Rolling status: `docs/worklog/mfs-campaigns.md`.
 - The production chain for revF/snapshot/band4 (nchan 32, robust step 0.2,
-  both curves, 7 subarrays, refine 200/8) is built, tested (419 green) and
-  preflighted.  Launch: `bash curvegen/submit_campaign.sh revF snapshot --mode mfs
-  --refine-budget 200 --refine-rounds 8 --time 24:00:00` (`--mode mfs|1chan`
-  replaced `--band`; the band key is internal).  FOV at coarse tapers is
-  decided (D9, bmason 7 Sep 2026): keep the convention, document it in the
-  memo and docs (worklog `docs/worklog/mfs-campaigns.md`).  tclean consult saved in
-  `docs/worklog/mfs-tclean-consult-2026-09-07.md`.  Launch line and harvest checklist: top of
+  both curves, 7 subarrays, refine 200/8) is built, tested and has now run
+  end to end.  Launch line (kept for future combos): `bash
+  curvegen/submit_campaign.sh revF snapshot --mode mfs --refine-budget 200
+  --refine-rounds 8 --time 24:00:00` (`--mode mfs|1chan` replaced `--band`;
+  the band key is internal).  FOV at coarse tapers is decided (D9, bmason 7
+  Sep 2026): keep the convention, document it in the memo and docs (worklog
+  `docs/worklog/mfs-campaigns.md`).  tclean consult saved in
+  `docs/worklog/mfs-tclean-consult-2026-09-07.md`.  Harvest checklist: top of
   `docs/ops/RUN_CAMPAIGNS.md`.  bmason launches; agents never sbatch.
-- After the run: harvest, review the "Rev F — MFS snapshot" report view and
-  the robust-axis behaviour, then data commit.
+- Remaining: A3 (bmason review of the "Rev F — MFS snapshot" report view and
+  the robust-axis behaviour) and A14 (possible-later follow-up sims, not
+  prioritised).
 
 ## Pending merges (built 7 Sep 2026 in $WORK worktrees; merge AFTER collect 3475089 is checked)
+
+Collect 3475089 checked and the campaign data harvested 8 Sep 2026 (see
+START HERE above).  `fix/psf-export-band` (commit 7016330) merged to main
+8 Sep 2026.  Still pending, per A4:
 
 | Branch | Worktree | What | Tests there |
 | --- | --- | --- | --- |

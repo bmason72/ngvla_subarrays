@@ -25,6 +25,23 @@ exploratory points, and most snapshot-campaign points (Rev F ~2,470 of 3,830,
 Rev D ~1,560 of 2,380), lack one and get no ΩPSF/ΩG or confusion ratio; the
 report marks these "—" ("no restoring beam recorded").
 
+## Where exported PSF payloads live
+
+`curvegen/export_psf_data.py::export_active` writes each combo's per-subarray
+JS payloads under `curvegen/reports/psf/<combo_key>/`, where `<combo_key>` is
+`config.combo_key(rev, sim_mode, band)`: `"<rev>_<sim_mode>"` for the legacy
+mono combos (e.g. `revF_track`) and `"<rev>_<sim_mode>_<band>"` once a band is
+given (e.g. `revF_snapshot_band4`). `make_report.py` builds the same key
+(`combo_entry`) so the report's lazy PSF loader always looks in the directory
+the exporter actually wrote. `combo_key` is shared by both modules
+specifically so they cannot drift apart. Before 8 Sep 2026 the exporter built
+its key from `(rev, sim_mode)` only, ignoring the band: the band4 collect job
+wrote its PSF payloads into the mono `revF_snapshot/` directory, clobbering
+the 7 mono files, and the band4 report showed no PSF panels. Fixed by
+threading `--band` (default `$NGVLA_BAND`) through the exporter CLI and all
+sbatch callers; see the `docs/plans/PLAN.md` gotchas log and the
+`docs/worklog/mfs-campaigns.md` 8 Sep entry.
+
 ## Gaussian reference: the tclean restoring beam
 
 ΩGaussian is the **tclean restoring-beam volume**,

@@ -42,8 +42,12 @@ timing at 32 channels is judged fine without a benchmark.
 revF/snapshot/band4 at nchan 32 with a registry-driven robust step of 0.2 (21
 values), both curve types, and an "MFS snapshot" view in the combined report;
 spec `docs/plans/mfs-snapshot-production-spec.md`, launch line in
-`docs/ops/RUN_CAMPAIGNS.md`.  Launched 7 Sep 2026 (prep job 3475087); status in
-`docs/worklog/mfs-campaigns.md`.
+`docs/ops/RUN_CAMPAIGNS.md`.  Launched 7 Sep 2026 (prep job 3475087),
+COMPLETE and harvested 8 Sep 2026: all exit 0, 0 failures, 419 tests green,
+routed CSV committed.  Harvest also found and fixed a band-blind PSF-export
+bug (merged `fix/psf-export-band`, commit 7016330) and turned up a Briggs
+robust-leverage ordering finding (track > MFS snapshot > mono snapshot); see
+`docs/worklog/mfs-campaigns.md` 8 Sep entry for full detail.
 
 **Status: IMPLEMENTATION IN PROGRESS (4 Sep 2026) — MFS-2a's Ka-band routing,
 required-nchan checks, immutable manifest, multi-channel simulation setup, and

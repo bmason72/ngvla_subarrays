@@ -676,3 +676,36 @@ weighting, approximate and unquantified at coarse-taper Briggs points
 `docs/worklog/mfs-campaigns.md`, `docs/plans/NEXT_AGENT.md`,
 `docs/ops/RUN_CAMPAIGNS.md`); D10 drops the 27-vs-54 channel confirmation
 pilot as not needed.
+
+**SESSION DELTA (8 Sep 2026, Fable — MFS snapshot run harvested; PSF export
+bug fixed; leverage finding).** Harvest of the Band-4 MFS snapshot production
+run (prep 3475087, sweep 3475088_0, collect 3475089): all exit 0, 7
+subarrays x 330 points (main 418), 0 failed/skipped, 0 REFINE FAILED, refine
+found 0 defects, `fill_beam_caps --verify` OK, 419 tests green (one harmless
+marginal-sampling warning: coarsest core-inner natural taper, beam 26",
+eta 13.7). Found and fixed a band-blind PSF export bug: `export_psf_data.py`
+keyed its combo/output dir on `(rev, sim_mode)` only, so the band4 collect
+wrote PSF payloads into the mono `reports/psf/revF_snapshot/` dir (clobbering
+7 mono files) and the band4 report had no PSF panels; fixed with a shared
+`config.combo_key(rev, sim_mode, band)` helper and a `--band` flag threaded
+through all three sbatch callers (branch `fix/psf-export-band`, commit
+7016330, merged to main 8 Sep; mono payloads re-exported, band4 export run,
+all reports rebuilt). Science finding: comparing untapered natural-vs-robust
+-2 points across mono track, mono snapshot, and MFS snapshot for core, mid,
+core+spiral, and main shows Briggs leverage ordering track > MFS snapshot >
+mono snapshot for every subarray; in a one-integration single-channel
+snapshot robust is essentially inert for compact arrays (about one visibility
+per uv cell, so uniform ~ natural), while 32 channels over 50% fractional
+bandwidth add radial uv samples and recover part of the leverage; the skirt
+follows the same ordering, and the natural-weight skirt is slightly higher
+under MFS. Full table, mechanism discussion, and the codex consult are in
+`docs/worklog/mfs-campaigns.md` (2026-09-08 entry) and
+`docs/worklog/mfs-leverage-consult-2026-09-08.md`. bmason decided (8 Sep) not
+to prioritise further simulations to separate snapshot sparsity from
+bandwidth filling (the registered `revF/track/band4` run, or a mono-snapshot
+imsize pilot); logged as A14 (possible later). Data commit: routed CSV
+`sa_select/data/revf_snapshot_band4_curves.csv` and docs committed 8 Sep;
+report review by bmason remains open (A3). Docs updated: `docs/ACTION_ITEMS.md`,
+`docs/ops/RUN_CAMPAIGNS.md`, `docs/plans/NEXT_AGENT.md`,
+`docs/plans/MFS_CAMPAIGN_PLAN.md`, `docs/worklog/mfs-campaigns.md`,
+`docs/architecture/PSF_DIAGNOSTICS.md`, `CLAUDE.md`, `memo/ngvla_sa_selection.tex`.

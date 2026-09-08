@@ -4,7 +4,20 @@ Scope, design, and assumptions live in `docs/plans/MFS_CAMPAIGN_PLAN.md` and
 `docs/features/MFS2_ADAPTIVE_SAMPLER_SPEC.md`; this file tracks only current status. See
 `docs/plans/NEXT_AGENT.md` for the hand-off and open decisions for bmason.
 
-## Current status (as of 6 Sep 2026)
+## Current status (as of 8 Sep 2026)
+
+The Band-4 MFS snapshot production run (revF/snapshot/band4, nchan 32,
+21-value robust grid, 7 subarrays; prep 3475087, sweep 3475088_0, collect
+3475089) is COMPLETE and harvested: all exit 0, 0 failures, refine found 0
+defects, 419 tests green (one harmless marginal-sampling warning). Routed
+CSV `sa_select/data/revf_snapshot_band4_curves.csv` committed. A band-blind
+PSF-export bug found during harvest is fixed and merged (`fix/psf-export-band`,
+commit 7016330); mono and band4 PSF payloads are re-exported and all reports
+rebuilt. A Briggs robust-leverage finding (track > MFS snapshot > mono
+snapshot, snapshot sparsity vs. bandwidth filling) is logged. See the
+`### 2026-09-08` log entry below for full detail. The campaign freeze is
+over (nothing queued or running). Remaining: A3 (bmason's report review)
+and A14 (possible-later follow-up sims, not prioritised).
 
 Decisions D3/D4 (bmason, 6 Sep 2026): the adaptive quadtree sampler is set
 aside (parked, not abandoned) for MFS v1; production uses the standard
@@ -98,7 +111,8 @@ All uncommitted (last commit `c264af4`, 5 Sep, is doc cleanup only):
   enter the release page as its own section unless excluded; no test yet
   drives the chain for band4 (a `--prep-only` dry run plus a smoke test is
   the gap).
-- Nothing MFS has been committed.
+- Nothing MFS has been committed. (Superseded 8 Sep: the routed curve CSV
+  and docs are now committed; see "Current status" above.)
 
 ### Decisions pending (bmason)
 
@@ -127,7 +141,7 @@ Decided 6 Sep evening: Decided today (D5 to D8, bmason):
 - D10: the 27-vs-54 channel confirmation pilot is not needed and will not
   be run.
 
-### Next actions (in order)
+### Next actions (in order) — DONE, superseded 8 Sep (kept for history)
 
 1. bmason launches the production chain (exact line at the top of
    `docs/ops/RUN_CAMPAIGNS.md`):
@@ -140,6 +154,59 @@ Decided 6 Sep evening: Decided today (D5 to D8, bmason):
 4. Data commit after bmason's review.
 
 ## Log
+
+### 2026-09-08
+
+Harvest of the Band-4 MFS snapshot run (prep 3475087, sweep 3475088_0,
+collect 3475089; all exit 0, 4h28m sweep). Checklist steps 1-5 pass: 7
+subarrays x 330 points (main 418), 0 failed, 0 skipped, 0 REFINE FAILED,
+refine found 0 defects everywhere (the 0.2 robust grid needs no polish),
+`fill_beam_caps --verify` OK with the campaign env, 419 tests green. The one
+marginal-sampling warning is the coarsest core-inner natural taper (beam
+26", eta 13.7, bmin 2.7 cells): far outside any usable range, harmless.
+Caps CSV unchanged (main capped by core, already committed). Data commit
+(routed CSV + reports) awaits bmason (A3).
+
+**Bug found: PSF export is band-blind.** `export_psf_data.py` built the combo
+key as `rev_simmode` and read the mono registry row, so collect wrote the
+band4 PSF payloads into `reports/psf/revF_snapshot/` (clobbering the 7 mono
+files for the band4 subarrays) and the band4 report shows the "no PSF data
+exported" placeholder. The profile JSONLs under
+`results-revF_snapshot_band4/profiles/` are intact, so no tclean is needed.
+Fix on branch `fix/psf-export-band` (worktree
+`/work2/10240/bmason72/stampede3/wt-psf-export-band`, commit 7016330):
+shared `config.combo_key`, `--band` on the exporter, all three sbatch
+callers pass it, 422 tests green. Mono payloads re-exported on main 8 Sep;
+band4 export + report rebuilds need the merge (A13).
+
+**Robust leverage, three campaigns compared** (untapered, natural vs robust
+-2; beam ratio / eta at -2 / skirt natural->-2; script
+`docs/worklog/scripts/mfs_vs_mono_analysis.py`, consult
+`docs/worklog/mfs-leverage-consult-2026-09-08.md`):
+
+| subarray | mono track | mono snapshot | MFS snapshot |
+| --- | --- | --- | --- |
+| core | 1.43 / 1.42 / 0.116->0.000 | 1.005 / 1.003 / 0.115->0.112 | 1.24 / 1.17 / 0.125->0.032 |
+| mid | 1.46 / 1.26 / 0.227->0.044 | 1.002 / 1.002 / 0.226->0.225 | 1.20 / 1.07 / 0.223->0.152 |
+| core+spiral | 3.77 / 1.73 / 0.274->0.015 | 1.23 / 1.03 / 0.274->0.282 | 3.12 / 1.47 / 0.291->0.094 |
+| main | 8.1 / 2.50 / 0.570->0.192 | 1.82 / 1.49 / 0.562->0.324 | 4.8 / 2.13 / 0.599->0.238 |
+
+bmason's impression (MFS gives less robust leverage and a less sculptable
+skirt) holds relative to the released mono *track* curves, and is reversed
+relative to the mono *snapshot* curves, where robust is essentially inert for
+the compact arrays. Working explanation: Briggs acts on the summed weight per
+uv cell (cell = 1/FOV, FOV fixed by imsize x cell); a one-integration
+single-channel snapshot leaves ~one visibility per cell for compact arrays so
+uniform ~ natural; 32 channels over a 50% fractional bandwidth add radial
+(not azimuthal) samples and recover part of the density; a track fills
+azimuthally too. So the MFS snapshot mixes two effects (snapshot sparsity vs
+bandwidth filling); only the registered but unrun `revF/track/band4` combo
+separates them. The natural-weight skirt is slightly higher for MFS in most
+subarrays (main 0.57->0.60), plausibly from averaging differently scaled
+monochromatic PSFs; to be checked by overlaying radial profiles once the PSF
+export is fixed. Cheap mechanism test proposed by the consult: re-image a
+few mono-snapshot points at *smaller* imsize (larger uv cells) and watch
+robust leverage return.
 
 ### 2026-09-07
 

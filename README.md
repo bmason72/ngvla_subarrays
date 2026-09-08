@@ -30,7 +30,7 @@ restoring beam, confusion, nearest-PSF lookup).
 | Path | What it is |
 |------|-----------|
 | `sa_select/` | The selection tool (pure Python + numpy at query time, no CASA). `schema.py` documents units and data-table columns. `stroh.py` reads M. Stroh's delivery formats (.cfg subarrays + subarray_data.json curves). |
-| `sa_select/data/` | Per-campaign curve + metadata tables, routed by `config_registry.csv` on `(rev, sim_mode, band)`; an empty band is a legacy mono campaign and `band4` is the in-progress Ka MFS campaign (internal key; user-facing name is "MFS snapshot"). `sim_mode` is `track` (4 h synthesis) or `snapshot` (a single ~60 s correlator dump). |
+| `sa_select/data/` | Per-campaign curve + metadata tables, routed by `config_registry.csv` on `(rev, sim_mode, band)`; an empty band is a legacy mono campaign and `band4` is the Ka MFS snapshot campaign (internal key; user-facing name is "MFS snapshot"; harvested 8 Sep 2026). `sim_mode` is `track` (4 h synthesis) or `snapshot` (a single ~60 s correlator dump). |
 | `curvegen/` | Curve generation under CASA: `config.py` (grids + campaign axes), `simulate.py` (mono/MFS MS creation and validation), `campaign_manifest.py` (immutable MFS provenance), `sweep.py` (resumable imaging), `refine.py` and `adaptive.py` (refinement/sampling), plus collect/report tooling. `results*/` CSVs are tracked; `ms/`, `work/`, `reports/` are regenerable. |
 | `tests/` | Stdlib-unittest regression suite, including memo-121 replay and CASA-free MFS contracts. |
 | `memo/` | The LaTeX memo (`make pdf`). |

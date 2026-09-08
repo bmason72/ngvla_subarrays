@@ -11,6 +11,7 @@ open items at the top of each table.
 
 | # | Raised | Needs from bmason | Context |
 | --- | --- | --- | --- |
+| A14 | 8 Sep 2026 | Possible later (not prioritised, bmason 8 Sep): more simulations to separate snapshot sparsity from bandwidth filling — the registered `revF/track/band4` MFS track run and/or a small mono-snapshot pilot at smaller imsize. | `docs/worklog/mfs-campaigns.md` 8 Sep; `docs/worklog/mfs-leverage-consult-2026-09-08.md` |
 | A12 | 7 Sep 2026 | Read the open questions in the curve-product design note and answer them before any refactor work is scheduled. | `docs/architecture/curve-product-design.md` "Open questions for bmason" |
 | A11 | 7 Sep 2026 | Decide whether to pursue more sweep parallelism (pylauncher) once this run's timing is known. Optional. | wishlist item 3; `docs/worklog/wishlist-consult-2026-09-07.md` |
 | A10 | 7 Sep 2026 | Delete (or explain) the stray empty directory `~/Code/skills/mkdir`. | `docs/worklog/mfs-campaigns.md` 7 Sep |
@@ -20,7 +21,7 @@ open items at the top of each table.
 | A6 | 7 Sep 2026 | Review the ngVLA imaging skill draft: `skills/ngvla-imaging/SKILL.md` + `references/` (5 files); install per `docs/ops/SKILLS_INSTALL.md` once approved. | wishlist item 7 |
 | A5 | 7 Sep 2026 | Choose install scope for the ALMA and radio-analyst skills (Claude Code personal vs project; Codex) and run the install commands agents may not run. Instructions: `docs/ops/SKILLS_INSTALL.md` (ready; commit 81dedb5). | wishlist item 8; `~/Code/skills/` |
 | A4 | 7 Sep 2026 | Approve merging `feature/curve-limits` then `feature/spiral-plus` into main after the harvest commit. | `docs/plans/NEXT_AGENT.md` "Pending merges" |
-| A3 | 7 Sep 2026 | When collect 3475089 finishes: run or delegate the harvest checklist, review the "Rev F — MFS snapshot" report view and the robust-axis behaviour, approve the data commit. Look at the marginal-sampling warning at the coarsest natural taper. | `docs/ops/RUN_CAMPAIGNS.md` top section; `docs/worklog/mfs-campaigns.md` |
+| A3 | 7 Sep 2026 | Review the Rev F MFS snapshot report view (PSF panels present since 8 Sep) and the robust-axis behaviour; confirm the committed band4 curves are acceptable for production use. | `docs/ops/RUN_CAMPAIGNS.md` top section; `docs/worklog/mfs-campaigns.md` |
 | A2 | 18 Aug 2026 | Memo T6: review comments beyond the section 4 paragraph 1 stop marker in `memo/myComments.tex`; then the final editorial pass and release tag. | `docs/plans/RELEASE_PLAN.md` T6 |
 | A1 | 7 Sep 2026 | Add rows to `sa_select/data/curve_limits.csv` only when a curve needs a manual valid range (none yet). | `docs/worklog/curve-limits.md` (branch `feature/curve-limits`) |
 
@@ -28,6 +29,7 @@ open items at the top of each table.
 
 | # | Raised | Resolved | Decision |
 | --- | --- | --- | --- |
+| R12 | 8 Sep 2026 | 8 Sep 2026 | merged 8 Sep, PSF export band-qualified, reports rebuilt. |
 | R11 | 7 Sep 2026 | 7 Sep 2026 | spiral+5/+10 antenna selection confirmed as built (D11): nearest core antenna in the tangent plane to each arm's tip, iterated inward. `docs/worklog/spiral-plus.md` |
 | R10 | 7 Sep 2026 | 7 Sep 2026 | 27-vs-54 channel confirmation pilot not needed (D10). |
 | R9 | 7 Sep 2026 | 7 Sep 2026 | Keep the fixed-imsize image-geometry convention; document it precisely (D9). |

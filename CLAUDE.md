@@ -110,11 +110,12 @@ domain-concept explanations for the core terms.
 
 ## Environment & commands
 
-> **Campaign freeze:** while any campaign stage is queued or running, do not edit
-> `curvegen/`, `sa_select/`, or `sa_select/data/*.csv` on `main`: each Slurm stage
-> re-imports them from this checkout when it starts.  Code work goes in a separate
-> git worktree and merges after collect has finished and been checked.  Live freeze
-> window: `docs/worklog/mfs-campaigns.md`.
+> **Campaign freeze (rule; no freeze currently active — 8 Sep 2026):** while any
+> campaign stage is queued or running, do not edit `curvegen/`, `sa_select/`, or
+> `sa_select/data/*.csv` on `main`: each Slurm stage re-imports them from this
+> checkout when it starts.  Code work goes in a separate git worktree and
+> merges after collect has finished and been checked.  Live freeze window:
+> `docs/worklog/mfs-campaigns.md`.
 
 
 - **This IS a git repo** (since 5 Jul 2026, branch `main`); commit at milestones, and only

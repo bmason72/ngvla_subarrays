@@ -628,7 +628,12 @@ uv filling as open use cases \cite{plan}.  This fixed-FOV convention is exact
 at the fine end of the lattice and for every natural-weighting point, and only
 approximate at coarse-taper Briggs points, where the taper dominates the pixel
 scale and the effect on $\eta$ is not yet quantified; the convention is shared
-by every campaign in this memo, mono and MFS alike.  The Memo 67 LAS coefficient is
+by every campaign in this memo, mono and MFS alike.  Empirically, Briggs
+robust leverage in a snapshot depends strongly on uv-cell occupancy: robust
+is nearly inert for a compact array's mono (single-channel) snapshot, a
+multi-channel (MFS) snapshot recovers partial leverage from added radial
+samples, and a full track recovers full leverage (worklog dated 8 September
+2026).  The Memo 67 LAS coefficient is
 applied uniformly to all 18-m subarrays and is assumed independent of robust
 and taper.  SBA remains deferred (6-m dishes, no taper support in the
 sensitivity calculator).  Long is now included via the 178 m

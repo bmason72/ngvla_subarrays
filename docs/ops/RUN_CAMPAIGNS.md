@@ -1,16 +1,19 @@
 # Campaign run sheet (copy-paste, one command per step)
 
-## MFS snapshot production run (Band 4 internal key) — LAUNCHED 7 Sep 2026
+## MFS snapshot production run (Band 4 internal key) — COMPLETE (harvested 8 Sep 2026)
 
 Launched by bmason 7 Sep 2026 ~12:15 CDT (prep 3475087 -> sweep 3475088 ->
-collect 3475089).  Do NOT relaunch while those jobs are queued or running; the
-command below is kept for reference and for future combos.
+collect 3475089); all three jobs exit 0, harvested 8 Sep (0 failures, refine
+found 0 defects, 419 tests green — see `docs/worklog/mfs-campaigns.md` 8 Sep).
+The command below is kept for reference and for future combos; no relaunch is
+needed for this combo.
 
-> **Campaign freeze:** while any campaign stage is queued or running, do not edit
-> `curvegen/`, `sa_select/`, or `sa_select/data/*.csv` on `main`: each Slurm stage
-> re-imports them from this checkout when it starts.  Code work goes in a separate
-> git worktree and merges after collect has finished and been checked.  Live freeze
-> window: `docs/worklog/mfs-campaigns.md`.
+No campaign freeze is currently active (nothing queued or running): while a
+campaign stage IS queued or running, do not edit `curvegen/`, `sa_select/`, or
+`sa_select/data/*.csv` on `main` — each Slurm stage re-imports them from this
+checkout when it starts, so code work goes in a separate git worktree and
+merges after collect has finished and been checked.  Live freeze window (when
+one is active): `docs/worklog/mfs-campaigns.md`.
 
 Built and tested (sonnet worker, 6 Sep 2026; spec
 `docs/plans/mfs-snapshot-production-spec.md`): the standard mono-style
@@ -78,7 +81,9 @@ Harvest checklist:
    silently clobbers those files; see docs/plans/PLAN.md gotchas).
 6. Data commit: the routed curve CSV, updated
    `subarrays_revf_mfs_band4_snapshot.csv` caps, the per-combo report, and
-   the rebuilt combined report -- only once bmason has reviewed.
+   the rebuilt combined report -- only once bmason has reviewed.  (8 Sep
+   2026: routed CSV `sa_select/data/revf_snapshot_band4_curves.csv` and docs
+   committed; report review is A3.)
 
 ## 4 Sep MFS snapshot simulation pilot — optional (superseded by production above)
 
