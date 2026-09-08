@@ -507,6 +507,19 @@ SIM = SIM_MODES[SIM_MODE]
 OVERSAMPLE = 5           # pixels per synthesized-beam FWHM (via im.advise)
 
 
+def combo_key(rev, sim_mode, band=""):
+    """The (rev, sim_mode, band) identifier used to key report artifacts
+    (PSF export dirs, combined-report dropdown entries): "<rev>_<sim_mode>"
+    for the legacy mono combos, "<rev>_<sim_mode>_<band>" once a band is
+    given.  Shared by export_psf_data.py and make_report.py so the two never
+    drift apart."""
+    band = (band or "").strip().lower()
+    parts = [rev, sim_mode]
+    if band:
+        parts.append(band)
+    return "_".join(parts)
+
+
 def config_suffix():
     """Path suffix for the active combo: "" for the default mono campaign,
     else "-<rev>_<sim_mode>[_<band>]" so each combination writes to FRESH directories

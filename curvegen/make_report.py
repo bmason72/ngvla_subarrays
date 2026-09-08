@@ -34,7 +34,8 @@ import numpy as np
 
 from config import (REPO, RESULTS_DIR, ROBUST_LIST, BEAM_CAP_ARCSEC, grid_rows,
                     REV, SIM_MODE, BAND, MFS, REF_FREQ_GHZ, FREQ_LO_GHZ,
-                    FREQ_HI_GHZ, CURVE_TYPES, NCHAN, NOISE_POLICY, PROFILE_DIR)
+                    FREQ_HI_GHZ, CURVE_TYPES, NCHAN, NOISE_POLICY, PROFILE_DIR,
+                    combo_key)
 
 sys.path.insert(0, REPO)                    # for the shared curve engine
 from sa_select.envelope import Envelope, ETA_CAP   # noqa: E402
@@ -1038,7 +1039,7 @@ def combo_entry(rev, sim_mode, band="", ref_freq_ghz=None,
                 "and &eta; are native to this fixed window and are not "
                 "frequency-scaled. (internal key: %s)"
                 % (nch, flo, fhi, ref, npolicy, band))
-        return dict(key="%s_%s_%s" % (rev, sim_mode, band),
+        return dict(key=combo_key(rev, sim_mode, band),
                     label="%s — MFS %s" % (_REV_DISPLAY.get(rev, rev),
                                            _SIM_LABEL.get(sim_mode, sim_mode)),
                     h1_html=h1, sub_html=sub, note_html=note,
@@ -1057,7 +1058,7 @@ def combo_entry(rev, sim_mode, band="", ref_freq_ghz=None,
            "where needed. %s"
            % (rev_html, _SIM_DESC_HTML.get(sim_mode, sim_mode),
               _SUB_TAIL_HTML))
-    return dict(key="%s_%s" % (rev, sim_mode),
+    return dict(key=combo_key(rev, sim_mode),
                 label="%s — %s" % (_REV_DISPLAY.get(rev, rev),
                                    _SIM_LABEL.get(sim_mode, sim_mode)),
                 h1_html=h1, sub_html=sub,

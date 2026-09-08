@@ -136,6 +136,7 @@ REPORT="$CG/reports/${NGVLA_REV}-${NGVLA_SIM_MODE}-curves.html"
     || echo "REPORT FAILED (non-blocking): $REPORT"
 
 "$PY" "$CG/export_psf_data.py" \
+    --rev "$NGVLA_REV" --sim-mode "$NGVLA_SIM_MODE" --band "${NGVLA_BAND:-}" \
     || echo "PSF EXPORT FAILED (non-blocking)"
 
 # the flagship all-campaigns report (campaign dropdown): rebuild it from

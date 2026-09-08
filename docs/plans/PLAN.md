@@ -199,3 +199,9 @@ adjust to whatever is current.)
     `NGA10` (main, robust −2) has skirt 1.48 (>1, unconverged) — kept but flagged in `note`.
   - Coverage: main 52×2, core+spiral 30×2, core 10×2, spiral 1×2, spiral+mid 1×2, **mid 0,
     core+mid 0** — real gaps until Track 2 fills them.
+- **`export_psf_data.py` was band-blind (found 8 Sep 2026).** `export_active` built its combo
+  key/output dir from `(rev, sim_mode)` only, ignoring `NGVLA_BAND`, so the MFS band4 collect job
+  wrote band4 PSF payloads into the mono `curvegen/reports/psf/revF_snapshot/` dir, clobbering the
+  7 mono files instead of landing at `revF_snapshot_band4/`. Fixed by threading `--band` through
+  (shared `config.combo_key` helper, also used by `make_report.combo_entry`); any pre-fix MFS
+  collect must be re-run and its mono PSF payloads re-verified against git.

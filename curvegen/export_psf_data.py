@@ -299,20 +299,21 @@ def export_subarray(combo_key, subarray, profile_dir):
     return len(profiles), n_cuts
 
 
-def export_active(rev, sim_mode):
+def export_active(rev, sim_mode, band=""):
     """Export every offered subarray for the active environment combo."""
-    from config import PROFILE_DIR, REV, SIM_MODE
+    from config import PROFILE_DIR, REV, SIM_MODE, BAND, combo_key as _combo_key
     from make_report import offered_order, registry_paths
 
-    if (rev, sim_mode) != (REV, SIM_MODE):
-        raise ValueError("--rev/--sim-mode (%s/%s) disagree with the "
-                         "environment (NGVLA_REV=%s NGVLA_SIM_MODE=%s); "
-                         "export those to match, so RESULTS_DIR points at "
-                         "the right results dir"
-                         % (rev, sim_mode, REV, SIM_MODE))
+    band = (band or "").strip().lower()
+    if (rev, sim_mode, band) != (REV, SIM_MODE, BAND):
+        raise ValueError("--rev/--sim-mode/--band (%s/%s/%s) disagree with "
+                         "the environment (NGVLA_REV=%s NGVLA_SIM_MODE=%s "
+                         "NGVLA_BAND=%s); export those to match, so "
+                         "RESULTS_DIR points at the right results dir"
+                         % (rev, sim_mode, band, REV, SIM_MODE, BAND))
 
-    subarrays_csv, _samples_csv = registry_paths(rev, sim_mode)
-    combo_key = "%s_%s" % (rev, sim_mode)
+    subarrays_csv, _samples_csv = registry_paths(rev, sim_mode, band)
+    combo_key = _combo_key(rev, sim_mode, band)
     offered = offered_order(subarrays_csv)
     # "+"/"-" both stem to "_", so two display names could in principle share
     # an output filename; refuse rather than silently overwrite one of them
@@ -334,21 +335,20 @@ def export_all():
         rows = list(csv.DictReader(f))
     failed = []
     for row in rows:
-        # MFS profiles use band-qualified keys and are wired in MFS-5.  Do not
-        # accidentally re-run the corresponding mono combo under a duplicate
-        # (rev, mode) key while those rows share the registry.
-        if (row.get("band") or "").strip():
-            continue
         rev = row["rev"].strip()
         sim_mode = row["sim_mode"].strip()
-        env = dict(os.environ, NGVLA_REV=rev, NGVLA_SIM_MODE=sim_mode)
+        band = (row.get("band") or "").strip().lower()
+        env = dict(os.environ, NGVLA_REV=rev, NGVLA_SIM_MODE=sim_mode,
+                  NGVLA_BAND=band)
         proc = subprocess.run(
             [sys.executable, os.path.abspath(__file__),
-             "--rev", rev, "--sim-mode", sim_mode],
+             "--rev", rev, "--sim-mode", sim_mode, "--band", band],
             env=env)
+        combo = "%s/%s/%s" % (rev, sim_mode, band) if band \
+            else "%s/%s" % (rev, sim_mode)
         if proc.returncode != 0:
-            failed.append("%s/%s" % (rev, sim_mode))
-            print("export FAILED for %s/%s (continuing)" % (rev, sim_mode),
+            failed.append(combo)
+            print("export FAILED for %s (continuing)" % combo,
                   file=sys.stderr)
     if failed:
         raise SystemExit("export_psf_data --all: failed combos: %s"
@@ -358,21 +358,25 @@ def export_all():
 def main():
     env_rev = os.environ.get("NGVLA_REV", "revF")
     env_sim_mode = os.environ.get("NGVLA_SIM_MODE", "track")
+    env_band = os.environ.get("NGVLA_BAND", "")
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--rev", default=env_rev,
                     help="config revision (default: $NGVLA_REV or revF)")
     ap.add_argument("--sim-mode", default=env_sim_mode, dest="sim_mode",
                     help="simulation mode (default: $NGVLA_SIM_MODE or track)")
+    ap.add_argument("--band", default=env_band,
+                    help="MFS band, e.g. band4 (default: $NGVLA_BAND or "
+                         "empty for the mono campaigns)")
     ap.add_argument("--all", action="store_true",
                     help="export every config_registry.csv combo in routed "
-                         "subprocesses; ignores --rev/--sim-mode")
+                         "subprocesses; ignores --rev/--sim-mode/--band")
     args = ap.parse_args()
 
     if args.all:
         export_all()
         return
     try:
-        export_active(args.rev, args.sim_mode)
+        export_active(args.rev, args.sim_mode, args.band)
     except ValueError as e:
         ap.error(str(e))
 

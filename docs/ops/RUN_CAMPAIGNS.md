@@ -71,6 +71,11 @@ Harvest checklist:
    sweep as a preflight; re-run manually if in doubt).
 5. Full test suite green: `casapy -m unittest discover -s tests -t .` from
    the repo root.
+5a. PSF export landed under the band-qualified key:
+   `ls curvegen/reports/psf/<rev>_<sim_mode>[_<band>]/` — for a band-tagged
+   combo this must be a NEW directory (e.g. `revF_snapshot_band4/`), never a
+   write into the mono combo's `revF_snapshot/` (a band-blind export
+   silently clobbers those files; see docs/plans/PLAN.md gotchas).
 6. Data commit: the routed curve CSV, updated
    `subarrays_revf_mfs_band4_snapshot.csv` caps, the per-combo report, and
    the rebuilt combined report -- only once bmason has reviewed.

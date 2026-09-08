@@ -2,12 +2,18 @@
 
 import json
 import math
+import os
+import tempfile
 import unittest
+from unittest import mock
 
 from curvegen.export_psf_data import (parse_profile_line,
                                       derive_psf_metrics,
                                       transform_profile_lines,
+                                      export_subarray,
                                       PROFILE_LINE_ERRORS)
+import curvegen.export_psf_data as export_psf_data
+from curvegen.config import combo_key
 
 
 def profile(key, res=0.1, **extra):
@@ -207,6 +213,51 @@ class TestParseProfileLine(unittest.TestCase):
     def test_non_dict_line_raises(self):
         with self.assertRaises(PROFILE_LINE_ERRORS):
             parse_profile_line(json.dumps([1, 2, 3]))
+
+
+class TestBandQualifiedComboKey(unittest.TestCase):
+    """MFS-4 bug (band-blind export): export_psf_data must key/route its
+    output the SAME way make_report.py's combo_entry does, or a band-tagged
+    collect job silently clobbers the mono payloads at the unqualified key
+    (curvegen/reports/psf/<rev>_<sim_mode>/)."""
+
+    def test_band_qualified_key_matches_make_report(self):
+        from curvegen.make_report import combo_entry
+        self.assertEqual(combo_key("revF", "snapshot", "band4"),
+                         "revF_snapshot_band4")
+        self.assertEqual(combo_key("revF", "snapshot", "band4"),
+                         combo_entry("revF", "snapshot", "band4")["key"])
+
+    def test_unqualified_key_for_empty_band(self):
+        from curvegen.make_report import combo_entry
+        self.assertEqual(combo_key("revF", "track"), "revF_track")
+        self.assertEqual(combo_key("revF", "track", ""), "revF_track")
+        self.assertEqual(combo_key("revF", "track"),
+                         combo_entry("revF", "track")["key"])
+
+    def test_export_subarray_routes_under_band_qualified_dir(self):
+        """export_subarray (what export_active drives per offered subarray)
+        must land under REPORT_PSF_DIR/<band-qualified key>/, not the mono
+        directory, when a band is given."""
+        with tempfile.TemporaryDirectory() as tmp:
+            profile_dir = os.path.join(tmp, "profiles")
+            os.makedirs(profile_dir)
+            with open(os.path.join(profile_dir, "Core.jsonl"), "w") as f:
+                f.write(profile("natural_2.00_0.000") + "\n")
+
+            report_psf_dir = os.path.join(tmp, "reports_psf")
+            mono_key = combo_key("revF", "snapshot")
+            band_key = combo_key("revF", "snapshot", "band4")
+            self.assertNotEqual(mono_key, band_key)
+
+            with mock.patch.object(export_psf_data, "REPORT_PSF_DIR",
+                                   report_psf_dir):
+                export_subarray(band_key, "Core", profile_dir)
+
+            band_out = os.path.join(report_psf_dir, band_key, "Core.js")
+            mono_out = os.path.join(report_psf_dir, mono_key, "Core.js")
+            self.assertTrue(os.path.isfile(band_out))
+            self.assertFalse(os.path.isfile(mono_out))
 
 
 if __name__ == "__main__":

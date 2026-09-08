@@ -54,5 +54,6 @@ echo "=== BACKFILL  rev=$NGVLA_REV  mode=$NGVLA_SIM_MODE  (cwd $RUN_CWD) ==="
 # campaign_collect.sbatch's export step) so the report picks up the new
 # cut-bearing lines
 "$PY" "$CG/export_psf_data.py" --rev "$NGVLA_REV" --sim-mode "$NGVLA_SIM_MODE" \
+    --band "${NGVLA_BAND:-}" \
     || echo "PSF EXPORT FAILED (non-blocking)"
 echo "backfill task ${SLURM_ARRAY_TASK_ID:-0} done -> $NGVLA_REV/$NGVLA_SIM_MODE"
