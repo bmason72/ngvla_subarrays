@@ -8,7 +8,8 @@ A stand-alone, astronomer-readable Python module that, given an observing reques
 **ranked list of viable Rev F subarrays** with the `tclean` parameters (Briggs `robust` and/or
 UV outer `taper`), the resulting sensitivity-loss (`eta`), antenna hours, and — bonus — an
 integration time, chosen to hit the requested beam within a tolerance while minimizing either
-integration time or antenna-hours.
+integration time or antenna-hours, or maximizing the baseline efficiency or
+performance defined in the selector README's [baseline-ranking section](../../sa_select/README.md#baseline-ranking).
 
 ### Inputs
 - `resolution` (target beam FWHM, e.g. mas) — the angular resolution (AR) goal.
@@ -20,11 +21,12 @@ integration time or antenna-hours.
   detection ⇒ skirt unconstrained, only beam size must be met.
 - `beam_margin` (default 0.05): fractional tolerance on the achieved beam vs. requested.
 - `skirt_threshold` (default 0.10): max allowed PSF value at radius = 1 FWHM (imaging only).
-- `optimize` ∈ {`integration_time`, `antenna_hours`}: the ranking objective.
+- `optimize` ∈ {`integration_time`, `antenna_hours`, `efficient`, `performance`}:
+  the ranking objective; antenna-hours is the default.
 
 **Design requirement (added 5 Jul 2026, user):** the selection/ranking heuristic must be
 **pluggable** — a small strategy interface (feasible candidates in → ranked list out) so the
-heuristic can be tweaked or swapped without touching the engine. The two `optimize` values are
+heuristic can be tweaked or swapped without touching the engine. These `optimize` values are
 just the built-in strategies.
 
 ### Output
@@ -181,7 +183,17 @@ required. Verify by cross-checking one or two cases against the calculator's own
 3. Pick curve: imaging (skirt-constrained) if `imaging_project` else point-source.
 4. Read off eta and (robust, taper) at the target resolution.
 5. Integration time from sensitivity calculator; antenna-hours = t_int × N_ant.
-6. Rank by `optimize` objective (min integration time OR min antenna-hours).
+6. Rank by `optimize`: minimize integration time or antenna-hours, or maximize
+   baseline efficiency or performance. For the two baseline criteria, count
+   physical pairs inclusively between `las_coeff * lambda / LAS` (if LAS is
+   absent, Bmin defaults to `DEFAULT_LAS_RATIO * requested_resolution` --
+   see `sa_select/baselines.py`) and `1.02 * lambda / requested_resolution`,
+   with angles in radians.
+   Efficiency divides this count by `Nant*(Nant-1)/2`; performance uses the count.
+   Keep all feasible subarrays, including Main/Main+Long, and the existing
+   strict-skirt-first grouping. These bounds do not replace measured-curve beam
+   feasibility. Projection/asymmetry and memo-121 natural-beam correction factors
+   do not enter these ranking scores.
 7. Return ranked list with full metadata.
 
 ---
@@ -196,4 +208,3 @@ required. Verify by cross-checking one or two cases against the calculator's own
   keep only what the curve needs. Watch disk: Main/Main+Long need large imsize (15000–25000 px).
 
 ---
-

@@ -219,6 +219,23 @@ class Candidate:
     cost_error: str = ""
     goal_origin: Optional[str] = None         # user | main_natural_1min_fiducial
 
+    # Physical-baseline interval metrics.  These are optional because external
+    # curve libraries do not necessarily carry a verified antenna geometry.
+    baseline_min_m: Optional[float] = None
+    baseline_max_m: Optional[float] = None
+    baselines_in_range: Optional[int] = None
+    baselines_total: Optional[int] = None
+    baseline_efficiency: Optional[float] = None
+    baseline_provenance: Dict[str, object] = field(default_factory=dict)
+    baseline_status: str = "unavailable"     # available | unavailable | failed
+    baseline_error: str = ""
+    # The LAS the baseline metric used for Bmin (arcsec) and whether it was
+    # defaulted (baselines.DEFAULT_LAS_RATIO * resolution) because the PI
+    # supplied none.  A defaulted LAS never affects `las`/feasibility above,
+    # nor antenna_hours/integration_time -- see sa_select/baselines.py.
+    baseline_las_arcsec: Optional[float] = None
+    baseline_las_defaulted: bool = False
+
     source: str = ""                      # provenance of the curve sample used
 
     def tclean_pars(self) -> dict:

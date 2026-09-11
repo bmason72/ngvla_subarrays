@@ -7,7 +7,8 @@ anchor, canonical taper, and the rest).
 A stand-alone Python tool that, given a desired resolution, frequency, sensitivity,
 and largest angular scale (LAS), returns a ranked list of NGVLA subarrays with
 the `tclean` weighting parameters (Briggs robust / uv taper) that achieve the
-requested beam — minimizing integration time or antenna-hours — plus the CASA
+requested beam, ranked by integration time, antenna-hours, baseline efficiency,
+or baseline performance, plus the CASA
 pipeline that generates the underlying taperability/sculptability curves. The
 ranked results also estimate the number of raw visibilities for one channel and
 a 5 s correlator dump time.
@@ -55,6 +56,8 @@ pip install casatools casatasks numpy scipy      # modular CASA (Linux/macOS)
 # selection tool
 python3 -m sa_select --resolution 0.005 --frequency 80 --sensitivity 1e-6 --imaging
 python3 -m sa_select --resolution 0.005 --frequency 30 --rev revD --point-source
+python3 -m sa_select --resolution 0.1 --frequency 30 --point-source --optimize efficient
+python3 -m sa_select --resolution 0.1 --frequency 30 --point-source --optimize performance
 python3 -m sa_select --batch cases.csv --top 3       # EOP-style case list
 python3 -m sa_select --stroh mstroh/subarray_data.json --resolution 0.1 \
         --frequency 30 --point-source                # query Stroh's curves
@@ -76,6 +79,13 @@ sbatch --array=0,2 curvegen/adaptive_retrofit.sbatch  # retrofit tracks
 # isolated, simulation-only Ka snapshot nchan/RSS pilot (one queue slot)
 bash curvegen/submit_mfs_snapshot_sim_pilot.sh
 ```
+
+The Python `--optimize` options and HTML calculator's **Rank by** control include
+`efficient` (largest fraction of physical baselines in the science interval)
+and `performance` (largest number in that interval). All matching subarrays,
+including Main and Main+Long, remain eligible. Antenna-hours remains the default.
+See [the selector documentation](sa_select/README.md#baseline-ranking) for the
+bound formulas and interpretation.
 
 The MFS snapshot pilot creates only the core/main measurement sets for
 `nchan=27,54` (0.5 and 0.25 GHz across Band 4), with an isolated manifest and

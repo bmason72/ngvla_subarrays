@@ -145,14 +145,52 @@ def load_samples(path: Optional[str] = None) -> Dict[str, List[CurveSample]]:
 class CurveLibrary:
     """Tabulated subarray curves + metadata, with the query logic."""
 
-    def __init__(self, subarrays: Optional[str] = None, samples: Optional[str] = None):
+    def __init__(self, subarrays: Optional[str] = None, samples: Optional[str] = None,
+                 geometry: Optional[dict] = None):
         self.subarrays = load_subarrays(subarrays)
         self.samples = load_samples(samples)
         self._envelopes: Dict[str, Envelope] = {}
+        self.geometry_error = ""
+        # Geometry is deliberately attached only for a known packaged metadata
+        # table.  A familiar name in a caller's CSV is not evidence that its
+        # antenna membership is the packaged one.
+        stock_rev = self._stock_revision(subarrays)
+        if geometry is None and stock_rev is not None:
+            try:
+                from .baselines import load_baseline_geometry
+                geometry = load_baseline_geometry(stock_rev)
+            except (OSError, ValueError) as e:
+                self.geometry_error = "packaged baseline geometry unavailable: %s" % e
+        self.geometry = self._geometry_mapping(geometry)
+
+    @staticmethod
+    def _stock_revision(path: Optional[str]) -> Optional[str]:
+        stock_files = {
+            "revF": "subarrays.csv",
+            "revD": "subarrays_revd.csv",
+            "revC": "subarrays_revc.csv",
+        }
+        if path is None:
+            return "revF"
+        canonical = os.path.abspath(path)
+        for rev, filename in stock_files.items():
+            if canonical == os.path.abspath(os.path.join(DATA_DIR, filename)):
+                return rev
+        return None
+
+    def _geometry_mapping(self, geometry: Optional[dict]) -> dict:
+        """Keep supplied geometry optional and defer validation to selection.
+
+        An external or stale geometry payload must not break the established
+        beam/LAS and cost rankings.  The selector records a precise per-row
+        baseline error if a baseline mode actually needs it.
+        """
+        return dict(geometry or {})
 
     @classmethod
     def from_tables(cls, subarrays: Dict[str, SubarrayInfo],
-                    samples: Dict[str, List[CurveSample]]) -> "CurveLibrary":
+                    samples: Dict[str, List[CurveSample]],
+                    geometry: Optional[dict] = None) -> "CurveLibrary":
         """Build a library directly from in-memory tables (no CSV files) --
         e.g. from an external curve delivery (see sa_select/stroh.py)."""
         lib = cls.__new__(cls)
@@ -160,6 +198,8 @@ class CurveLibrary:
         lib.samples = {k: sorted(v, key=lambda s: s.resolution)
                        for k, v in samples.items()}
         lib._envelopes = {}
+        lib.geometry_error = ""
+        lib.geometry = lib._geometry_mapping(geometry)
         return lib
 
     @classmethod
@@ -180,8 +220,21 @@ class CurveLibrary:
                 "registered combinations: %s"
                 % (rev, sim_mode, sorted(registry)))
         subs_csv, samp_csv = registry[key]
-        return cls(subarrays=os.path.join(DATA_DIR, subs_csv),
-                   samples=os.path.join(DATA_DIR, samp_csv))
+        lib = cls(subarrays=os.path.join(DATA_DIR, subs_csv),
+                  samples=os.path.join(DATA_DIR, samp_csv),
+                  geometry={} if registry_path is not None else None)
+        # Only the packaged registry establishes membership identity.  A
+        # caller-provided registry may re-use a revision label for different
+        # antenna membership, so it must supply geometry explicitly.
+        if registry_path is None:
+            try:
+                from .baselines import load_baseline_geometry
+                lib.geometry = lib._geometry_mapping(load_baseline_geometry(rev))
+                lib.geometry_error = ""
+            except (OSError, ValueError) as e:
+                lib.geometry = {}
+                lib.geometry_error = "packaged baseline geometry unavailable: %s" % e
+        return lib
 
     def envelope(self, name: str) -> Envelope:
         """The interpolated curve families for one subarray (cached)."""

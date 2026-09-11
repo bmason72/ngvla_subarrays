@@ -12,6 +12,7 @@ on any path below to see its full history.
 | [ACTION_ITEMS.md](ACTION_ITEMS.md) | The single list of items needing bmason (decision, review, launch); open and resolved | active, check every session |
 | [../README.md](../README.md) | Project overview, layout, environment, commands | active |
 | [plans/PLAN.md](plans/PLAN.md) | Living plan core: task table, milestones, decisions and open questions, gotchas log | active |
+| [plans/baseline-ranking-plan.md](plans/baseline-ranking-plan.md) | Efficient/performance ranking contract, implementation scope, overlap assessment and validation | implemented and validated 10 Sep 2026; user review pending |
 | [plans/PLAN-session-log.md](plans/PLAN-session-log.md) | Dated session deltas and hand-off state, 15 Jul to 4 Sep 2026; new deltas append here (split from PLAN.md lines 483-988) | active |
 | [plans/mfs-campaigns-detail.md](plans/mfs-campaigns-detail.md) | Long-form MFS broadband continuum campaign design and implementation status (split from PLAN.md lines 1083-1324) | active, in progress |
 | [plans/RELEASE_PLAN.md](plans/RELEASE_PLAN.md) | MVP release plan per WRAPUP: scope, T0-T6 task list, progress notes | active, status blocks stopped 18-19 Aug; see docs/worklog/mfs-campaigns.md for current state |
@@ -22,6 +23,7 @@ on any path below to see its full history.
 | [plans/mfs-v1-replay-spec.md](plans/mfs-v1-replay-spec.md) | Worker spec for the MFS-2d V1 retrospective replay harness (built 5 Sep 2026; gate result in the 5 Sep session delta; investigation findings in `curvegen/reports/v1_replay/INVESTIGATION.md`) | completed, reference |
 | [features/MFS2_ADAPTIVE_SAMPLER_SPEC.md](features/MFS2_ADAPTIVE_SAMPLER_SPEC.md) | Spec v2.1 for the MFS-2 adaptive (quadtree) sampler: constants, cell lifecycle, validation gates | parked 6 Sep 2026 |
 | [worklog/README.md](worklog/README.md) | Convention for rolling, time-stamped status notes on in-flight features | active, convention |
+| [worklog/baseline-ranking.md](worklog/baseline-ranking.md) | Efficient/performance implementation, report builds and validation results | implemented locally 10 Sep 2026 |
 | [worklog/mfs-campaigns.md](worklog/mfs-campaigns.md) | Rolling status of the MFS broadband continuum campaigns workstream | active, in progress |
 | [archive/worklog/README.md](archive/worklog/README.md) | Where retired worklog files land, with retirement convention | active |
 | [architecture/selection-tool-design.md](architecture/selection-tool-design.md) | Original design: objective, definitions, two-phase architecture, frequency scaling, selection algorithm (split from PLAN.md lines 14-208) | reference; scope superseded by WRAPUP |

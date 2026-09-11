@@ -11,7 +11,7 @@
   --s-long: #00b3b3; --s-mid-long: #8b5a2b; --s-spiral-mid-long: #7c3aed;
   --s-main-long: #d11d6b; --s-spiral-core-outer: #64748b;
   --s-mid-spiral-core-outer: #b07d00; --s-long-mid-spiral-core-outer: #4b4b4b;
-  --good: #0ca30c; --warning: #fab219;
+  --good: #0ca30c; --warning: #fab219; --flag-row: rgba(198,40,40,0.10);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -24,6 +24,7 @@
     --s-long: #14c4c4; --s-mid-long: #a56c39; --s-spiral-mid-long: #9563f0;
     --s-main-long: #e24a86; --s-spiral-core-outer: #8b98ad;
     --s-mid-spiral-core-outer: #cf9a1a; --s-long-mid-spiral-core-outer: #8a8a8a;
+    --flag-row: rgba(255,99,99,0.16);
   }
 }
 :root[data-theme="light"] {
@@ -36,6 +37,7 @@
   --s-long: #00b3b3; --s-mid-long: #8b5a2b; --s-spiral-mid-long: #7c3aed;
   --s-main-long: #d11d6b; --s-spiral-core-outer: #64748b;
   --s-mid-spiral-core-outer: #b07d00; --s-long-mid-spiral-core-outer: #4b4b4b;
+  --flag-row: rgba(198,40,40,0.10);
 }
 :root[data-theme="dark"] {
   --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
@@ -47,6 +49,7 @@
   --s-long: #14c4c4; --s-mid-long: #a56c39; --s-spiral-mid-long: #9563f0;
   --s-main-long: #e24a86; --s-spiral-core-outer: #8b98ad;
   --s-mid-spiral-core-outer: #cf9a1a; --s-long-mid-spiral-core-outer: #8a8a8a;
+  --flag-row: rgba(255,99,99,0.16);
 }
 * { box-sizing: border-box; }
 body {
@@ -127,6 +130,10 @@ header .sub { color: var(--ink-2); max-width: 72ch; margin: 0; }
 #calc-table th:first-child, #calc-table td:first-child { text-align: right; }
 #calc-table th:nth-child(2), #calc-table td:nth-child(2) { text-align: left; }
 #calc-table tr.psf-inline td { text-align: left; padding: 10px 14px 14px; }
+/* Light tint (not a fill) so a row that failed to meet the skirt limit, or
+   whose cost fields errored out, stands out without hurting legibility.
+   No zebra-striping/hover rules exist on #calc-table to conflict with. */
+#calc-table tr.calc-row-flagged td { background: var(--flag-row); }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0 4px; }
 .legend .chip {
   display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
@@ -153,6 +160,15 @@ th:first-child, td:first-child { text-align: left; }
 th { color: var(--muted); font-weight: 600; font-size: 12px; letter-spacing: 0.03em; }
 .tablewrap { overflow-x: auto; }
 details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
+details.explain { margin: 2px 0 10px; }
+details.explain summary { display: inline-block; }
+details.explain[open] summary { margin-bottom: 6px; }
+details.explain > p.note { margin: 0 0 10px; }
+.section-divider { border: none; border-top: 1px solid var(--ring); margin: 8px 0 0; }
+.section-heading {
+  font-size: 20px; font-weight: 650; letter-spacing: 0.02em; color: var(--ink);
+  margin: 22px 0 0;
+}
 .flag { color: var(--warning); }
 .ok { color: var(--good); }
 .hm-footnote {
@@ -191,6 +207,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
     <select id="combo-select" aria-label="campaign"></select>
   </label>
   <h1 id="page-h1">Rev&thinsp;F taperability &amp; sculptability curves</h1>
+  <details class="explain"><summary>Explanation</summary>
   <p class="sub">These plots show sensitivity cost (&eta;) against angular resolution at
   30&thinsp;GHz. Sensitivity cost is the image rms divided by the rms for natural weighting. The
   sensitivity calculation uses underlying code similar to the
@@ -201,6 +218,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   s<sub>0</sub>. The default limit is 10%. At each resolution, the curve shows the result with the
   lowest &eta; that meets the limit. If no result meets the limit, the curve shows the lowest
   available skirt and uses a hollow marker.</p>
+  </details>
 </header>
 
 <!-- per-campaign caveat (e.g. the snapshot-mode physics note); combined mode only -->
@@ -210,8 +228,10 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 
 <div class="card" id="subarray-calculator">
   <h2>Subarray calculator</h2>
+  <details class="explain"><summary>Explanation</summary>
   <p class="note">Use the same tabulated curves as the plots below. The calculation runs in this
   page.</p>
+  </details>
   <form class="calc-form" id="calc-form">
     <label class="calc-field"><span id="calc-freq-label">Frequency [GHz]</span>
       <input id="calc-freq" name="freq" type="number" min="1.2" max="116" step="0.01" value="30" inputmode="decimal">
@@ -261,6 +281,8 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
       <select id="calc-rank" name="rank">
         <option value="antenna_hours" selected>antenna hours</option>
         <option value="time">observing time</option>
+        <option value="efficient">efficient (baseline fraction)</option>
+        <option value="performance">performance (baseline count)</option>
       </select>
     </label>
     <button class="calc-button" type="submit">Compute</button>
@@ -272,6 +294,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   <details id="calc-infeasible"><summary>Subarrays that do not meet the requirements</summary>
     <ul class="calc-reasons" id="calc-reasons"></ul>
   </details>
+  <details class="explain"><summary>Explanation</summary>
   <p class="note calc-caveat">The times use the thermal-noise part of the memo-96 sensitivity
   model and multiply the natural-weighting reference value by &eta;. Confusion is calculated from
   the measured sqrt(&int;B<sup>2</sup>d&Omega;) to the first null, shown separately, and never added
@@ -279,11 +302,24 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   1&thinsp;h, 1&thinsp;MHz reference
   value and one pointing. If desired sensitivity is blank, the calculator internally uses the
   natural, untapered MAIN sensitivity in one minute at the selected frequency and bandwidth as a
-  ranking scale. Kelvin goals are converted separately using each candidate's achieved beam. The
-  times do not include overheads. The model does not include the difference in band averaging
+  ranking scale. Kelvin goals are converted separately using each candidate's achieved beam.
+  The efficient rank is the fraction of physical antenna pairs in the requested science interval;
+  performance is the number of those pairs. The interval uses B<sub>min</sub> = LAS coefficient
+  &times; &lambda; / LAS and B<sub>max</sub> = 1.02&lambda; / requested resolution, with angles
+  in radians and inclusive endpoints. If no LAS is requested, B<sub>min</sub> assumes LAS = 10&times;
+  the requested resolution &mdash; a default assumption, not a supplied requirement; the summary
+  line flags this default whenever it applies (efficient/performance only, since it has no effect
+  on the antenna-hours/time ranks).
+  The denominator includes all distinct antenna pairs. Main and Main+Long remain eligible
+  whenever they meet the requirements. These scores do not change the modeled times.
+  Pair lengths are physical,
+  unprojected distances: source-direction projection and asymmetric uv coverage are future
+  considerations. The measured curves above still determine beam and PSF feasibility.
+  Times do not include overheads. The model does not include the difference in band averaging
   between spectral-line and continuum observations. The visibility count is the number of
   cross-correlation samples in the observation. It assumes one channel, no autocorrelations,
   and one correlator dump every 5&thinsp;s.</p>
+  </details>
 </div>
 
 <div class="card">
@@ -303,6 +339,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   <p class="note" id="imaging-omitted-note" style="display:none">This campaign contains only
   point-source results. Imaging curves are not available.</p>
   <div id="imaging-card-body">
+  <details class="explain"><summary>Explanation</summary>
   <p class="note">At each target resolution, the curve shows the beam with the lowest &eta; that
   meets the selected PSF skirt limit. The interpolation engine calculates values continuously
   across resolution. If no beam meets the limit, the curve shows the lowest available skirt.
@@ -310,6 +347,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   triangle to see its skirt value. Dashed vertical lines show the largest angular scale (LAS) for
   each subarray at 30&thinsp;GHz. Subarrays that contain the core have the same minimum baseline and the
   same LAS. Use this plot to select a result for an imaging project.</p>
+  </details>
   <div class="legend" id="legend-img"></div>
   <div id="chart-imaging"></div>
   </div>
@@ -317,12 +355,17 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 
 <div class="card">
   <h2>Point-source sensitivity cost by resolution</h2>
+  <details class="explain"><summary>Explanation</summary>
   <p class="note">These curves include all beams and do not apply a PSF skirt limit. Use this plot
   for point-source detection. Near natural weighting, the imaging and point-source curves can be
   different because the point-source curve does not control the PSF skirt.</p>
+  </details>
   <div class="legend" id="legend-ps"></div>
   <div id="chart-ps"></div>
 </div>
+
+<hr class="section-divider">
+<h2 class="section-heading" id="diagnostics-heading">DIAGNOSTICS</h2>
 
 <div class="card">
   <div class="card-head">
@@ -334,6 +377,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
       </select>
     </label>
   </div>
+  <details class="explain"><summary>Explanation</summary>
   <p class="note" id="samples-resolution-note">These plots show simulation results for which
   &eta;&thinsp;&le;&thinsp;5. Circles show natural weighting with taper. Squares show Briggs
   weighting without taper. Triangles show Briggs weighting with taper. Filled markers meet the
@@ -347,11 +391,13 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   audit-limited, wave-limited, and non-residual retirements do not count as validated. Small gray
   dots are on the natural row, the untapered seam, or outside the quadtree and were not assessed.
   Gaps show regions that have few results or no results. Point to a dot to see its parameters.</p>
+  </details>
   <div class="grid3" id="multiples"></div>
 </div>
 
 <div class="card">
   <h2>Sweep grid in robust and taper space</h2>
+  <details class="explain"><summary>Explanation</summary>
   <p class="note">Each plot shows the full sweep grid for one subarray. Rows show natural weighting
   and Briggs robust values from +2 to &minus;2. Columns show uv-taper values. The color shows
   &eta;: light colors are near 1 and dark colors are near 5. A dot identifies a result that meets
@@ -359,17 +405,20 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
   Striped cells are beam-cap anchors and are for diagnosis only. A slash identifies a cell that
   was skipped after the row reached the beam cap. An X identifies a failed simulation. An empty
   cell has no result. Point to a measured cell to see its beam, &eta;, and skirt.</p>
+  </details>
   <div class="legend" id="hm-legend"></div>
   <div class="grid3" style="grid-template-columns: repeat(auto-fit, minmax(460px, 1fr))" id="heatmaps"></div>
 </div>
 
 <div class="card" id="psf-inspector">
   <h2>PSF inspector</h2>
+  <details class="explain"><summary>Explanation</summary>
   <p class="note">Select a subarray to examine its measured PSF. You can also select a marker in
   the simulation-results plots or a cell in the sweep grid. In the calculator, select a PSF button
   to open the PSF below that row. The page loads profile data only when you request it. The internal
   report uses the adjacent <code>psf/</code> directory. Keep that directory with the HTML file. The
   release page contains the profile data and does not need the directory.</p>
+  </details>
   <div class="psf-controls">
     <label class="s0-field"><span>subarray:</span><select id="psf-sa"></select></label>
     <span id="psf-status" role="status" aria-live="polite"></span>
@@ -380,10 +429,12 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px; }
 
 <div class="card">
   <h2>Subarray summary and native-beam checks</h2>
+  <details class="explain"><summary>Explanation</summary>
   <p class="note">This table compares the simulated native beam with the value in the sensitivity
   calculator file <code>subarray_data.pkl</code>. The values for component subarrays agree within
   2%. Composite subarrays can have larger differences because a single Gaussian does not fit a
   two-component beam well. The calculator file also uses the Mid sites from before Rev&thinsp;F.</p>
+  </details>
   <div class="tablewrap"><table id="qa-table"></table></div>
 </div>
 
@@ -756,6 +807,10 @@ function togglePsfInline(anchorTr, saName, point) {
 const CALC_RECEIVER_BANDS = [[1.2, 50.5], [70.0, 116.0]];
 const CALC_CORRELATOR_DUMP_SECONDS = 5;
 const CALC_VISIBILITY_CHANNELS = 1;
+// Mirrors sa_select.baselines.DEFAULT_LAS_RATIO -- Python is authoritative
+// for the derivation and the decision-1 coupling caveat with Bmax's 1.02
+// Airy factor; do not change this value here without changing it there.
+const DEFAULT_LAS_RATIO = 10.0;
 
 function finitePositive(x) {
   return Number.isFinite(x) && x > 0;
@@ -818,6 +873,76 @@ function fmtArcsecFromMas(mas) {
 function fmtS0(s0) {
   const v = Number(s0);
   return Number.isFinite(v) ? (100 * v).toFixed(0) + '%' : String(s0);
+}
+
+// Exact physical baseline metric from Memo 121 section 2.3.  Pair lengths are
+// unprojected; measured curves still decide whether a subarray is feasible.
+function baselineMetric(name, request) {
+  const geometry = DATA.baseline_geometry && DATA.baseline_geometry[name];
+  if (!geometry || geometry.status !== 'ok')
+    return {status: 'unavailable', error: (geometry && geometry.error) || 'no packaged baseline geometry'};
+  const lengths = geometry.lengths_m;
+  const nAnt = Number(geometry.n_ant);
+  const nPairs = Number(geometry.n_pairs);
+  const metadataNAnt = DATA.las && DATA.las[name] ? Number(DATA.las[name].n_ant) : NaN;
+  const coeff = DATA.las && DATA.las[name] ? Number(DATA.las[name].coeff) : NaN;
+  // No uv-range cut is applied to this packaged geometry (see
+  // sa_select/baselines.py and curvegen/build_baseline_data.py): every
+  // subarray has exactly n_ant*(n_ant-1)/2 pairs. Validate against the
+  // payload's own n_pairs count and keep the full pair count only as a
+  // generic sanity upper bound (not because a cut is expected).
+  if (!Array.isArray(lengths) || typeof geometry.n_ant !== 'number' ||
+      !Number.isInteger(nAnt) || nAnt < 2 ||
+      nAnt !== metadataNAnt ||
+      !Number.isInteger(nPairs) || nPairs !== lengths.length ||
+      lengths.length > nAnt * (nAnt - 1) / 2 || !finitePositive(coeff) ||
+      lengths.some((v, i) => v === null || typeof v === 'boolean' ||
+        !Number.isFinite(Number(v)) || Number(v) < 0 ||
+        (i && Number(lengths[i - 1]) > Number(v))))
+    return {status: 'unavailable', error: 'invalid baseline geometry'};
+  if (!finitePositive(request.freq) || !finitePositive(request.resolution) ||
+      (request.las !== null && !finitePositive(request.las)))
+    return {status: 'invalid', error: 'requested baseline bounds are invalid'};
+  const lambda = 0.299792458 / request.freq;
+  // Mirror sa_select.baselines.baseline_metrics: default LAS = DEFAULT_LAS_RATIO
+  // x requested resolution when the PI supplies none.  This feeds Bmin only --
+  // never LAS feasibility, which evaluateSubarray checks separately against
+  // request.las (unmodified).
+  const lasDefaulted = request.las === null;
+  const lasEffective = lasDefaulted ? DEFAULT_LAS_RATIO * request.resolution : request.las;
+  const bMin = coeff * lambda * 206264.8 / lasEffective;
+  const bMax = 1.02 * lambda * 206264.8 / request.resolution;
+  if (!Number.isFinite(bMin) || !Number.isFinite(bMax) || bMin > bMax)
+    return {status: 'invalid', error: 'requested baseline bounds are invalid or inverted'};
+  const lower = (x) => {
+    let first = 0, last = lengths.length;
+    while (first < last) {
+      const middle = (first + last) >> 1;
+      if (Number(lengths[middle]) < x) first = middle + 1;
+      else last = middle;
+    }
+    return first;
+  };
+  const upper = (x) => {
+    let first = 0, last = lengths.length;
+    while (first < last) {
+      const middle = (first + last) >> 1;
+      if (Number(lengths[middle]) <= x) first = middle + 1;
+      else last = middle;
+    }
+    return first;
+  };
+  // Matches sa_select.baselines.baseline_metrics: the denominator is every
+  // distinct antenna pair (nAnt choose 2). No uv-range cut is applied to
+  // this geometry (by design -- see sa_select/baselines.py), so a
+  // subarray's short intra-cluster pairs (e.g. Long's) are simply not
+  // credited when they fall outside the requested [Bmin, Bmax] window; they
+  // remain eligible to be credited for a request whose Bmin is small enough.
+  const inRange = upper(bMax) - lower(bMin), total = nAnt * (nAnt - 1) / 2;
+  return {status: 'ok', baseline_min_m: bMin, baseline_max_m: bMax,
+    baselines_in_range: inRange, baselines_total: total,
+    baseline_efficiency: inRange / total, baseline_provenance: geometry.provenance,
+    baseline_las_arcsec: lasEffective, baseline_las_defaulted: lasDefaulted};
 }
 
 function currentImagingCurves() {
@@ -996,6 +1121,16 @@ function flagInfo(p) {
   return {text: flags.join(', '), title: notes.join(' ')};
 }
 
+// Single place deciding whether a calculator row gets the light-red
+// "something's off" tint. Currently true for the same case that produces
+// flag text in flagInfo() (skirt limit not met) plus a row-level cost_error
+// (missing/failed sensitivity cost) -- the latter is included deliberately:
+// it means the row's cost numbers are absent, which is just as worth
+// flagging at a glance as a missed skirt limit.
+function rowHasBadFlag(p, costError) {
+  return !!(flagInfo(p).text || costError);
+}
+
 function capInfeasibleReason(name, request, resRefMas) {
   const cap = DATA.caps && DATA.caps[name];
   const capRefMas = Number(cap);
@@ -1032,18 +1167,38 @@ function evaluateSubarray(name, request, order) {
     }
   }
 
+  // Baseline scores describe the already-feasible candidates.  They never
+  // replace the measured beam/LAS/skirt feasibility checks above.
+  const useBaselineRank = request.rank === 'efficient' || request.rank === 'performance';
+  const baseline = useBaselineRank ? baselineMetric(name, request) : null;
+
   const sens = interpolateSigma(name, request.freq);
-  if (!sens.sigma) reasons.push(sens.reason);
+  // A geometric rank in mono mode remains useful when an implicit sensitivity
+  // reference is unavailable.  Keep its costs blank; MFS still needs a proved
+  // thermal/confusion floor and therefore retains the existing failure path.
+  if (!sens.sigma && (!useBaselineRank || DATA.fixed_window || request.goalMode !== 'fiducial')) reasons.push(sens.reason);
 
   if (reasons.length) return {name, feasible: false, reasons, order};
+
+  if (!sens.sigma)
+    return {name, feasible: true, point: curve.point, nAnt, order, baseline,
+      tHours: null, antennaHours: null, nVisibilities: null,
+      cost_error: sens.reason || 'sensitivity cost unavailable',
+      skirtMet: request.obs !== 'imaging' ? null : !curve.point.relaxed};
 
   const eta = Number(curve.point.eta);
   let goalMicroJy = request.sensitivity;
   let goalOrigin = 'user';
   if (request.goalMode === 'fiducial') {
     const mainSens = interpolateSigma('main', request.freq);
-    if (!mainSens.sigma)
+    if (!mainSens.sigma) {
+      if (useBaselineRank && !DATA.fixed_window)
+        return {name, feasible: true, point: curve.point, nAnt, order, baseline,
+          tHours: null, antennaHours: null, nVisibilities: null,
+          cost_error: mainSens.reason || 'MAIN fiducial sensitivity unavailable',
+          skirtMet: request.obs !== 'imaging' ? null : !curve.point.relaxed};
       return {name, feasible: false, reasons: [mainSens.reason], order};
+    }
     goalMicroJy = mainSens.sigma * Math.sqrt(60 / request.bandwidth);
     goalOrigin = 'main_natural_1min_fiducial';
   } else if (request.sensUnit === 'mJy') {
@@ -1073,12 +1228,18 @@ function evaluateSubarray(name, request, order) {
   const nVisibilities = nAnt * (nAnt - 1) / 2
     * tHours * 3600 / CALC_CORRELATOR_DUMP_SECONDS * CALC_VISIBILITY_CHANNELS;
   if (!finitePositive(tHours) || !finitePositive(antennaHours)
-      || !finitePositive(nVisibilities))
+      || !finitePositive(nVisibilities)) {
+    if (useBaselineRank && !DATA.fixed_window && request.goalMode === 'fiducial')
+      return {name, feasible: true, point: curve.point, nAnt, order, baseline,
+        tHours: null, antennaHours: null, nVisibilities: null,
+        cost_error: 'sensitivity calculation failed',
+        skirtMet: request.obs !== 'imaging' ? null : !curve.point.relaxed};
     return {name, feasible: false, reasons: ['sensitivity calculation failed'], order};
+  }
   return {name, feasible: true, point: curve.point, tHours, antennaHours,
     nVisibilities,
     nAnt, order, goalMicroJy, goalOrigin, psfMetric, confusionMicroJy,
-    skirtMet: request.obs !== 'imaging' ? null : !curve.point.relaxed};
+    skirtMet: request.obs !== 'imaging' ? null : !curve.point.relaxed, baseline};
 }
 
 function clearNode(el) {
@@ -1102,15 +1263,27 @@ function addSubarrayCell(tr, name) {
   tr.append(td);
 }
 
-function renderCalcSummary(summaryEl, winner, request) {
+function renderCalcSummary(summaryEl, winner, request, rankingAvailable=true) {
   clearNode(summaryEl);
   if (!winner) {
-    summaryEl.textContent = 'No subarray meets these requirements.';
+    summaryEl.textContent = rankingAvailable ? 'No subarray meets these requirements.' : 'Ranking unavailable.';
     return;
   }
   const name = document.createElement('strong');
   name.textContent = winner.name;
-  summaryEl.append('Best: ', name, ' — ', fmtDuration(winner.tHours),
+  summaryEl.append('Best: ', name);
+  if (request.rank === 'efficient' || request.rank === 'performance') {
+    const metric = winner.baseline;
+    const count = String(metric.baselines_in_range), total = String(metric.baselines_total);
+    summaryEl.append(' — ', request.rank === 'efficient' ? 'efficiency ' : 'performance ',
+      request.rank === 'efficient' ? fmtSig(metric.baseline_efficiency * 100) + '%' : count + ' baselines',
+      ' (' + count + '/' + total + ', ' + fmtSig(metric.baseline_efficiency * 100) +
+      '% in ' + fmtSig(metric.baseline_min_m) + '–' + fmtSig(metric.baseline_max_m) + ' m).');
+    if (metric.baseline_las_defaulted)
+      summaryEl.append(' No LAS was requested; Bmin assumes LAS = ' +
+        fmtSig(metric.baseline_las_arcsec) + '″ (' + DEFAULT_LAS_RATIO +
+        '× the requested resolution, a default assumption, not a requirement).');
+  } else summaryEl.append(' — ', fmtDuration(winner.tHours),
     ' observing time, ', fmtSig(winner.antennaHours), ' antenna h, ',
     fmtVisibilityCount(winner.nVisibilities), '.');
   if (Number.isFinite(winner.confusionMicroJy))
@@ -1120,10 +1293,12 @@ function renderCalcSummary(summaryEl, winner, request) {
     summaryEl.append(' Costs use the natural, untapered MAIN sensitivity in one minute as the common goal.');
 }
 
-function renderCalcTable(table, feasible, request) {
+function renderCalcTable(table, feasible, request, rankingAvailable=true) {
   clearNode(table);
   const header = document.createElement('tr');
+  const baselineMode = request.rank === 'efficient' || request.rank === 'performance';
   ['rank', 'subarray', 'observing time', 'antenna hours', 'visibilities',
+   ...(baselineMode ? ['science baselines', 'efficiency', 'bounds [m]'] : []),
    'confusion', 'ΩPSF / ΩGaussian', 'eta', 'skirt',
    'tclean parameters', 'flags', 'PSF'].forEach(label => {
     const th = document.createElement('th');
@@ -1134,7 +1309,7 @@ function renderCalcTable(table, feasible, request) {
   if (!feasible.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 12;
+    td.colSpan = baselineMode ? 15 : 12;
     td.style.textAlign = 'left';
     td.textContent = 'No subarray meets the requirements.';
     tr.append(td);
@@ -1144,11 +1319,17 @@ function renderCalcTable(table, feasible, request) {
   feasible.forEach((row, i) => {
     const p = row.point;
     const tr = document.createElement('tr');
-    addCell(tr, String(i + 1));
+    addCell(tr, rankingAvailable ? String(i + 1) : '—');
     addSubarrayCell(tr, row.name);
     addCell(tr, fmtDuration(row.tHours));
     addCell(tr, fmtSig(row.antennaHours) + ' h');
     addCell(tr, fmtVisibilityCount(row.nVisibilities));
+    const metric = row.baseline;
+    if (baselineMode) {
+      addCell(tr, metric && metric.status === 'ok' ? String(metric.baselines_in_range) + '/' + String(metric.baselines_total) : '—');
+      addCell(tr, metric && metric.status === 'ok' ? fmtSig(metric.baseline_efficiency * 100) + '%' : '—');
+      addCell(tr, metric && metric.status === 'ok' ? fmtSig(metric.baseline_min_m) + '–' + fmtSig(metric.baseline_max_m) : '—');
+    }
     addCell(tr, fmtConfusion(row.confusionMicroJy),
       'Classical source confusion from sqrt(∫B² dΩ) to the first ' +
       (row.psfMetric && row.psfMetric.first_null_is_proxy
@@ -1172,8 +1353,10 @@ function renderCalcTable(table, feasible, request) {
     addCell(tr, Number.isFinite(Number(p.skirt)) ? fmtSig(100 * Number(p.skirt)) + '%' : '—');
     addCell(tr, tcleanText(p, request.freq));
     const flags = flagInfo(p);
+    if (row.cost_error) flags.text = (flags.text ? flags.text + '; ' : '') + row.cost_error;
     const flagCell = addCell(tr, flags.text || '—', flags.title);
     flagCell.className = 'calc-flags';
+    if (rowHasBadFlag(p, row.cost_error)) tr.className = 'calc-row-flagged';
     const psfCell = addCell(tr, '');
     const button = document.createElement('button');
     button.type = 'button';
@@ -1224,12 +1407,35 @@ function runSubarrayCalculator() {
   const rows = order.map((name, i) => evaluateSubarray(name, request, i));
   const feasible = rows.filter(r => r.feasible);
   const infeasible = rows.filter(r => !r.feasible);
-  const key = request.rank === 'time' ? 'tHours' : 'antennaHours';
+  const useBaselineRank = request.rank === 'efficient' || request.rank === 'performance';
+  const baselineFailure = useBaselineRank && feasible.some(row =>
+    !row.baseline || row.baseline.status !== 'ok');
+  if (baselineFailure) {
+    const bad = feasible.find(row => !row.baseline || row.baseline.status !== 'ok');
+    document.getElementById('calc-warning').textContent =
+      'Baseline ranking is unavailable: ' + (bad.baseline && bad.baseline.error ||
+      'geometry is missing') + '. Feasible rows are shown without a recommendation.';
+    renderCalcSummary(document.getElementById('calc-summary'), null, request, false);
+    renderCalcTable(document.getElementById('calc-table'), feasible, request, false);
+    renderInfeasible(document.getElementById('calc-infeasible'),
+                     document.getElementById('calc-reasons'), infeasible);
+    return;
+  }
+  const key = request.rank === 'time' ? 'tHours' : request.rank === 'antenna_hours'
+    ? 'antennaHours' : request.rank === 'efficient' ? 'baseline_efficiency' : 'baselines_in_range';
   feasible.sort((a, b) => {
     const groupA = request.obs === 'imaging' && !a.skirtMet ? 1 : 0;
     const groupB = request.obs === 'imaging' && !b.skirtMet ? 1 : 0;
-    return (groupA - groupB) || (a[key] - b[key])
-      || (a.nAnt - b.nAnt) || (a.order - b.order);
+    const scoreA = useBaselineRank ? a.baseline[key] : a[key];
+    const scoreB = useBaselineRank ? b.baseline[key] : b[key];
+    const first = useBaselineRank ? scoreB - scoreA : scoreA - scoreB;
+    const secondary = request.rank === 'efficient'
+      ? b.baseline.baselines_in_range - a.baseline.baselines_in_range
+      : request.rank === 'performance'
+        ? b.baseline.baseline_efficiency - a.baseline.baseline_efficiency : 0;
+    return (groupA - groupB) || first || secondary || (a.nAnt - b.nAnt)
+      || (useBaselineRank ? (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
+          : a.order - b.order);
   });
   const noStrict = request.obs === 'imaging'
     && !feasible.some(row => row.skirtMet);

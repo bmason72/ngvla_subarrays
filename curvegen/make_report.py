@@ -39,6 +39,7 @@ from config import (REPO, RESULTS_DIR, ROBUST_LIST, BEAM_CAP_ARCSEC, grid_rows,
 
 sys.path.insert(0, REPO)                    # for the shared curve engine
 from sa_select.envelope import Envelope, ETA_CAP   # noqa: E402
+from sa_select.baselines import load_baseline_geometry  # noqa: E402
 
 TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "report_template.html")
@@ -716,6 +717,7 @@ def build_payload():
                 display_by[name].append(s)
 
     las = {}
+    baseline_geometry = {}
     caps = {name: None for name in ACTIVE_ORDER}
     with open(SUBARRAYS_CSV) as f:
         for r in csv.DictReader(f):
@@ -731,6 +733,32 @@ def build_payload():
             cap = r.get(cap_column, "").strip()
             if r["name"] in caps:
                 caps[r["name"]] = float(cap) * 1e3 if cap else None
+
+    # Runtime selection does not import curvegen/config, so the exact physical
+    # pair lists are packaged separately.  Keep only the active revision and
+    # displayed subarrays in this report payload.  A mismatch remains explicit
+    # in the browser instead of silently applying same-named geometry.
+    try:
+        packaged_geometry = load_baseline_geometry(REV)
+    except (ValueError, OSError) as exc:
+        packaged_geometry = {}
+        geometry_error = str(exc)
+    else:
+        geometry_error = None
+    for name in ACTIVE_ORDER:
+        entry = packaged_geometry.get(name)
+        expected_n = las.get(name, {}).get("n_ant")
+        if entry is None:
+            baseline_geometry[name] = {"status": "unavailable",
+                                       "error": geometry_error or "no packaged geometry for subarray"}
+        elif entry["n_ant"] != expected_n:
+            baseline_geometry[name] = {"status": "unavailable",
+                                       "error": "geometry antenna count disagrees with report metadata"}
+        else:
+            baseline_geometry[name] = dict(status="ok", n_ant=entry["n_ant"],
+                                           n_pairs=entry["n_pairs"],
+                                           lengths_m=entry["lengths_m"],
+                                           provenance=entry["provenance"])
 
     skirt_setpoints = ["%.2f" % s0 for s0 in SKIRT_SETPOINTS]
     imaging = {}
@@ -819,6 +847,7 @@ def build_payload():
     _print_smooth_report(smooth_report)
 
     data = dict(order=ACTIVE_ORDER, las=las, caps=caps, samples=display_by,
+                baseline_geometry=baseline_geometry,
                 skirt_setpoints=skirt_setpoints,
                 s0_default=SKIRT_DEFAULT_KEY,
                 imaging=imaging,

@@ -207,7 +207,8 @@ class TestPayloadWiring(unittest.TestCase):
     def test_existing_keys_unchanged(self):
         # the exact key set build_payload returned before this feature
         # (git history, curvegen/make_report.py pre-smoothing) plus exactly
-        # the two new parallel-array keys -- nothing renamed or dropped.
+        # the parallel-array and diagnostic keys added since then; nothing
+        # renamed or dropped. Baseline geometry is an independent ranking input.
         before = {"order", "las", "caps", "samples", "skirt_setpoints",
                   "s0_default", "imaging", "pointsource", "counts",
                   "heatmaps", "profile", "sens", "qa", "combo"}
@@ -215,7 +216,25 @@ class TestPayloadWiring(unittest.TestCase):
         self.assertEqual(set(self.data.keys()) - before,
                          {"imaging_smooth", "pointsource_smooth",
                           "psf_exported", "validation_counts",
-                          "psf_metrics", "confusion_model"})
+                          "psf_metrics", "confusion_model", "baseline_geometry"})
+
+    def test_baseline_geometry_matches_displayed_revision_and_antenna_counts(self):
+        self.assertEqual(set(self.data["baseline_geometry"]), set(self.data["order"]))
+        for name in self.data["order"]:
+            geometry = self.data["baseline_geometry"][name]
+            self.assertEqual(geometry["status"], "ok")
+            self.assertEqual(geometry["provenance"]["revision"], mr.REV)
+            self.assertEqual(geometry["provenance"]["subarray"], name)
+            n_ant = self.data["las"][name]["n_ant"]
+            self.assertEqual(geometry["n_ant"], n_ant)
+            # No uv-range cut is applied to the packaged geometry (reversed
+            # 11 Sep 2026; see sa_select/baselines.py and
+            # docs/plans/baseline-window-plan.md decision 5/W3), so every
+            # subarray keeps its full n_ant*(n_ant-1)/2 pair count. Compare
+            # against the payload's own stored n_pairs (not derived from
+            # n_ant) since that is what the runtime path actually validates.
+            self.assertEqual(geometry["n_pairs"], len(geometry["lengths_m"]))
+            self.assertEqual(geometry["n_pairs"], n_ant * (n_ant - 1) // 2)
 
     def test_validation_counts_partition_displayed_samples(self):
         for name, points in self.data["samples"].items():

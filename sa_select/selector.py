@@ -12,7 +12,7 @@ For each subarray the steps are (docs/architecture/selection-tool-design.md sect
   4. resolve either the supplied sensitivity goal or the natural MAIN
      one-minute fiducial, then calculate time and antenna-hours;
   5. for imaging, rank skirt-met candidates ahead of relaxed candidates, and
-     rank within each group with the requested cost heuristic.
+     rank within each group with the requested time/cost or baseline heuristic.
 
 Infeasible subarrays are kept, with human-readable reasons, so the caller can
 see *why* something was excluded.
@@ -32,11 +32,13 @@ class SelectionResult:
 
     def __init__(self, request: ObservingRequest, candidates: List[Candidate],
                  warnings: Optional[List[SelectionWarning]] = None,
-                 ranking_available: bool = True):
+                 ranking_available: bool = True,
+                 ranking_heuristic: Optional[str] = None):
         self.request = request
         self.candidates = candidates
         self.warnings = list(warnings or [])
         self.ranking_available = bool(ranking_available)
+        self.ranking_heuristic = ranking_heuristic or request.optimize
 
     @property
     def feasible(self) -> List[Candidate]:
@@ -89,6 +91,16 @@ class SelectionResult:
                 visibility_channels=VISIBILITY_CHANNELS,
                 cost_status=c.cost_status,
                 cost_error=c.cost_error, goal_origin=c.goal_origin,
+                baseline_min_m=c.baseline_min_m,
+                baseline_max_m=c.baseline_max_m,
+                baselines_in_range=c.baselines_in_range,
+                baselines_total=c.baselines_total,
+                baseline_efficiency=c.baseline_efficiency,
+                baseline_provenance=c.baseline_provenance,
+                baseline_status=c.baseline_status,
+                baseline_error=c.baseline_error,
+                baseline_las_arcsec=c.baseline_las_arcsec,
+                baseline_las_defaulted=c.baseline_las_defaulted,
                 ranking_available=self.ranking_available,
                 result_warning_codes=";".join(w.code for w in self.warnings),
                 source=c.source,
@@ -112,6 +124,7 @@ class SelectionResult:
             fiducial_goal_jy=(next(iter(fiducial_values))
                               if len(fiducial_values) == 1 else None),
             frequency_ghz=self.request.frequency,
+            optimize=self.ranking_heuristic,
             delta_v_m_per_s=self.request.delta_v,
             correlator_dump_time_s=CORRELATOR_DUMP_TIME_S,
             visibility_channels=VISIBILITY_CHANNELS,
@@ -122,16 +135,19 @@ class SelectionResult:
         def fmt(x, spec="%.3g"):
             return "-" if x is None else spec % x
 
+        metric_columns = self.ranking_heuristic in ("efficient", "performance")
         hdr = ("%-12s %5s %9s %5s %8s %6s %8s %6s %9s %8s %8s %12s"
                % ("subarray", "N_ant", "beam(\")", "eta", "weight",
                   "robust", "taper(\")", "skirt", "LAS(\")", "t_int(h)",
                   "antHrs", "visibilities"))
+        if metric_columns:
+            hdr += " %16s %10s %9s" % ("Bmin-Bmax(m)", "B_in/B_all", "efficient")
         lines = [hdr, "-" * len(hdr)]
         if not self.ranking_available and self.feasible:
-            lines.append("(cost ranking unavailable; feasible rows are not recommendations)")
+            lines.append("(ranking unavailable; feasible rows are not recommendations)")
         for c in self.feasible:
-            lines.append("%-12s %5d %9s %5s %8s %6s %8s %6s %9s %8s %8s %12s"
-                         % (c.subarray.name, c.subarray.n_ant,
+            line = ("%-12s %5d %9s %5s %8s %6s %8s %6s %9s %8s %8s %12s"
+                    % (c.subarray.name, c.subarray.n_ant,
                             fmt(c.resolution, "%.4g"), fmt(c.eta),
                             c.weighting or "-", fmt(c.robust, "%.2f"),
                             fmt(c.taper, "%.3g"), fmt(c.skirt, "%.2f"),
@@ -139,6 +155,23 @@ class SelectionResult:
                             fmt(c.integration_time_hr),
                             fmt(c.antenna_hours),
                             format_visibility_count(c.n_visibilities)))
+            if metric_columns:
+                bounds = ("-" if c.baseline_min_m is None or c.baseline_max_m is None
+                          else "%.3g-%.3g" % (c.baseline_min_m, c.baseline_max_m))
+                counts = ("-" if c.baselines_in_range is None else
+                          "%d/%s" % (c.baselines_in_range,
+                                      "-" if c.baselines_total is None else c.baselines_total))
+                line += " %16s %10s %9s" % (bounds, counts, fmt(c.baseline_efficiency))
+            lines.append(line)
+            if metric_columns and c.baseline_status != "available":
+                lines.append("baseline  %-12s : %s" %
+                             (c.subarray.name, c.baseline_error or c.baseline_status))
+            if metric_columns and c.baseline_las_defaulted:
+                from .baselines import DEFAULT_LAS_RATIO
+                lines.append(
+                    "note      %-12s : no LAS requested; Bmin assumed LAS = %.4g\" "
+                    "(%.3g x requested resolution)"
+                    % (c.subarray.name, c.baseline_las_arcsec, DEFAULT_LAS_RATIO))
         if not self.feasible:
             lines.append("(no feasible subarray)")
         for c in self.feasible:
@@ -163,6 +196,9 @@ def select_subarrays(request: ObservingRequest,
     candidates.
     """
     library = library or CurveLibrary()
+    selected_name = (heuristic if isinstance(heuristic, str) else
+                     (request.optimize if heuristic is None else None))
+    baseline_ranking = selected_name in ("efficient", "performance")
     rank = heuristics.resolve(heuristic, default=request.optimize)
     skirt_thr = request.skirt_threshold if request.imaging else None
 
@@ -175,6 +211,34 @@ def select_subarrays(request: ObservingRequest,
         c = Candidate(subarray=info)
         c.skirt_required = skirt_thr
         c.las = info.las_arcsec(request.frequency)
+
+        # Baseline metrics are informative for every mode when verified
+        # geometry is present.  Only the new modes require every feasible row
+        # to have one; missing geometry must never silently remove a row.
+        geometry = getattr(library, "geometry", {}).get(info.name)
+        if geometry is not None:
+            try:
+                from .baselines import baseline_metrics
+                try:
+                    geometry_n_ant = int(geometry["n_ant"])
+                except (KeyError, TypeError, ValueError) as e:
+                    raise ValueError("geometry antenna count is invalid: %s" % e)
+                if geometry_n_ant != info.n_ant:
+                    raise ValueError("geometry antenna count %d does not match "
+                                     "curve metadata count %d" %
+                                     (geometry_n_ant, info.n_ant))
+                metrics = baseline_metrics(
+                    geometry, request.frequency, request.resolution,
+                    request.las, info.las_coeff)
+                for key, value in metrics.items():
+                    setattr(c, key, value)
+                c.baseline_status = "available"
+            except Exception as e:
+                c.baseline_status = "failed"
+                c.baseline_error = "baseline metric failed: %s" % e
+        else:
+            c.baseline_error = (getattr(library, "geometry_error", "") or
+                                "no verified baseline geometry for this subarray")
 
         # -- LAS feasibility -------------------------------------------- #
         if request.las is not None and c.las < request.las:
@@ -209,6 +273,7 @@ def select_subarrays(request: ObservingRequest,
     # -- cost: explicit science goal or the one-minute MAIN fiducial ------- #
     curve_feasible = [c for c in candidates if c.feasible]
     ranking_available = True
+    cost_ranking = not baseline_ranking
     sens = None
     sens_err = None
     if curve_feasible:
@@ -234,14 +299,16 @@ def select_subarrays(request: ObservingRequest,
                 c.reasons.append(sens_err)
                 c.feasible = False
         else:
-            ranking_available = False
+            if cost_ranking:
+                ranking_available = False
             for c in curve_feasible:
                 c.cost_status = "unavailable"
                 c.cost_error = sens_err
             result_warnings.append(SelectionWarning(
                 "COST_UNAVAILABLE",
-                "%s; beam/LAS feasibility is retained but no recommendation "
-                "is ranked" % sens_err))
+                "%s; beam/LAS feasibility is retained%s" %
+                (sens_err, "; baseline scores do not require these costs"
+                 if baseline_ranking else " but no recommendation is ranked")))
     elif curve_feasible:
         implicit_failures = []
         for c in curve_feasible:
@@ -281,23 +348,39 @@ def select_subarrays(request: ObservingRequest,
                     implicit_failures.append(c)
 
         if implicit_failures:
-            ranking_available = False
+            if cost_ranking:
+                ranking_available = False
             names = ", ".join(c.subarray.name for c in implicit_failures)
-            for c in candidates:
-                if c.feasible:
-                    c.integration_time_hr = None
-                    c.antenna_hours = None
-                    c.n_visibilities = None
-                    if c.cost_status == "available":
-                        c.cost_status = "unavailable"
-                        c.cost_error = "implicit cost ranking disabled because another candidate failed"
+            if cost_ranking:
+                for c in candidates:
+                    if c.feasible:
+                        c.integration_time_hr = None
+                        c.antenna_hours = None
+                        c.n_visibilities = None
+                        if c.cost_status == "available":
+                            c.cost_status = "unavailable"
+                            c.cost_error = "implicit cost ranking disabled because another candidate failed"
             result_warnings.append(SelectionWarning(
                 "COST_UNAVAILABLE",
                 "implicit fiducial cost failed for %s; beam/LAS feasibility is "
-                "retained but no recommendation is ranked" % names,
+                "retained%s" % (names, "; baseline scores do not require these costs"
+                                if baseline_ranking else
+                                " but no recommendation is ranked"),
                 {"subarrays": [c.subarray.name for c in implicit_failures]}))
 
     feasible = [c for c in candidates if c.feasible]
+    if baseline_ranking:
+        unavailable = [c for c in feasible if c.baseline_status != "available"]
+        if unavailable:
+            ranking_available = False
+            result_warnings.append(SelectionWarning(
+                "BASELINE_RANKING_UNAVAILABLE",
+                "%s ranking requires verified baseline metrics for every "
+                "feasible subarray" % selected_name,
+                {"optimize": selected_name,
+                 "subarrays": [c.subarray.name for c in unavailable],
+                 "errors": {c.subarray.name: c.baseline_error
+                            for c in unavailable}}))
     if request.imaging and not any(c.skirt_met is True for c in feasible):
         result_warnings.append(SelectionWarning(
             "NO_SUBARRAY_MEETS_SKIRT",
@@ -320,4 +403,5 @@ def select_subarrays(request: ObservingRequest,
         ranked = feasible                   # metadata presentation order only
     ranked += [c for c in candidates if not c.feasible]
     return SelectionResult(request, ranked, warnings=result_warnings,
-                           ranking_available=ranking_available)
+                           ranking_available=ranking_available,
+                           ranking_heuristic=selected_name or "custom")

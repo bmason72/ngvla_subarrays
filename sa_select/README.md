@@ -68,11 +68,12 @@ from sa_select import ObservingRequest, select_subarrays
 req = ObservingRequest(resolution=0.01, frequency=30.0,   # arcsec, GHz
                        sensitivity=1e-5,                   # Jy/beam (or K, see unit)
                        las=0.5, imaging=True,
-                       optimize="antenna_hours")           # or "integration_time"
+                       optimize="antenna_hours")           # also integration_time,
+                                                          # efficient, performance
 result = select_subarrays(req)
 
 print(result.table())          # readable summary + why each SA was excluded
-best = result.best             # cheapest feasible Candidate (or None)
+best = result.best             # best by the selected criterion (or None)
 rows = result.to_rows()        # list[dict], drops into a DataFrame
 summary = result.to_summary()  # structured warnings/ranking status
 ```
@@ -85,8 +86,72 @@ and `n_visibilities`. The visibility estimate is
 no autocorrelations. The human-readable table reports SI units such as MVis and
 GVis. `to_rows()` also returns the dump time and channel-count assumptions. For
 imaging, skirt-met candidates rank ahead of relaxed candidates;
-each group is ordered by the requested cost metric. A structured
+each group is ordered by the requested ranking metric. A structured
 `NO_SUBARRAY_MEETS_SKIRT` warning is returned if the strict group is empty.
+
+## Baseline ranking
+
+Select `optimize="efficient"` or `optimize="performance"` in Python, use
+`--optimize efficient|performance` in the CLI, or choose the corresponding
+**Rank by** option in the HTML calculator. These implement the baseline-count
+metrics of ngVLA memo 121 section 2.3:
+
+| Criterion | Score (larger is better) |
+| --- | --- |
+| `efficient` | Baselines in the science interval / all antenna-pair baselines |
+| `performance` | Number of baselines in the science interval |
+
+The interval includes both endpoints. With wavelength in meters and requested
+angles in radians, its bounds are `Bmin = las_coeff * lambda / LAS` and
+`Bmax = 1.02 * lambda / resolution`. Wavelength uses the requested frequency.
+The lower bound uses the existing per-subarray LAS coefficient (currently 0.8
+for all packaged subarrays); when LAS is omitted, Bmin defaults to
+`DEFAULT_LAS_RATIO` (10.0) times the requested resolution rather than zero
+(see `sa_select/baselines.py`). The upper bound
+uses the requested resolution, even when the accepted achieved beam differs
+within its tolerance. An inverted interval is reported as unavailable ranking.
+
+Counts use physical, unprojected antenna separations from the selected revision.
+Each distinct pair is counted once; the denominator is `Nant*(Nant-1)/2`, including
+LONG's short pairs. Existing short-baseline cuts used for imaging/LAS do not
+change this metric's denominator. No autocorrelations, observing-time samples,
+channel multiplicities, robust weights, or taper weights enter these scores.
+Projection and beam asymmetry remain future considerations.
+
+Measured-curve beam feasibility, LAS feasibility, and imaging skirt policy still
+apply before ranking. Memo 121's natural-beam correction factors are not used:
+our measured curves already determine whether a suitable robust/taper solution
+exists. All matching subarrays, including Main and Main+Long, are ranked.
+Efficient ties favor a larger in-range count, then fewer antennas, then the
+canonical subarray name. Performance ties favor a larger efficiency fraction,
+then fewer antennas, then the name. Imaging still places skirt-met candidates
+ahead of relaxed candidates unless Python's `strict_first=False` is requested.
+
+Performance is a baseline-count proxy, so it can order subarrays differently
+from `integration_time`, which includes the measured weighting loss `eta`.
+The displayed times and antenna-hours retain their existing sensitivity model.
+A zero in-range count is a valid score. Missing geometry is not zero and makes
+the new ranking unavailable if any feasible candidate lacks a valid score.
+The existing cost criteria remain available without geometry. Baseline ranking
+can work when an implicit fiducial cost is unavailable; a failed explicit
+sensitivity request retains the existing feasibility policy.
+
+Result rows include `baseline_min_m`, `baseline_max_m`, `baselines_in_range`,
+`baselines_total`, `baseline_efficiency` (a fraction), `baseline_status`,
+`baseline_error`, and `baseline_provenance`. The displayed metric columns explain
+the selected order; JSON/CSV retain the numerical values. Baseline geometry is
+packaged in `data/baseline_geometry.json.gz`, keyed by revision and subarray,
+with membership checksums. Regenerate it from the authoritative configuration
+membership with `python3 curvegen/build_baseline_data.py`; no CASA simulation is
+needed. The same package data supplies the HTML report.
+
+Custom libraries can provide `geometry={subarray_name: entry}` to
+`CurveLibrary(..., geometry=...)` or `CurveLibrary.from_tables(..., geometry=...)`.
+Each entry contains `n_ant`, the sorted physical pair lengths `lengths_m` in
+meters, and a `provenance` dictionary. A familiar subarray name in a custom
+CSV, registry, or Stroh delivery does not establish antenna membership; supply
+the matching geometry explicitly. Stock `CurveLibrary()` and packaged
+`CurveLibrary.for_config(...)` load the appropriate revision automatically.
 
 ## How sensitivity is computed
 

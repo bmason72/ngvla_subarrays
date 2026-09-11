@@ -14,6 +14,14 @@
 
 -run rest of subarrays on RevF MFS
 
+-add declination support (bmason, 10 Sep 2026): evaluate whether simulations and
+   their derived curves can be scaled to other declinations, and establish the
+   accuracy and limits of that approximation. This is broader than the
+   efficient/performance baseline bounds: assess resolution, projected uv
+   coverage, beam asymmetry, weighting/taper response and PSF quality generally.
+   Simple scaling may be sufficient, but that is a hypothesis to evaluate.
+   Future development only; outside the current ranking change.
+
 ===========
 actually maintenance tasks
 
@@ -23,5 +31,4 @@ actually maintenance tasks
 -make an ngvla imaging skill (general)
 
 -add alma data skill, krishna+preshanth data skills
-
 

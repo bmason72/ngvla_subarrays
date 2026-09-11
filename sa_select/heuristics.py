@@ -10,10 +10,11 @@ for skirt-met candidates and once for relaxed candidates, then concatenates
 those groups.  ``ObservingRequest.strict_first=False`` opts into one mixed
 pool.
 
-The selector always resolves an absolute goal before invoking a built-in: a
-user goal, or the natural untapered MAIN sensitivity in one minute.  Built-ins
-therefore refuse candidates without absolute costs.  The relative helper
-functions below remain only for transition/audit comparisons.
+The time and antenna-hour built-ins use an absolute goal: a user goal, or the
+natural untapered MAIN sensitivity in one minute, and refuse unavailable
+costs.  ``efficient`` and ``performance`` instead use exact physical-baseline
+counts and can rank when an implicit sensitivity cost is unavailable.  The
+relative helper functions below remain only for transition/audit comparisons.
 """
 
 from typing import Callable, Dict, List, Union
@@ -54,9 +55,33 @@ def by_antenna_hours(cands: List[Candidate], request: ObservingRequest
     return sorted(cands, key=key)
 
 
+def by_efficient(cands: List[Candidate], request: ObservingRequest
+                 ) -> List[Candidate]:
+    """Largest fraction of physical baselines in the requested interval."""
+    def key(c):
+        if c.baseline_efficiency is None or c.baselines_in_range is None:
+            raise ValueError("efficient ranking requested without baseline metrics")
+        return (-c.baseline_efficiency, -c.baselines_in_range,
+                c.subarray.n_ant, c.subarray.name)
+    return sorted(cands, key=key)
+
+
+def by_performance(cands: List[Candidate], request: ObservingRequest
+                   ) -> List[Candidate]:
+    """Largest number of physical baselines in the requested interval."""
+    def key(c):
+        if c.baselines_in_range is None or c.baseline_efficiency is None:
+            raise ValueError("performance ranking requested without baseline metrics")
+        return (-c.baselines_in_range, -c.baseline_efficiency,
+                c.subarray.n_ant, c.subarray.name)
+    return sorted(cands, key=key)
+
+
 HEURISTICS: Dict[str, Heuristic] = {
     "integration_time": by_integration_time,
     "antenna_hours": by_antenna_hours,
+    "efficient": by_efficient,
+    "performance": by_performance,
 }
 
 
