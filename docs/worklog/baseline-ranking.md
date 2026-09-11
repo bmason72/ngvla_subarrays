@@ -181,3 +181,49 @@ Verified independently: for every revF subarray, n_pairs == n_ant*(n_ant-1)/2
 and `long`'s minimum pair length is back down in the spurious ~cluster range
 rather than the previous 515 km post-cut minimum. Full suite green (see
 verification numbers in this session's report).
+
+### 2026-09-11 -- checkpoint commit and final report rebuild
+
+Committed as `cb14273` (22 files, +2662/-56): the efficient/performance
+criteria, the default-LAS Bmin fix, the packaged Rev C/D/F pair geometry, the
+report UX changes, and the three bugs found while validating (report-JS
+geometry rejection, Python/JS `baselines_total` divergence, silently skipping
+quickjs tests).  `curvegen/reports/` is gitignored, so the built pages are not
+in the commit.
+
+All nine reports rebuilt against the final template; each grew by exactly
+1,133 bytes (the new Explanation/divider markup) and carries every marker
+(`class="explain"`, `section-divider`, `DIAGNOSTICS`, `DEFAULT_LAS_RATIO`,
+`calc-row-flagged`, `n_pairs`).  Profile JSONL inputs verified present before
+building (the 10 Sep trap did not recur); subarray counts 14/14/9/9/9/7 as
+expected; release embedded 32 PSF payload blocks.  `revf-curves.html` and
+`revF-track-curves.html` differ in 3 bytes only -- the provenance-footer
+timestamp -- so the alias is correct.  Note the earlier claim that they were
+"byte-identical" had compared sizes only, never `cmp`.
+
+Suite at 468 tests, OK, 1 pre-existing skip.
+
+Not committed and left for bmason: `AGENTS.toml`, `CHANGES_31aug-9sep2026.md`,
+`memo/myComments.tex`, `curvegen/results-revF_snapshot_band4/campaign_manifest.json`
+(the first and last look like they should be tracked), and the untracked
+clutter (`junk/`, `tmp/`, `files.txt`, `memo/foo.tar`, `memo/*.aux|log|out|pdf`,
+`memo/myComments.tex~`) -- the LaTeX build artifacts look like .gitignore
+candidates.
+
+bmason reviewed the rebuilt release report on 11 Sep 2026 and confirmed it
+looks good.  That closes this workstream: the `efficient`/`performance`
+criteria, the default-LAS Bmin fix and the report UX changes are implemented,
+validated and checked in.
+
+Still open, and deliberately NOT changed (bmason's call):
+
+* The strict-first skirt grouping, which was the actual cause of the reported
+  "MID tops every criterion" symptom -- MID is the only subarray meeting
+  skirt <= 0.10 at 0.01", so it heads every ranking regardless of the selected
+  criterion.  `envelope.py` evaluates skirt = threshold crossings as candidate
+  solutions, so the winning point sits exactly on the boundary (0.09995 against
+  0.10): a candidate can take the whole strict group by a 0.05% margin.  Worth
+  revisiting whenever the skirt semantics are next examined.
+* `performance` structurally favours the largest array -- a raw in-range pair
+  count is monotone in array size, so no window tuning makes a component beat
+  its superset.  bmason, 11 Sep: obvious enough not to need documenting.
