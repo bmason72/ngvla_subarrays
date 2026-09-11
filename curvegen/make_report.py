@@ -1018,12 +1018,11 @@ _SNAPSHOT_NOTE_HTML = (
 # the imaging-curve explanation shared by every combo's subtitle (matches the
 # template's static paragraph)
 _SUB_TAIL_HTML = (
-    "The imaging curves use a selectable PSF skirt limit, s<sub>0</sub>. "
-    "The PSF skirt is the average PSF level at a radius of one FWHM. The "
-    "default limit is 10%. At each resolution, the curve shows the result "
-    "with the lowest &eta; that meets the limit. If no result meets the "
-    "limit, the curve shows the lowest available skirt and uses a hollow "
-    "marker.")
+    "The imaging curves use a selectable PSF skirt limit, s<sub>0</sub>, "
+    "the average PSF level at a radius of one FWHM, with a default of 10%: "
+    "at each resolution the curve shows the result with the lowest &eta; "
+    "that meets the limit, or &mdash; where nothing meets it &mdash; the "
+    "lowest available skirt, drawn with a hollow marker.")
 
 
 def combo_entry(rev, sim_mode, band="", ref_freq_ghz=None,
@@ -1076,14 +1075,14 @@ def combo_entry(rev, sim_mode, band="", ref_freq_ghz=None,
     h1 = "%s %staperability &amp; sculptability curves" % (
         rev_html, "snapshot " if snap else "")
     sub = ("These plots show sensitivity cost (&eta;) against angular "
-           "resolution at 30&thinsp;GHz. Sensitivity cost is the image rms "
+           "resolution at 30&thinsp;GHz, where &eta; is the image rms "
            "divided by the rms for natural weighting. The sensitivity "
            "calculation uses underlying code similar to the "
            "<a href=\"https://ngect.nrao.edu\">ngVLA Exposure Calculator "
            "Tool (ngECT)</a>. The data come from "
            "noise simulations of each %s subarray. Each simulation uses a "
-           "%s at declination +24&deg;. The simulations use a grid of "
-           "Briggs robust and uv-taper values, with adaptive refinement "
+           "%s at declination +24&deg;, over a grid of "
+           "Briggs robust and uv-taper values with adaptive refinement "
            "where needed. %s"
            % (rev_html, _SIM_DESC_HTML.get(sim_mode, sim_mode),
               _SUB_TAIL_HTML))

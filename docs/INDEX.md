@@ -35,6 +35,7 @@ on any path below to see its full history.
 | [ops/SKILLS_INSTALL.md](ops/SKILLS_INSTALL.md) | How to install the ALMA, radio-analyst, and ngvla-imaging skills into Claude Code and Codex on this machine | active |
 | [ops/RUN_CAMPAIGNS.md](ops/RUN_CAMPAIGNS.md) | Slurm campaign copy-paste run sheet with live commands and dated wave history | active |
 | [ops/POLISH_AND_STORAGE.md](ops/POLISH_AND_STORAGE.md) | How polish refinement samples; what moved from $SCRATCH to $WORK | active |
+| [ops/editing-report-prose.md](ops/editing-report-prose.md) | Where the report's "Explanation" prose lives, which exact phrases are pinned by tests, and how to rebuild/check one page | active |
 | [postmortems/2026-07-06-curve-anomaly.md](postmortems/2026-07-06-curve-anomaly.md) | Post-mortem of eta-curve pop-ups and drop-outs: three mechanisms, census, fix plan | completed; fixes landed in the v3 engine |
 | [archive/plans/NEXT_AGENT_old.md](archive/plans/NEXT_AGENT_old.md) | Kickoff prompt from a previous dev iteration | superseded |
 | [archive/plans/campaign_proposal_revd_snapshot.md](archive/plans/campaign_proposal_revd_snapshot.md) | Proposal for Rev D and snapshot campaigns, approved 10 Jul 2026 | completed |

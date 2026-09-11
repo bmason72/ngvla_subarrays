@@ -209,15 +209,15 @@ details.explain > p.note { margin: 0 0 10px; }
   <h1 id="page-h1">Rev&thinsp;F taperability &amp; sculptability curves</h1>
   <details class="explain"><summary>Explanation</summary>
   <p class="sub">These plots show sensitivity cost (&eta;) against angular resolution at
-  30&thinsp;GHz. Sensitivity cost is the image rms divided by the rms for natural weighting. The
+  30&thinsp;GHz, where &eta; is the image rms divided by the rms for natural weighting. The
   sensitivity calculation uses underlying code similar to the
   <a href="https://ngect.nrao.edu">ngVLA Exposure Calculator Tool (ngECT)</a>. The data come from
-  noise simulations of each Rev&thinsp;F subarray for a 4&thinsp;h track at
-  declination +24&deg;. The simulations use a grid of Briggs robust and uv-taper values, with
+  noise simulations of each Rev&thinsp;F subarray for a 4&thinsp;h track at declination
+  +24&deg;, over a grid of Briggs robust and uv-taper values with
   adaptive refinement where needed. The imaging curves use a selectable PSF skirt limit,
-  s<sub>0</sub>. The default limit is 10%. At each resolution, the curve shows the result with the
-  lowest &eta; that meets the limit. If no result meets the limit, the curve shows the lowest
-  available skirt and uses a hollow marker.</p>
+  s<sub>0</sub>, with a default of 10%: at each resolution the curve shows the result with the
+  lowest &eta; that meets the limit, or &mdash; where nothing meets it &mdash; the lowest
+  available skirt, drawn with a hollow marker.</p>
   </details>
 </header>
 
@@ -229,8 +229,8 @@ details.explain > p.note { margin: 0 0 10px; }
 <div class="card" id="subarray-calculator">
   <h2>Subarray calculator</h2>
   <details class="explain"><summary>Explanation</summary>
-  <p class="note">Use the same tabulated curves as the plots below. The calculation runs in this
-  page.</p>
+  <p class="note">Use the same tabulated curves as the plots below; the calculation runs in
+  this page.</p>
   </details>
   <form class="calc-form" id="calc-form">
     <label class="calc-field"><span id="calc-freq-label">Frequency [GHz]</span>
@@ -296,28 +296,27 @@ details.explain > p.note { margin: 0 0 10px; }
   </details>
   <details class="explain"><summary>Explanation</summary>
   <p class="note calc-caveat">The times use the thermal-noise part of the memo-96 sensitivity
-  model and multiply the natural-weighting reference value by &eta;. Confusion is calculated from
-  the measured sqrt(&int;B<sup>2</sup>d&Omega;) to the first null, shown separately, and never added
-  to the thermal rms. For MFS selection only, it is a feasibility floor. The table uses a
-  1&thinsp;h, 1&thinsp;MHz reference
-  value and one pointing. If desired sensitivity is blank, the calculator internally uses the
-  natural, untapered MAIN sensitivity in one minute at the selected frequency and bandwidth as a
-  ranking scale. Kelvin goals are converted separately using each candidate's achieved beam.
-  The efficient rank is the fraction of physical antenna pairs in the requested science interval;
-  performance is the number of those pairs. The interval uses B<sub>min</sub> = LAS coefficient
-  &times; &lambda; / LAS and B<sub>max</sub> = 1.02&lambda; / requested resolution, with angles
-  in radians and inclusive endpoints. If no LAS is requested, B<sub>min</sub> assumes LAS = 10&times;
-  the requested resolution &mdash; a default assumption, not a supplied requirement; the summary
-  line flags this default whenever it applies (efficient/performance only, since it has no effect
-  on the antenna-hours/time ranks).
-  The denominator includes all distinct antenna pairs. Main and Main+Long remain eligible
-  whenever they meet the requirements. These scores do not change the modeled times.
-  Pair lengths are physical,
-  unprojected distances: source-direction projection and asymmetric uv coverage are future
-  considerations. The measured curves above still determine beam and PSF feasibility.
-  Times do not include overheads. The model does not include the difference in band averaging
-  between spectral-line and continuum observations. The visibility count is the number of
-  cross-correlation samples in the observation. It assumes one channel, no autocorrelations,
+  model, multiplying the natural-weighting reference value by &eta;, for a 1&thinsp;h,
+  1&thinsp;MHz reference and one pointing. Confusion is calculated from the measured
+  sqrt(&int;B<sup>2</sup>d&Omega;) to the first null and shown separately; it is never added
+  to the thermal rms, and acts as a feasibility floor for MFS selection only. Where the desired
+  sensitivity is blank, the calculator uses the natural, untapered MAIN sensitivity in one minute
+  at the selected frequency and bandwidth as a ranking scale. Kelvin goals are converted
+  separately using each candidate's achieved beam.</p>
+  <p class="note">The efficient rank is the fraction of physical antenna pairs in the requested
+  science interval; performance is the number of those pairs. The interval runs from
+  B<sub>min</sub> = LAS coefficient &times; &lambda; / LAS to B<sub>max</sub> =
+  1.02&lambda; / requested resolution, with angles in radians and inclusive endpoints, and the
+  denominator counts all distinct antenna pairs. Where no LAS is requested, B<sub>min</sub>
+  assumes LAS = 10&times; the requested resolution &mdash; an assumption of the metric, not a
+  supplied requirement &mdash; which the summary line flags whenever it applies. It has no
+  effect on the antenna-hours and time ranks. Pair lengths are physical, unprojected distances;
+  source-direction projection and asymmetric uv coverage remain future work. Main and Main+Long
+  stay eligible wherever they meet the requirements, these scores do not change the modeled
+  times, and the measured curves above still decide beam and PSF feasibility.</p>
+  <p class="note">Times exclude overheads, and the model does not capture the difference in band
+  averaging between spectral-line and continuum observations. The visibility count is the number
+  of cross-correlation samples in the observation, assuming one channel, no autocorrelations,
   and one correlator dump every 5&thinsp;s.</p>
   </details>
 </div>
@@ -341,12 +340,12 @@ details.explain > p.note { margin: 0 0 10px; }
   <div id="imaging-card-body">
   <details class="explain"><summary>Explanation</summary>
   <p class="note">At each target resolution, the curve shows the beam with the lowest &eta; that
-  meets the selected PSF skirt limit. The interpolation engine calculates values continuously
-  across resolution. If no beam meets the limit, the curve shows the lowest available skirt.
-  Hollow triangles identify these results. They do not meet the selected limit. Point to a
-  triangle to see its skirt value. Dashed vertical lines show the largest angular scale (LAS) for
-  each subarray at 30&thinsp;GHz. Subarrays that contain the core have the same minimum baseline and the
-  same LAS. Use this plot to select a result for an imaging project.</p>
+  meets the selected PSF skirt limit; the interpolation engine calculates values continuously
+  across resolution. Where no beam meets the limit, the curve falls back to the lowest available
+  skirt, drawn as a hollow triangle &mdash; point to one to see the skirt value it actually
+  achieves. Dashed vertical lines show the largest angular scale (LAS) for each subarray at
+  30&thinsp;GHz; subarrays containing the core share a minimum baseline and therefore a LAS.
+  Use this plot to select a result for an imaging project.</p>
   </details>
   <div class="legend" id="legend-img"></div>
   <div id="chart-imaging"></div>
@@ -356,9 +355,9 @@ details.explain > p.note { margin: 0 0 10px; }
 <div class="card">
   <h2>Point-source sensitivity cost by resolution</h2>
   <details class="explain"><summary>Explanation</summary>
-  <p class="note">These curves include all beams and do not apply a PSF skirt limit. Use this plot
-  for point-source detection. Near natural weighting, the imaging and point-source curves can be
-  different because the point-source curve does not control the PSF skirt.</p>
+  <p class="note">These curves include all beams and do not apply a PSF skirt limit, so use this
+  plot for point-source detection. Near natural weighting the two families can diverge, because
+  the point-source curve does not control the PSF skirt.</p>
   </details>
   <div class="legend" id="legend-ps"></div>
   <div id="chart-ps"></div>
@@ -379,18 +378,19 @@ details.explain > p.note { margin: 0 0 10px; }
   </div>
   <details class="explain"><summary>Explanation</summary>
   <p class="note" id="samples-resolution-note">These plots show simulation results for which
-  &eta;&thinsp;&le;&thinsp;5. Circles show natural weighting with taper. Squares show Briggs
-  weighting without taper. Triangles show Briggs weighting with taper. Filled markers meet the
-  10% reference skirt limit. Hollow markers do not meet the limit. Point to a marker to see its
-  parameters.</p>
+  &eta;&thinsp;&le;&thinsp;5. Circles are natural weighting with taper, squares Briggs weighting
+  without taper, and triangles Briggs weighting with taper. Filled markers meet the 10% reference
+  skirt limit; hollow ones do not. Point to a marker to see its parameters.</p>
   <p class="note" id="samples-parameters-note" style="display:none">These plots show the same
-  simulation results in uv-taper and robust space. Each dot is one result. The natural row shows
-  natural weighting. The taper axis is linear so that concentrations and gaps are easy to see.
-  Filled colored dots are residual-validated: every adaptive cell touching the point passed the
-  convergence test. Hollow colored dots touch at least one cell that did not pass that test;
+  simulation results in uv-taper and robust space, one dot per result, with the natural row
+  carrying natural weighting. The taper axis is linear so that concentrations and gaps are easy
+  to see. Filled colored dots are residual-validated:
+  every adaptive cell touching the point passed the convergence test.
+  Hollow colored dots touch at least one cell that did not;
   audit-limited, wave-limited, and non-residual retirements do not count as validated. Small gray
-  dots are on the natural row, the untapered seam, or outside the quadtree and were not assessed.
-  Gaps show regions that have few results or no results. Point to a dot to see its parameters.</p>
+  dots &mdash; on the natural row, on the untapered seam, or outside the quadtree &mdash; were
+  not assessed. Gaps mark regions with few results or none. Point to a dot to see its
+  parameters.</p>
   </details>
   <div class="grid3" id="multiples"></div>
 </div>
@@ -398,13 +398,13 @@ details.explain > p.note { margin: 0 0 10px; }
 <div class="card">
   <h2>Sweep grid in robust and taper space</h2>
   <details class="explain"><summary>Explanation</summary>
-  <p class="note">Each plot shows the full sweep grid for one subarray. Rows show natural weighting
-  and Briggs robust values from +2 to &minus;2. Columns show uv-taper values. The color shows
-  &eta;: light colors are near 1 and dark colors are near 5. A dot identifies a result that meets
-  the default 10% skirt limit. A border identifies a result that the default imaging curve uses.
-  Striped cells are beam-cap anchors and are for diagnosis only. A slash identifies a cell that
-  was skipped after the row reached the beam cap. An X identifies a failed simulation. An empty
-  cell has no result. Point to a measured cell to see its beam, &eta;, and skirt.</p>
+  <p class="note">Each plot shows the full sweep grid for one subarray. Rows are natural
+  weighting and Briggs robust from +2 to &minus;2; columns are uv-taper values. Color shows
+  &eta;, light near 1 and dark near 5. A dot marks a result meeting the default 10% skirt limit,
+  and a border marks one the default imaging curve uses. Striped cells are beam-cap anchors, for
+  diagnosis only; a slash is a cell skipped after the row reached the beam cap, an X a failed
+  simulation, and an empty cell has no result. Point to a measured cell to see its beam, &eta;,
+  and skirt.</p>
   </details>
   <div class="legend" id="hm-legend"></div>
   <div class="grid3" style="grid-template-columns: repeat(auto-fit, minmax(460px, 1fr))" id="heatmaps"></div>
@@ -413,11 +413,12 @@ details.explain > p.note { margin: 0 0 10px; }
 <div class="card" id="psf-inspector">
   <h2>PSF inspector</h2>
   <details class="explain"><summary>Explanation</summary>
-  <p class="note">Select a subarray to examine its measured PSF. You can also select a marker in
-  the simulation-results plots or a cell in the sweep grid. In the calculator, select a PSF button
-  to open the PSF below that row. The page loads profile data only when you request it. The internal
-  report uses the adjacent <code>psf/</code> directory. Keep that directory with the HTML file. The
-  release page contains the profile data and does not need the directory.</p>
+  <p class="note">Select a subarray to examine its measured PSF, or reach the same thing by
+  selecting a marker in the simulation-results plots, a cell in the sweep grid, or a PSF button
+  in the calculator, which opens the PSF below that row. The page loads profile data only when
+  you request it. The internal report reads the adjacent <code>psf/</code> directory, so keep
+  that directory with the HTML file; the release page embeds the profile data and does not need
+  it.</p>
   </details>
   <div class="psf-controls">
     <label class="s0-field"><span>subarray:</span><select id="psf-sa"></select></label>
@@ -431,9 +432,9 @@ details.explain > p.note { margin: 0 0 10px; }
   <h2>Subarray summary and native-beam checks</h2>
   <details class="explain"><summary>Explanation</summary>
   <p class="note">This table compares the simulated native beam with the value in the sensitivity
-  calculator file <code>subarray_data.pkl</code>. The values for component subarrays agree within
-  2%. Composite subarrays can have larger differences because a single Gaussian does not fit a
-  two-component beam well. The calculator file also uses the Mid sites from before Rev&thinsp;F.</p>
+  calculator file <code>subarray_data.pkl</code>. Component subarrays agree within 2%. Composite
+  subarrays can differ by more, because a single Gaussian does not fit a two-component beam well,
+  and the calculator file also uses the Mid sites from before Rev&thinsp;F.</p>
   </details>
   <div class="tablewrap"><table id="qa-table"></table></div>
 </div>
