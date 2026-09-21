@@ -10,9 +10,10 @@ Rev D set into curvegen/configs-revD_track/.
 Run:  /Applications/CASA.app/Contents/MacOS/python3 curvegen/build_configs.py
 """
 
+import csv
 import os
 
-from config import COMPONENT_CFGS, SUBARRAYS, COMPONENT_DIR, CFG_DIR, REV
+from config import COMPONENT_CFGS, SUBARRAYS, COMPONENT_DIR, CFG_DIR, REV, REPO
 
 HEADER = "# observatory=NGVLA\n# coordsys=XYZ\n"
 
@@ -44,6 +45,33 @@ def outer_core_lines(n_inner=57):
     return [lines[i] for i in np.argsort(r)[n_inner:]]
 
 
+SPIRAL_PLUS_CSV = os.path.join(REPO, "sa_select", "data",
+                               "spiral_plus_selection.csv")
+
+
+def spiral_plus_core_lines(comp):
+    """Core antenna lines for the pseudo-component 'core-spiral+5' /
+    'core-spiral+10' -- a NAMED SUBSET of the core cfg (5 or 10 specific
+    station names, one/two per spiral arm), read from the selection table
+    that curvegen/make_spiral_plus.py computes and caches
+    (sa_select/data/spiral_plus_selection.csv).  '+10' includes the '+5'
+    picks (spiral+10 = spiral+5 plus one more per arm)."""
+    tag = comp[len("core-spiral"):]           # "+5" or "+10"
+    wanted_sets = {"+5"} if tag == "+5" else {"+5", "+10"}
+    names = []
+    with open(SPIRAL_PLUS_CSV, newline="") as f:
+        for row in csv.DictReader(f):
+            if row["set"] in wanted_sets:
+                names.append(row["chosen_antenna"])
+    lines = read_antenna_lines("core")
+    by_name = {ln.split()[-1].strip(): ln for ln in lines}
+    missing = [nm for nm in names if nm not in by_name]
+    if missing:
+        raise ValueError("spiral+ selection references unknown core "
+                         "antennas: %s" % missing)
+    return [by_name[nm] for nm in names]
+
+
 def build_all():
     os.makedirs(CFG_DIR, exist_ok=True)
     for name, components in SUBARRAYS.items():
@@ -53,6 +81,8 @@ def build_all():
                 lines += inner_core_lines()
             elif comp == "core-outer":
                 lines += outer_core_lines()
+            elif comp.startswith("core-spiral+"):
+                lines += spiral_plus_core_lines(comp)
             else:
                 lines += read_antenna_lines(comp)
         out = os.path.join(CFG_DIR, name.replace("+", "_") + ".cfg")

@@ -18,11 +18,12 @@ stage to finish and be checked, since it reads the subarray metadata CSVs).
 - **Run:** nothing simulated (out of scope; CASA-free deliverable).
 - **Tests:** `casapy -m unittest discover -s tests -t .` from the worktree
   root: 433 tests, OK (1 unrelated skip), ~59 s.
-- **Decisions needed:** none. bmason confirmed the selection on 7 Sep 2026 (D11): "spiral+5,10 look good". The branch copy of this file still says "to confirm"; update it at merge.
-- **Next actions:** none pending for this piece; ready for bmason's review,
-  then merge to `main` once the running campaign's collect stage is done.
+- **Decisions needed:** none. bmason confirmed the selection 7 Sep 2026 (D11):
+  "spiral+5,10 look good"; re-approved 21 Sep 2026 after reviewing
+  `docs/figures/spiral_plus_selection.png`.
+- **Next actions:** none pending for this piece; merged to `main` 21 Sep 2026.
 
-## Assumption (confirmed by bmason, 7 Sep 2026, D11)
+## Assumption (confirmed by bmason, 7 Sep 2026, D11; re-approved 21 Sep 2026)
 
 "Closest (radially, from the core center)" was implemented as: work in a
 local East-North tangent plane centred on the core centroid (114-antenna
