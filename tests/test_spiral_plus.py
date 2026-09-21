@@ -179,11 +179,19 @@ class TestSpiralPlusConfig(unittest.TestCase):
 
 
 class TestSpiralPlusMetadataRows(unittest.TestCase):
-    """The metadata rows added to the Rev F subarrays_revf_*.csv files."""
+    """The metadata rows added to the Rev F subarrays_revf_*.csv files.
 
-    CSVS = ["subarrays_revf_snapshot.csv",
-           "subarrays_revf_mfs_band4_snapshot.csv",
-           "subarrays_revf_mfs_band4_track.csv"]
+    Only the mono snapshot CSV carries spiral+5/spiral+10 rows (bmason D12,
+    21 Sep 2026): the Band-4 MFS combos are out of scope, and MFS mode
+    filters config.SUBARRAYS/IMSIZE to config.MFS_SUBARRAYS, which does not
+    include these two names -- a metadata CSV must never offer a subarray
+    the config cannot build (docs/plans/spiral-plus-campaign-plan.md, task
+    S0).
+    """
+
+    CSVS = ["subarrays_revf_snapshot.csv"]
+    MFS_CSVS = ["subarrays_revf_mfs_band4_snapshot.csv",
+                "subarrays_revf_mfs_band4_track.csv"]
 
     def test_rows_present_and_parse(self):
         from sa_select.curves import load_subarrays, DATA_DIR
@@ -197,6 +205,16 @@ class TestSpiralPlusMetadataRows(unittest.TestCase):
                 self.assertIsNone(info[name].beam_cap_arcsec,
                                  "%s beam cap should be blank (unmeasured) "
                                  "in %s" % (name, fname))
+
+    def test_absent_from_mfs_band4_csvs(self):
+        # D12 (21 Sep 2026): revF/track only, not MFS. spiral+5/spiral+10
+        # are not in config.MFS_SUBARRAYS, so offering them here would be a
+        # KeyError waiting to happen in a future Band-4 run.
+        from sa_select.curves import load_subarrays, DATA_DIR
+        for fname in self.MFS_CSVS:
+            info = load_subarrays(os.path.join(DATA_DIR, fname))
+            self.assertNotIn("spiral+5", info, fname)
+            self.assertNotIn("spiral+10", info, fname)
 
     def test_not_added_to_default_authoritative_csv(self):
         # subarrays.csv (revF/track, the release/offered default) is
