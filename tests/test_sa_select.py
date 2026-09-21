@@ -791,7 +791,7 @@ class TestConfigRegistry(unittest.TestCase):
         # (their curve CSVs are produced later by the sweeps)
         from sa_select.curves import load_subarrays, load_registry, DATA_DIR
         reg = load_registry()
-        counts = {("revD", "track"): 9, ("revF", "snapshot"): 14,
+        counts = {("revD", "track"): 9, ("revF", "snapshot"): 16,
                   ("revC", "track"): 9}
         for combo, n in counts.items():
             subs_csv, _ = reg[combo]

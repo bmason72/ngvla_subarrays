@@ -226,6 +226,18 @@ _SUBARRAYS = {
         "spiral+core-outer": ["spiral", "core-outer"],
         "mid+spiral+core-outer": ["mid", "spiral", "core-outer"],
         "long+mid+spiral+core-outer": ["long", "mid", "spiral", "core-outer"],
+        # spiral+5/+10 (bmason 7 Sep 2026, docs/plans/spiral-plus-subarrays-spec.md):
+        # spiral plus, per arm, the closest (tangent-plane) unselected core
+        # antenna to the arm's current tip -- one round for +5, a second
+        # round (tip advanced to the +5 pick) for +10.  Selection computed by
+        # curvegen/make_spiral_plus.py and cached in
+        # sa_select/data/spiral_plus_selection.csv; "core-spiral+5"/
+        # "core-spiral+10" below are pseudo-components resolved by name
+        # against that CSV in build_configs.py (see spiral_plus_core_lines).
+        # DEFINED here only -- deliberately absent from MFS_SUBARRAYS/RUN_SET
+        # (the offered/run sets), per spec: no campaign runs for these yet.
+        "spiral+5": ["spiral", "core-spiral+5"],
+        "spiral+10": ["spiral", "core-spiral+10"],
     },
     # Rev D offered set (bmason, docs/archive/plans/campaign_proposal_revd_snapshot.md): mirror the
     # Rev F structure where components exist.  Rev D has no core-inner/core-outer
