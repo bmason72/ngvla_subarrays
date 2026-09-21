@@ -1,4 +1,28 @@
-# NEXT_AGENT — start here (updated 6 Sep 2026)
+# NEXT_AGENT — start here (updated 21 Sep 2026)
+
+## RESUME HERE (21 Sep 2026) — spiral+5/+10 campaign RUNNING, freeze ACTIVE
+
+**Do not edit `curvegen/`, `sa_select/` or `sa_select/data/*.csv` on `main`**
+until collect 3524017 has finished and been checked: each Slurm stage
+re-imports them from this checkout when it starts.  Code work goes in a
+separate git worktree and merges afterwards.
+
+bmason launched 21 Sep 2026: prep 3523968 (done, seed beams checked clean)
+-> sweep 3524014_0 -> collect 3524017, restricted to the four new subarrays
+(`spiral+5`, `spiral+10`, `mid+spiral+5`, `mid+spiral+10`) so the other
+fourteen subarrays' released curves cannot be touched.
+
+Plan: `docs/plans/spiral-plus-campaign-plan.md` (decisions D12-D15; task S7
+is the harvest).  Rolling status and the prep-gate numbers:
+`docs/worklog/spiral-plus.md` 21 Sep.  Code landed in commits `892da6c`
+(subarrays + subset flag + preflight) and `97d8670` (docs).
+
+When the jobs finish, do S7 in the plan.  Two things to carry into it: the
+D14 acceptance check (the routed curves CSV must change by insertions only),
+and the D15 question — spiral+10's natural-weight skirt (0.126) is above the
+0.10 imaging threshold, which is the first evidence these subarrays may need
+a beam cap after all.
+
 
 Hand-off sheet for whoever (human or agent) picks this up.  Read order:
 `docs/plans/WRAPUP.md` (bmason's 17 Aug scope — the authority) → `docs/plans/RELEASE_PLAN.md`

@@ -210,3 +210,56 @@ S4 preflight (all verified by the architect):
 Suite: 518 tests, OK, 1 pre-existing unrelated skip.
 
 **Next: bmason launches S5 (prep), checks the seed beams, then S6.**
+
+### 2026-09-21 (evening) — campaign LAUNCHED; freeze active
+
+**CAMPAIGN FREEZE IS ACTIVE** until collect 3524017 finishes and is checked.
+Do not edit `curvegen/`, `sa_select/` or `sa_select/data/*.csv` on `main`;
+each Slurm stage re-imports them from this checkout when it starts.  Code
+work goes in a separate git worktree and merges afterwards.
+
+bmason launched, 21 Sep 2026: **prep 3523968 -> sweep 3524014_0 ->
+collect 3524017**, restricted to the four new subarrays via
+`--subarrays` (D14), so the other fourteen subarrays' released curves cannot
+be touched.  One sweep array task: all four are short-baseline, so they share
+a node and run serially.
+
+**Prep gate passed.** The prep log does not print the seed beams despite
+telling you to inspect them; they were read from `curvegen/results/*.csv`
+(natural and robust=-2 rows at taper 0):
+
+| subarray | natural res | robust -2 res | axial ratio | natural skirt |
+| --- | --- | --- | --- | --- |
+| spiral | 0.0761" | 0.0612" | 1.12 | 0.088 |
+| spiral+5 | 0.0803" | 0.0624" | 1.12 | 0.107 |
+| spiral+10 | 0.0845" | 0.0633" | 1.12 | 0.126 |
+| spiral+mid | 0.0111" | 0.0024" | 1.16 | 0.308 |
+| mid+spiral+5 | 0.0122" | 0.0024" | 1.15 | 0.329 |
+| mid+spiral+10 | 0.0131" | 0.0023" | 1.08 | 0.345 |
+
+Each new subarray sits just coarser than its reference, five-to-ten is
+monotonic, and the axial ratios track their references — the check that would
+have caught a bad antenna selection.  Antenna counts were right in the build
+(59/64/105/110), only the four were seeded, and the MSes (615 MB) landed on
+`$WORK` through the `curvegen/ms` symlink, not in the home quota.
+
+**First science finding, and it bears on the cap decision (D15).**  The added
+antennas buy roughly a doubling of LAS and cost resolution and PSF quality:
+5% resolution for five antennas, 11% for ten.  More pointed: spiral's
+natural-weight skirt (0.088) is under the 0.10 imaging threshold but
+spiral+10's (0.126) is above it, and spiral+5's (0.107) is marginal.  So
+spiral+10 cannot be imaged at natural weighting under the default sculpting
+criterion and its imaging curve must start away from natural.  D15 set no cap
+by analogy to `spiral`; this is the first evidence these behave less like
+`spiral` than that analogy assumed.  Re-examine when the curves land (S7).
+
+Cosmetic, pre-existing, not a problem: every prep log since August opens with
+`ModuleNotFoundError: No module named 'config'` from a status line that runs
+before the module path is set.
+
+**Next (S7, after collect):** confirm zero failed/skipped points and no
+unresolved refine defects; run the D14 acceptance check (diff
+`sa_select/data/revf_curves.csv` against its pre-run state — insertions only,
+every added line naming one of the four); inspect the four curves for the D15
+risk; regenerate `sa_select/data/ngect_subarray_data.json` (deliberately left
+stale, since the four had no data); rebuild reports; commit data and docs.

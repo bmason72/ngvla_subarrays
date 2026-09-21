@@ -110,11 +110,13 @@ domain-concept explanations for the core terms.
 
 ## Environment & commands
 
-> **Campaign freeze (rule; no freeze currently active — 8 Sep 2026):** while any
+> **Campaign freeze (rule; FREEZE ACTIVE — 21 Sep 2026, spiral+5/+10 revF/track
+> sweep 3524014_0 running, collect 3524017 queued):** while any
 > campaign stage is queued or running, do not edit `curvegen/`, `sa_select/`, or
 > `sa_select/data/*.csv` on `main`: each Slurm stage re-imports them from this
 > checkout when it starts.  Code work goes in a separate git worktree and
 > merges after collect has finished and been checked.  Live freeze window:
+> `docs/worklog/spiral-plus.md` (this one); past windows in
 > `docs/worklog/mfs-campaigns.md`.
 
 

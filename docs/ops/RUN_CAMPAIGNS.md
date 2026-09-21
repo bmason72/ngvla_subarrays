@@ -1,5 +1,35 @@
 # Campaign run sheet (copy-paste, one command per step)
 
+## spiral+5/+10 backfill (revF / track) — RUNNING (launched 21 Sep 2026)
+
+**CAMPAIGN FREEZE IS ACTIVE.**  Do not edit `curvegen/`, `sa_select/` or
+`sa_select/data/*.csv` on `main` until collect 3524017 has finished and been
+checked — each Slurm stage re-imports them from this checkout when it starts.
+Code work goes in a separate git worktree and merges afterwards.
+
+bmason launched 21 Sep 2026: prep 3523968 (exit 0, seed beams checked and
+clean) -> sweep 3524014_0 -> collect 3524017.  Restricted to the four new
+subarrays, so the released curves for the other fourteen cannot be touched
+(decision D14).  Plan and harvest steps: `docs/plans/spiral-plus-campaign-plan.md`
+(tasks S5 to S7); rolling status `docs/worklog/spiral-plus.md`.
+
+```bash
+# what was launched (prep first, gate on the seed beams, then the rest)
+bash /home1/10240/bmason72/Code/ngvla_subarrays/curvegen/submit_campaign.sh \
+  revF track --prep-only \
+  --subarrays "spiral+5 spiral+10 mid+spiral+5 mid+spiral+10" \
+  --time 48:00:00
+# then the sweep/collect lines --prep-only prints (they carry the dependency
+# and the array size; the restricted run is a single array task)
+
+squeue -u bmason72 -o "%.18i %.22j %.10T %.12M %.6D %R"
+```
+
+The prep log does NOT print the seed beams despite saying "inspect the seed
+beams above" — read them out of `curvegen/results/<name>.csv` (the natural
+and robust=-2 rows at taper 0).
+
+
 ## MFS snapshot production run (Band 4 internal key) — COMPLETE (harvested 8 Sep 2026)
 
 Launched by bmason 7 Sep 2026 ~12:15 CDT (prep 3475087 -> sweep 3475088 ->
@@ -8,7 +38,8 @@ found 0 defects, 419 tests green — see `docs/worklog/mfs-campaigns.md` 8 Sep).
 The command below is kept for reference and for future combos; no relaunch is
 needed for this combo.
 
-No campaign freeze is currently active (nothing queued or running): while a
+No campaign freeze was active when this section was written; one IS active
+now (see the top of this file).  The rule: while a
 campaign stage IS queued or running, do not edit `curvegen/`, `sa_select/`, or
 `sa_select/data/*.csv` on `main` — each Slurm stage re-imports them from this
 checkout when it starts, so code work goes in a separate git worktree and

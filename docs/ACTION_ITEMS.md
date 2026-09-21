@@ -11,7 +11,7 @@ open items at the top of each table.
 
 | # | Raised | Needs from bmason | Context |
 | --- | --- | --- | --- |
-| A15 | 21 Sep 2026 | **Launch the spiral+5/+10 campaign.** Prep first (command in `docs/plans/spiral-plus-campaign-plan.md` S5), eyeball the seed beams, then sweep per S6. Code is committed (892da6c) and preflighted; nothing runs until you submit. | `docs/plans/spiral-plus-campaign-plan.md`; `docs/worklog/spiral-plus.md` 21 Sep |
+| A15 | 21 Sep 2026 | **Campaign launched, freeze active.** prep 3523968 (done, seed beams clean) -> sweep 3524014_0 -> collect 3524017. Nothing needed from you until it lands; then review the four curves, especially whether spiral+10's high natural skirt argues for a beam cap after all (D15). | `docs/worklog/spiral-plus.md` 21 Sep; `docs/plans/spiral-plus-campaign-plan.md` S7 |
 | A14 | 8 Sep 2026 | Possible later (not prioritised, bmason 8 Sep): more simulations to separate snapshot sparsity from bandwidth filling — the registered `revF/track/band4` MFS track run and/or a small mono-snapshot pilot at smaller imsize. | `docs/worklog/mfs-campaigns.md` 8 Sep; `docs/worklog/mfs-leverage-consult-2026-09-08.md` |
 | A12 | 7 Sep 2026 | Read the open questions in the curve-product design note and answer them before any refactor work is scheduled. | `docs/architecture/curve-product-design.md` "Open questions for bmason" |
 | A11 | 7 Sep 2026 | Decide whether to pursue more sweep parallelism (pylauncher) once this run's timing is known. Optional. | wishlist item 3; `docs/worklog/wishlist-consult-2026-09-07.md` |
