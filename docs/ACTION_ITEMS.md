@@ -11,13 +11,14 @@ open items at the top of each table.
 
 | # | Raised | Needs from bmason | Context |
 | --- | --- | --- | --- |
+| A15 | 21 Sep 2026 | **Launch the spiral+5/+10 campaign.** Prep first (command in `docs/plans/spiral-plus-campaign-plan.md` S5), eyeball the seed beams, then sweep per S6. Code is committed (892da6c) and preflighted; nothing runs until you submit. | `docs/plans/spiral-plus-campaign-plan.md`; `docs/worklog/spiral-plus.md` 21 Sep |
 | A14 | 8 Sep 2026 | Possible later (not prioritised, bmason 8 Sep): more simulations to separate snapshot sparsity from bandwidth filling — the registered `revF/track/band4` MFS track run and/or a small mono-snapshot pilot at smaller imsize. | `docs/worklog/mfs-campaigns.md` 8 Sep; `docs/worklog/mfs-leverage-consult-2026-09-08.md` |
 | A12 | 7 Sep 2026 | Read the open questions in the curve-product design note and answer them before any refactor work is scheduled. | `docs/architecture/curve-product-design.md` "Open questions for bmason" |
 | A11 | 7 Sep 2026 | Decide whether to pursue more sweep parallelism (pylauncher) once this run's timing is known. Optional. | wishlist item 3; `docs/worklog/wishlist-consult-2026-09-07.md` |
 | A10 | 7 Sep 2026 | Delete (or explain) the stray empty directory `~/Code/skills/mkdir`. | `docs/worklog/mfs-campaigns.md` 7 Sep |
 | A9 | 7 Sep 2026 | Two optional pilots proposed by the tclean consult: paired Briggs+taper points at fixed vs grown FOV; a small MT-MFS nterms=2 tt0 subset. Say yes, no, or later. | `docs/worklog/mfs-tclean-consult-2026-09-07.md`; D9 in `docs/worklog/mfs-campaigns.md` |
 | A8 | 7 Sep 2026 | Define the LONG combos rule (which short baselines involving LONG are filtered; the old utilities cut at ~150 m). Needed before any LONG subarray is added. | wishlist item 4; `artifacts/saUtil.py` `filter_spurious_shorts` |
-| A7 | 7 Sep 2026 | Decide which further campaigns to run after reviewing this one: remaining Rev F MFS subarrays; spiral+5/+10 (mono and/or MFS). | wishlist item 5; `docs/worklog/spiral-plus.md` |
+| A7 | 7 Sep 2026 | Decide which further campaigns to run: remaining Rev F MFS subarrays. (The spiral+5/+10 half is answered — D12, 21 Sep 2026: revF/track only for now.) | wishlist item 5; `docs/worklog/spiral-plus.md` |
 | A6 | 7 Sep 2026 | Review the ngVLA imaging skill draft: `skills/ngvla-imaging/SKILL.md` + `references/` (5 files); install per `docs/ops/SKILLS_INSTALL.md` once approved. | wishlist item 7 |
 | A5 | 7 Sep 2026 | Choose install scope for the ALMA and radio-analyst skills (Claude Code personal vs project; Codex) and run the install commands agents may not run. Instructions: `docs/ops/SKILLS_INSTALL.md` (ready; commit 81dedb5). | wishlist item 8; `~/Code/skills/` |
 | A4 | 7 Sep 2026 | Approve merging `feature/curve-limits` into main. (`feature/spiral-plus` merged 21 Sep 2026, D13; no longer part of this item.) | `docs/plans/NEXT_AGENT.md` "Pending merges" |

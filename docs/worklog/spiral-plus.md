@@ -162,3 +162,51 @@ spiral+10 = spiral+5 + {cor080, cor082, cor068, cor109, cor102} = 64 antennas.
 - Nothing else in `curvegen/`, `sa_select/`, or the data CSVs was touched
   beyond what's listed above. Next: task S1 (define the two `mid+spiral+N`
   combos and their metadata).
+
+### 2026-09-21 (later) — S1 to S4 landed; ready for bmason to launch
+
+Commit `892da6c`.  bmason approved the selection from
+`docs/figures/spiral_plus_selection.png` and took decisions D12 to D15; the
+plan is `docs/plans/spiral-plus-campaign-plan.md`.
+
+Built (S1): `mid+spiral+5` / `mid+spiral+10` defined; all four given IMSIZE
+entries (4096 for the two `spiral+N`, 8192 for the two `mid+spiral+N`);
+`_DONOR_N_ANT` sensitivity anchors; four appended rows in the authoritative
+`sa_select/data/subarrays.csv`; `ORDER` slots in the report; the packaged
+`baseline_geometry.json.gz` regenerated (verified additive: revC and revD
+byte-identical, revF gained exactly the four).  Geometry was computed from
+the built cfgs and matched the plan's arithmetic exactly.
+
+Built (S2/S3): `NGVLA_SUBARRAYS` restriction plus `--subarrays` on
+`submit_campaign.sh`; fail-closed preflight in `campaign_tasks.groups()`
+for offered-but-unbuildable/unsizeable subarrays.
+
+Architect review found the restriction **failed open**: the value rides
+inside Slurm's comma-delimited `--export` list, the natural CLI form puts
+spaces in it, and a lost value read as "no restriction" — i.e. a full sweep
+over the released subarrays, looking like a normal run.  Hardened: colon
+normalization plus an `NGVLA_SUBARRAYS_N` companion count that aborts on
+mismatch.
+
+Also fixed: `export_ngect` could not tolerate an offered-but-unmeasured
+subarray, which is the normal state between adding a metadata row and
+finishing the campaign.  It now skips them, warns, and records them in
+`_meta`; a subarray with samples but no natural anchor still raises.
+Report build, selector and CLI were checked and already degrade sensibly
+(the four come back infeasible with "no curve data tabulated").
+
+S4 preflight (all verified by the architect):
+
+| check | result |
+| --- | --- |
+| unrestricted `narray` (must be unchanged) | 6 |
+| restricted `groups` | one task, all four (all light) |
+| restricted `narray` / `seeds` | 1 / the four |
+| companion count lost | aborts, exit 1 |
+| unknown name | aborts, names the offender |
+| caps | none of the four capped (D15) |
+| full grid | 12 rows x 15 tapers = 180 points per subarray |
+
+Suite: 518 tests, OK, 1 pre-existing unrelated skip.
+
+**Next: bmason launches S5 (prep), checks the seed beams, then S6.**
