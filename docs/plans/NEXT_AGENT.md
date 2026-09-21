@@ -42,18 +42,20 @@ still applies whenever a stage IS queued or running.
 
 Collect 3475089 checked and the campaign data harvested 8 Sep 2026 (see
 START HERE above).  `fix/psf-export-band` (commit 7016330) merged to main
-8 Sep 2026.  Still pending, per A4:
+8 Sep 2026.  `feature/spiral-plus` merged to main 21 Sep 2026 (D13; task S0
+of `docs/plans/spiral-plus-campaign-plan.md`), including a fix for the
+latent MFS `KeyError` bug (the branch's `spiral+5`/`spiral+10` rows were
+removed from both Band-4 MFS metadata CSVs — those two subarrays are out of
+scope for MFS per D12).  Still pending, per A4:
 
 | Branch | Worktree | What | Tests there |
 | --- | --- | --- | --- |
-| `feature/spiral-plus` | `/work2/10240/bmason72/stampede3/ngvla_wt_spiral` | spiral+5 / spiral+10 Rev F subarrays (defined, not offered), `make_spiral_plus.py`, metadata rows, figure | 433 green |
 | `feature/curve-limits` | `/work2/10240/bmason72/stampede3/ngvla_wt_curvelimits` | manual per-curve valid range: `sa_select/data/curve_limits.csv` (header only), limits at `Envelope.solve`, report/calculator agreement | 458 green |
 
-Merge order: harvest and commit the campaign data first; then `feature/curve-limits`
-(pure code, inert until rows are added); then `feature/spiral-plus` (touches the
-subarray metadata CSVs, so re-check any downstream CSV row-count tests).  Run the
-full suite on main after each merge.  bmason confirmed the spiral+5/+10 selection 7 Sep (D11); update the branch's
-`docs/worklog/spiral-plus.md` wording at merge.  Docs-only items
+Note: `feature/curve-limits` edits `curvegen/make_report.py`, which task S1
+of `docs/plans/spiral-plus-campaign-plan.md` also edits (its `ORDER` list) —
+expect a small merge conflict there whenever curve-limits is finally taken,
+in whichever order the two land.  Docs-only items
 landed directly on main: glossary + audit fixes (5e18e3d), curve-product design note
 (263bd2e).
 

@@ -125,3 +125,40 @@ spiral+10 = spiral+5 + {cor080, cor082, cor068, cor109, cor102} = 64 antennas.
   (1 skip, pre-existing/unrelated), ~59 s.
 - Not committed (per task instructions); worktree diff is additive except
   for the two row-count assertions above.
+
+### 2026-09-21 -- S0: merged to main, MFS latent bug fixed
+
+- Task S0 of `docs/plans/spiral-plus-campaign-plan.md`. Committed in the
+  worktree (`a49eaaa`) after two changes: reworded the "Decisions needed"
+  line above (D11 confirmed 7 Sep, re-approved 21 Sep after
+  `docs/figures/spiral_plus_selection.png`); and resolved the branch's
+  latent MFS bug (fact 5 in the campaign plan) by removing the `spiral+5`/
+  `spiral+10` rows the branch had added to
+  `subarrays_revf_mfs_band4_snapshot.csv` and
+  `subarrays_revf_mfs_band4_track.csv` -- those names were never added to
+  `config.MFS_SUBARRAYS`, and MFS mode filters `config.SUBARRAYS`/`IMSIZE`
+  to that set, so a future Band-4 run would have offered them and then hit
+  a `KeyError`. Both files are now byte-identical to their pre-branch
+  state. Reverted the associated row-count assertion in
+  `tests/test_mfs_campaign.py` (9 -> 7). `subarrays_revf_snapshot.csv` (the
+  mono snapshot combo) keeps its two new rows, per D12 (revF/track only).
+- Merged to `main` with `git merge --no-ff` (`45d1782`). One conflict, in
+  this file (`docs/worklog/spiral-plus.md` add/add): main already carried
+  a stub reflecting the D11 confirmation from when the campaign plan was
+  authored; merged it with the branch's 21 Sep re-approval note.
+- Post-merge full suite caught a regression the merge itself introduced:
+  `tests/test_spiral_plus.py::TestSpiralPlusMetadataRows.test_rows_present_and_parse`
+  still asserted `spiral+5`/`spiral+10` rows in all three
+  `subarrays_revf_*.csv` files, including the two MFS ones just emptied of
+  those rows. Fixed on `main` (`644467f`): narrowed that test to the mono
+  snapshot CSV and added `test_absent_from_mfs_band4_csvs` asserting the
+  opposite for the two MFS CSVs.
+- Full suite on `main` after both commits: `casapy -m unittest discover -s
+  tests -t .` -> **483 tests, OK (1 unrelated skip), ~66 s.**
+- `docs/ACTION_ITEMS.md` A4 reworded to cover `feature/curve-limits` only
+  (spiral-plus merged, D13); `docs/plans/NEXT_AGENT.md` "Pending merges"
+  updated to match, noting the expected `curvegen/make_report.py` conflict
+  between `feature/curve-limits` and task S1's `ORDER` edit.
+- Nothing else in `curvegen/`, `sa_select/`, or the data CSVs was touched
+  beyond what's listed above. Next: task S1 (define the two `mid+spiral+N`
+  combos and their metadata).

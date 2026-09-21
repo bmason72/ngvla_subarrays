@@ -20,7 +20,7 @@ open items at the top of each table.
 | A7 | 7 Sep 2026 | Decide which further campaigns to run after reviewing this one: remaining Rev F MFS subarrays; spiral+5/+10 (mono and/or MFS). | wishlist item 5; `docs/worklog/spiral-plus.md` |
 | A6 | 7 Sep 2026 | Review the ngVLA imaging skill draft: `skills/ngvla-imaging/SKILL.md` + `references/` (5 files); install per `docs/ops/SKILLS_INSTALL.md` once approved. | wishlist item 7 |
 | A5 | 7 Sep 2026 | Choose install scope for the ALMA and radio-analyst skills (Claude Code personal vs project; Codex) and run the install commands agents may not run. Instructions: `docs/ops/SKILLS_INSTALL.md` (ready; commit 81dedb5). | wishlist item 8; `~/Code/skills/` |
-| A4 | 7 Sep 2026 | Approve merging `feature/curve-limits` then `feature/spiral-plus` into main after the harvest commit. | `docs/plans/NEXT_AGENT.md` "Pending merges" |
+| A4 | 7 Sep 2026 | Approve merging `feature/curve-limits` into main. (`feature/spiral-plus` merged 21 Sep 2026, D13; no longer part of this item.) | `docs/plans/NEXT_AGENT.md` "Pending merges" |
 | A3 | 7 Sep 2026 | Review the Rev F MFS snapshot report view (PSF panels present since 8 Sep) and the robust-axis behaviour; confirm the committed band4 curves are acceptable for production use. | `docs/ops/RUN_CAMPAIGNS.md` top section; `docs/worklog/mfs-campaigns.md` |
 | A2 | 18 Aug 2026 | Memo T6: review comments beyond the section 4 paragraph 1 stop marker in `memo/myComments.tex`; then the final editorial pass and release tag. | `docs/plans/RELEASE_PLAN.md` T6 |
 | A1 | 7 Sep 2026 | Add rows to `sa_select/data/curve_limits.csv` only when a curve needs a manual valid range (none yet). | `docs/worklog/curve-limits.md` (branch `feature/curve-limits`) |
