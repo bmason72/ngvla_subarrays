@@ -54,7 +54,15 @@ SOURCE_TAG = ("%s_%s_%s-mfs" % (REV, SIM_MODE, BAND) if MFS
 def offered_subarrays():
     """Subarrays the selector offers (rows of the active combo's subarrays
     CSV).  Result files for other subarrays (e.g. in-progress campaign members,
-    or the dropped core+mid) are skipped until their metadata lands."""
+    or the dropped core+mid) are skipped until their metadata lands.
+
+    Deliberately reads the WHOLE metadata CSV and does NOT honour
+    NGVLA_SUBARRAYS (campaign_tasks.py's opt-in restriction, D14 in
+    docs/plans/spiral-plus-campaign-plan.md): collect.py rewrites the entire
+    routed curves CSV from a sorted glob of the per-subarray result files, so
+    if it were subset too, every already-released subarray's rows would be
+    dropped from the output, not just left untouched.  A restricted sweep
+    must still be collected against the full offered set."""
     with open(SUBARRAYS_CSV, newline="") as f:
         return {r["name"].strip() for r in csv.DictReader(f)}
 

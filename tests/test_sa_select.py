@@ -792,7 +792,7 @@ class TestConfigRegistry(unittest.TestCase):
         from sa_select.curves import load_subarrays, load_registry, DATA_DIR
         reg = load_registry()
         counts = {("revD", "track"): 9, ("revF", "snapshot"): 16,
-                  ("revC", "track"): 9}
+                  ("revC", "track"): 9, ("revF", "track"): 18}
         for combo, n in counts.items():
             subs_csv, _ = reg[combo]
             info = load_subarrays(os.path.join(DATA_DIR, subs_csv))

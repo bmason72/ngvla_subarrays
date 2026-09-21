@@ -18,7 +18,7 @@ from scipy.interpolate import PPoly
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sa_select import export_ngect
-from sa_select.curves import CurveLibrary
+from sa_select.curves import CurveLibrary, CurveSample, SubarrayInfo
 
 
 class TestNgectExport(unittest.TestCase):
@@ -31,14 +31,72 @@ class TestNgectExport(unittest.TestCase):
         cls.lib = CurveLibrary()
         with open(cls.out_path) as handle:
             cls.data = json.load(handle)
+        # Names offered in subarrays.csv (the metadata/offered set) with zero
+        # tabulated curve samples: legitimately skipped by build_export, per
+        # docs/plans/spiral-plus-campaign-plan.md (offered before their
+        # campaign sweep has run).  Recomputed from the library rather than
+        # hardcoded so this test tracks reality as the campaign fills in.
+        cls.dataless_names = {
+            name for name in cls.lib.names() if not cls.lib.samples.get(name)
+        }
+        cls.measured_names = [
+            name for name in cls.lib.names() if name not in cls.dataless_names
+        ]
 
     @classmethod
     def tearDownClass(cls):
         cls.tmp.cleanup()
 
+    def test_dataless_offered_subarrays_are_skipped_and_recorded(self):
+        # Sanity: this repo state (docs/plans/spiral-plus-campaign-plan.md
+        # S1) actually exercises the skip path -- spiral+5/+10 and
+        # mid+spiral+5/+10 are offered but not yet measured.
+        self.assertTrue(self.dataless_names)
+        for name in self.dataless_names:
+            with self.subTest(subarray=name):
+                self.assertNotIn(name, self.data)
+        meta = self.data["_meta"]
+        self.assertEqual(set(meta["skipped_subarrays"]), self.dataless_names)
+        self.assertIn("skipped_subarrays_reason", meta)
+
+    def test_meta_skipped_subarrays_empty_when_nothing_skipped(self):
+        # A real, fully-measured subarray (from the packaged library) in
+        # isolation: nothing to skip, so _meta must show it empty.
+        lib = CurveLibrary.from_tables(
+            subarrays={"core": self.lib.subarrays["core"]},
+            samples={"core": self.lib.samples["core"]},
+        )
+        data, _ = export_ngect.build_export(lib)
+        self.assertEqual(data["_meta"]["skipped_subarrays"], [])
+        self.assertNotIn("skipped_subarrays_reason", data["_meta"])
+        self.assertIn("core", data)
+
+    def test_some_samples_but_no_natural_anchor_still_raises(self):
+        # Distinguishes genuine data corruption (some samples tabulated, but
+        # not exactly one natural-untapered ok sample) from the legitimate
+        # "zero samples yet" skip case: this must keep raising.
+        lib = CurveLibrary.from_tables(
+            subarrays={
+                "broken": SubarrayInfo(
+                    name="broken", components="broken", n_ant=50,
+                    b_min_m=10.0, b_max_m=1000.0, las_coeff=0.8,
+                ),
+            },
+            samples={
+                "broken": [
+                    CurveSample(subarray="broken", resolution=0.05, eta=1.5,
+                                weighting="briggs", skirt=0.05, robust=0.5,
+                                taper=None, freq_orig=30.0, source="t",
+                                note=""),
+                ],
+            },
+        )
+        with self.assertRaisesRegex(ValueError, "0 natural untapered ok samples"):
+            export_ngect.build_export(lib)
+
     def test_all_subarrays_and_legacy_fields_present(self):
         self.assertIn("_meta", self.data)
-        for name in self.lib.names():
+        for name in self.measured_names:
             with self.subTest(subarray=name):
                 self.assertIn(name, self.data)
                 entry = self.data[name]
@@ -69,7 +127,7 @@ class TestNgectExport(unittest.TestCase):
         self.assertLessEqual(theta, 720.0)
 
     def test_native_theta_matches_loaded_natural_untapered_samples(self):
-        for name in self.lib.names():
+        for name in self.measured_names:
             with self.subTest(subarray=name):
                 self.assertAlmostEqual(
                     self.data[name]["theta_nat_30_GHz"],
@@ -79,7 +137,7 @@ class TestNgectExport(unittest.TestCase):
 
     def test_splines_reproduce_export_dense_curves(self):
         worst = 0.0
-        for name in self.lib.names():
+        for name in self.measured_names:
             for curve_key in (export_ngect.CURVE_POINT_SOURCE, export_ngect.CURVE_IMAGING):
                 with self.subTest(subarray=name, curve=curve_key):
                     curve = export_ngect.build_export_curve(self.lib, name, curve_key)
@@ -115,7 +173,7 @@ class TestNgectExport(unittest.TestCase):
             "main+long",
             "long+mid+spiral+core-outer",
         }
-        for name in self.lib.names():
+        for name in self.measured_names:
             with self.subTest(subarray=name):
                 policy = self.data[name]["curves"][export_ngect.CURVE_IMAGING][
                     "selection_policy"

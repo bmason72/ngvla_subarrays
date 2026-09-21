@@ -50,7 +50,9 @@ ORDER = ["core", "spiral", "mid", "core+spiral", "spiral+mid",
          # memo-121 long-baseline + outer-core campaign (added 7 Jul 2026)
          "long", "mid+long", "spiral+mid+long", "main+long",
          "spiral+core-outer", "mid+spiral+core-outer",
-         "long+mid+spiral+core-outer"]   # core+mid measured but dropped
+         "long+mid+spiral+core-outer",   # core+mid measured but dropped
+         # spiral+5/+10, mid+spiral+5/+10 (S1, docs/plans/spiral-plus-campaign-plan.md)
+         "spiral+5", "spiral+10", "mid+spiral+5", "mid+spiral+10"]
 
 
 GRID_DEX = 0.01      # target-resolution grid spacing of the plotted curves

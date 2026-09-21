@@ -27,6 +27,7 @@ import json
 import math
 import os
 import re
+import sys
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -71,8 +72,8 @@ class SplineStats:
     curve_errors: Dict[Tuple[str, str], float]
 
 
-def _meta() -> Dict[str, object]:
-    return {
+def _meta(skipped_subarrays: Optional[Sequence[str]] = None) -> Dict[str, object]:
+    meta: Dict[str, object] = {
         "generator": GENERATOR,
         "data_provenance": "sa_select/data/revf_curves.csv (curvegen collect.py)",
         "rev": "revF",
@@ -101,7 +102,17 @@ def _meta() -> Dict[str, object]:
             "knots are inserted adaptively until dense-grid relative error is "
             "below %.3g" % MAX_RELATIVE_SPLINE_ERROR
         ),
+        "skipped_subarrays": list(skipped_subarrays or []),
     }
+    if meta["skipped_subarrays"]:
+        meta["skipped_subarrays_reason"] = (
+            "offered in subarrays.csv (the offered set) but zero curve "
+            "samples are tabulated yet for this subarray -- it is awaiting "
+            "its curvegen campaign sweep (legitimate, temporary; see "
+            "docs/plans/spiral-plus-campaign-plan.md). This export is "
+            "partial: these subarrays have no entry below."
+        )
+    return meta
 
 
 def _log10_theta_mas(point) -> float:
@@ -327,14 +338,36 @@ def build_subarray_entry(lib: CurveLibrary, name: str) -> Tuple[Dict[str, object
 
 def build_export(lib: Optional[CurveLibrary] = None) -> Tuple[Dict[str, object], SplineStats]:
     lib = lib or CurveLibrary()
-    out: Dict[str, object] = {"_meta": _meta()}
     curve_errors: Dict[Tuple[str, str], float] = {}
+    skipped: List[str] = []
+    entries: Dict[str, object] = {}
 
     for name in lib.names():
+        # A subarray can be offered (a row in subarrays.csv) before its
+        # curvegen campaign sweep has produced any tabulated samples -- that
+        # is legitimate and temporary (see
+        # docs/plans/spiral-plus-campaign-plan.md).  Skip it, but loudly: a
+        # subarray with *some* samples that still fails to resolve exactly
+        # one natural-untapered anchor is genuine data corruption and must
+        # keep raising (theta_nat_30_ghz_mas below).
+        if not lib.samples.get(name):
+            skipped.append(name)
+            continue
         entry, errors = build_subarray_entry(lib, name)
-        out[name] = entry
+        entries[name] = entry
         for curve_key, error in errors.items():
             curve_errors[(name, curve_key)] = error
+
+    if skipped:
+        print(
+            "export_ngect: WARNING skipping %d offered subarray(s) with no "
+            "tabulated curve samples yet (awaiting campaign sweep): %s"
+            % (len(skipped), ", ".join(skipped)),
+            file=sys.stderr,
+        )
+
+    out: Dict[str, object] = {"_meta": _meta(skipped_subarrays=skipped)}
+    out.update(entries)
 
     max_error = max(curve_errors.values()) if curve_errors else 0.0
     return out, SplineStats(max_relative_error=max_error, curve_errors=curve_errors)
@@ -362,7 +395,9 @@ def write_qa_plots(lib: CurveLibrary, data: Dict[str, object], qa_dir: str) -> N
     import matplotlib.pyplot as plt
 
     os.makedirs(qa_dir, exist_ok=True)
-    for name in lib.names():
+    # `data` omits any offered subarray build_export skipped for lack of
+    # tabulated samples (see build_export) -- plot only what was exported.
+    for name in [n for n in lib.names() if n in data]:
         fig, axes = plt.subplots(2, 1, figsize=(7.0, 6.2), sharex=False)
         for ax, curve_key in zip(axes, (CURVE_POINT_SOURCE, CURVE_IMAGING)):
             curve = build_export_curve(lib, name, curve_key)

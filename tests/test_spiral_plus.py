@@ -147,18 +147,26 @@ class TestSpiralPlusConfig(unittest.TestCase):
         for name, components in _PRE_EXISTING_REVF_SUBARRAYS.items():
             self.assertEqual(config.SUBARRAYS[name], components,
                              "subarray %r membership changed" % name)
-        # additive only: the two new subarrays plus the pre-existing ones,
-        # nothing dropped
+        # additive only: the four new subarrays plus the pre-existing ones,
+        # nothing dropped (S1 adds mid+spiral+5/10 alongside the S0
+        # spiral+5/10 pair)
         self.assertEqual(
             set(config.SUBARRAYS),
-            set(_PRE_EXISTING_REVF_SUBARRAYS) | {"spiral+5", "spiral+10"})
+            set(_PRE_EXISTING_REVF_SUBARRAYS)
+            | {"spiral+5", "spiral+10", "mid+spiral+5", "mid+spiral+10"})
+
+    def test_mid_spiral_plus_components(self):
+        import config
+        self.assertEqual(config.SUBARRAYS["mid+spiral+5"],
+                         ["mid", "spiral", "core-spiral+5"])
+        self.assertEqual(config.SUBARRAYS["mid+spiral+10"],
+                         ["mid", "spiral", "core-spiral+10"])
 
     def test_spiral_plus_absent_from_run_and_mfs_sets(self):
         import config
-        self.assertNotIn("spiral+5", config.RUN_SET)
-        self.assertNotIn("spiral+10", config.RUN_SET)
-        self.assertNotIn("spiral+5", config.MFS_SUBARRAYS)
-        self.assertNotIn("spiral+10", config.MFS_SUBARRAYS)
+        for name in ("spiral+5", "spiral+10", "mid+spiral+5", "mid+spiral+10"):
+            self.assertNotIn(name, config.RUN_SET)
+            self.assertNotIn(name, config.MFS_SUBARRAYS)
 
     def test_mfs_subarrays_unaffected_in_mfs_mode(self):
         # config freezes (rev, sim_mode, MFS) at import; validate the MFS
@@ -169,6 +177,8 @@ class TestSpiralPlusConfig(unittest.TestCase):
             "import config\n"
             "assert 'spiral+5' not in config.SUBARRAYS, config.SUBARRAYS\n"
             "assert 'spiral+10' not in config.SUBARRAYS, config.SUBARRAYS\n"
+            "assert 'mid+spiral+5' not in config.SUBARRAYS, config.SUBARRAYS\n"
+            "assert 'mid+spiral+10' not in config.SUBARRAYS, config.SUBARRAYS\n"
             "assert sorted(config.SUBARRAYS) == sorted(config.MFS_SUBARRAYS)\n"
         ) % CURVEGEN
         env = dict(os.environ, NGVLA_REV="revF", NGVLA_SIM_MODE="track",
@@ -216,13 +226,95 @@ class TestSpiralPlusMetadataRows(unittest.TestCase):
             self.assertNotIn("spiral+5", info, fname)
             self.assertNotIn("spiral+10", info, fname)
 
-    def test_not_added_to_default_authoritative_csv(self):
-        # subarrays.csv (revF/track, the release/offered default) is
-        # hand-maintained and out of scope for this spec.
+
+class TestSpiralPlusOfferedInDefaultCsv(unittest.TestCase):
+    """S1 (docs/plans/spiral-plus-campaign-plan.md): all four names are now
+    offered in the authoritative revF/track subarrays.csv, with geometry
+    computed from the built cfg files."""
+
+    # n_ant, b_min_m, b_max_m computed by build_configs.py / baseline_stats
+    # (verified against the plan's Goal table, 21 Sep 2026)
+    EXPECTED = {
+        "spiral+5": (59, 403.86, 39270.01),
+        "spiral+10": (64, 287.52, 39270.01),
+        "mid+spiral+5": (105, 403.86, 1272904.19),
+        "mid+spiral+10": (110, 287.52, 1272904.19),
+    }
+
+    # the 14 rows that existed in subarrays.csv before S1 (name -> n_ant),
+    # to prove the append left them byte-identical
+    _PRE_EXISTING_NAMES = [
+        "core-inner", "core", "spiral", "mid", "core+spiral", "spiral+mid",
+        "main", "long", "mid+long", "spiral+mid+long", "main+long",
+        "spiral+core-outer", "mid+spiral+core-outer",
+        "long+mid+spiral+core-outer",
+    ]
+
+    def test_rows_present_with_computed_geometry(self):
         from sa_select.curves import load_subarrays, DATA_DIR
         info = load_subarrays(os.path.join(DATA_DIR, "subarrays.csv"))
-        self.assertNotIn("spiral+5", info)
-        self.assertNotIn("spiral+10", info)
+        for name, (n_ant, b_min, b_max) in self.EXPECTED.items():
+            self.assertIn(name, info, name)
+            row = info[name]
+            self.assertEqual(row.n_ant, n_ant, name)
+            self.assertAlmostEqual(row.b_min_m, b_min, places=1, msg=name)
+            self.assertAlmostEqual(row.b_max_m, b_max, places=1, msg=name)
+            self.assertIsNone(row.beam_cap_arcsec,
+                              "%s should be uncapped (D15)" % name)
+
+    def test_existing_rows_unchanged(self):
+        # pre-existing rows must be untouched by the append (n_ant is a
+        # cheap, sensitive proxy for "row unchanged")
+        from sa_select.curves import load_subarrays, DATA_DIR
+        info = load_subarrays(os.path.join(DATA_DIR, "subarrays.csv"))
+        expected_n_ant = {
+            "core-inner": 57, "core": 114, "spiral": 54, "mid": 46,
+            "core+spiral": 168, "spiral+mid": 100, "main": 214, "long": 30,
+            "mid+long": 76, "spiral+mid+long": 130, "main+long": 244,
+            "spiral+core-outer": 111, "mid+spiral+core-outer": 157,
+            "long+mid+spiral+core-outer": 187,
+        }
+        self.assertEqual(set(info) - set(self.EXPECTED),
+                         set(self._PRE_EXISTING_NAMES))
+        for name in self._PRE_EXISTING_NAMES:
+            self.assertEqual(info[name].n_ant, expected_n_ant[name], name)
+
+
+class TestSpiralPlusReportAndSensitivity(unittest.TestCase):
+    """S1: report ORDER/offered_order and the sensitivity donor rescale."""
+
+    NAMES = ["spiral+5", "spiral+10", "mid+spiral+5", "mid+spiral+10"]
+
+    def test_all_four_in_make_report_order(self):
+        import make_report
+        for name in self.NAMES:
+            self.assertIn(name, make_report.ORDER)
+
+    def test_all_four_in_offered_order_for_subarrays_csv(self):
+        import make_report
+        from sa_select.curves import DATA_DIR
+        offered = make_report.offered_order(
+            os.path.join(DATA_DIR, "subarrays.csv"))
+        for name in self.NAMES:
+            self.assertIn(name, offered)
+
+    def test_natural_rms_resolves_without_raising(self):
+        from sa_select import sensitivity
+        for name in self.NAMES:
+            rms = sensitivity.natural_rms(name, 30.0, t_obs_hr=1.0)
+            self.assertGreater(rms, 0.0, name)
+
+    def test_mid_spiral_plus_is_superset_of_spiral_plus(self):
+        # antenna-count check standing in for a true set check: mid+spiral+N
+        # = mid + spiral+N by construction (config.SUBARRAYS), so its n_ant
+        # must equal spiral+N's n_ant plus mid's 46.
+        from sa_select.curves import load_subarrays, DATA_DIR
+        info = load_subarrays(os.path.join(DATA_DIR, "subarrays.csv"))
+        for base, combo in (("spiral+5", "mid+spiral+5"),
+                            ("spiral+10", "mid+spiral+10")):
+            self.assertEqual(info[combo].n_ant, info[base].n_ant + 46,
+                             "%s should be %s plus mid's 46 antennas"
+                             % (combo, base))
 
 
 if __name__ == "__main__":

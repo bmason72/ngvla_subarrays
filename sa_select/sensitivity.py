@@ -50,6 +50,13 @@ _DONOR_N_ANT = {
     "mid+spiral+core-outer": 157,
     "spiral+mid+long": 130,
     "long+mid+spiral+core-outer": 187,
+    # spiral+5/+10, mid+spiral+5/+10 (S1, docs/plans/spiral-plus-campaign-plan.md):
+    # computed antenna counts from the built cfg files (curvegen/build_configs.py),
+    # same donor-rescale approach as the other combos with no calculator entry.
+    "spiral+5": 59,
+    "spiral+10": 64,
+    "mid+spiral+5": 105,
+    "mid+spiral+10": 110,
 }
 CORE_MID_N_ANT = _DONOR_N_ANT["core+mid"]   # kept for callers/tests
 

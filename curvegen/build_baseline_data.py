@@ -45,11 +45,13 @@ REVISIONS = ("revC", "revD", "revF")
 
 _EXTRACT = r'''
 import json
-from build_configs import read_antenna_lines, inner_core_lines, outer_core_lines
+from build_configs import (read_antenna_lines, inner_core_lines,
+                           outer_core_lines, spiral_plus_core_lines)
 from config import SUBARRAYS
 def lines(component):
     if component == "core-inner": return inner_core_lines()
     if component == "core-outer": return outer_core_lines()
+    if component.startswith("core-spiral+"): return spiral_plus_core_lines(component)
     return read_antenna_lines(component)
 print(json.dumps({
     "subarrays": {name: [line.rstrip() for part in parts for line in lines(part)]

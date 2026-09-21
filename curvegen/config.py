@@ -238,6 +238,10 @@ _SUBARRAYS = {
         # (the offered/run sets), per spec: no campaign runs for these yet.
         "spiral+5": ["spiral", "core-spiral+5"],
         "spiral+10": ["spiral", "core-spiral+10"],
+        # mid+spiral+N (S1, docs/plans/spiral-plus-campaign-plan.md): name
+        # order follows the existing mid+spiral+core-outer precedent.
+        "mid+spiral+5": ["mid", "spiral", "core-spiral+5"],
+        "mid+spiral+10": ["mid", "spiral", "core-spiral+10"],
     },
     # Rev D offered set (bmason, docs/archive/plans/campaign_proposal_revd_snapshot.md): mirror the
     # Rev F structure where components exist.  Rev D has no core-inner/core-outer
@@ -299,6 +303,12 @@ _IMSIZE = {
         "spiral+core-outer": 8192,
         "mid+spiral+core-outer": 15000,
         "long+mid+spiral+core-outer": 15000,
+        # spiral+5/+10 mirror plain spiral (same b_max, uncapped); mid+spiral+N
+        # mirror spiral+mid (S1, docs/plans/spiral-plus-campaign-plan.md).
+        "spiral+5": 4096,
+        "spiral+10": 4096,
+        "mid+spiral+5": 8192,
+        "mid+spiral+10": 8192,
     },
     # Rev D mirrors the Rev F imsize choices for the shared subarray shapes.
     "revD": {
