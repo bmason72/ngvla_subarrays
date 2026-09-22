@@ -53,35 +53,75 @@ plt.rcParams.update({
     "savefig.bbox": "tight",
 })
 
-# Okabe-Ito colorblind-safe qualitative palette (8 colors, skip pale yellow
-# for print contrast -> 7 usable + black), reused per-panel (compact family /
-# long-baseline family are never shown together so reuse is unambiguous).
-PALETTE = ["#0072B2", "#D55E00", "#009E73", "#CC79A7",
-           "#E69F00", "#56B4E9", "#000000"]
+# Paul Tol "muted" qualitative palette: 9 colors, colorblind-safe and legible
+# in greyscale print, ordered so the first few are maximally separated.  Nine
+# are needed because the non-LONG panel now carries nine subarrays, which the
+# earlier 7-color Okabe-Ito set could not label without repeating a color
+# within a single panel.  Colors still repeat ACROSS the two panels; that is
+# unambiguous now that each panel carries its own legend directly beneath it.
+PALETTE = ["#332288", "#CC6677", "#117733", "#DDCC77", "#88CCEE",
+           "#882255", "#44AA99", "#AA4499", "#999933"]
 
 # The 14 subarrays offered in the current memo scope (curvegen/make_report's
 # own ACTIVE_ORDER for the default (revF, track) combo -- single source of
 # truth, so this script never hardcodes a possibly-stale list).
 OFFERED = list(mr.ACTIVE_ORDER)
 
-# Split into two families for legend readability (7 + 7): the compact/core
-# family vs. the long-baseline-containing family (memo-121 campaign
-# additions).  Purely a plotting choice -- both panels share the same engine
-# and data source.
-LONG_FAMILY = [n for n in OFFERED if "long" in n or "core-outer" in n]
-COMPACT_FAMILY = [n for n in OFFERED if n not in LONG_FAMILY]
+def _components_by_name():
+    """component token list for every offered subarray, from subarrays.csv."""
+    comp = {}
+    with open(mr.SUBARRAYS_CSV) as f:
+        for r in csv.DictReader(f):
+            comp[r["name"]] = [t.strip() for t in r["components"].split("+")]
+    return comp
 
-assert set(COMPACT_FAMILY) | set(LONG_FAMILY) == set(OFFERED)
-print("compact family:", COMPACT_FAMILY)
-print("long family:", LONG_FAMILY)
+
+COMPONENTS = _components_by_name()
+
+# Split into two panels for legend readability.  Membership of the
+# long-baseline family is decided on the COMPONENTS column, i.e. on whether
+# the subarray actually contains LONG antennas -- not on the subarray name.
+# The name test used previously also swept in the core-outer subarrays, which
+# carry no LONG stations at all.  Purely a plotting choice: both panels share
+# the same engine and data source.
+LONG_FAMILY = [n for n in OFFERED if "long" in COMPONENTS.get(n, [])]
+NONLONG_FAMILY = [n for n in OFFERED if n not in LONG_FAMILY]
+
+assert set(NONLONG_FAMILY) | set(LONG_FAMILY) == set(OFFERED)
+assert len(LONG_FAMILY) <= len(PALETTE) and len(NONLONG_FAMILY) <= len(PALETTE)
+print("long family:   ", LONG_FAMILY)
+print("non-LONG family:", NONLONG_FAMILY)
 
 LABELS = {n: n for n in OFFERED}   # canonical names are already memo-legible
 
 FIG_W, FIG_H = 6.5, 4.2
 
+# y-axis truncation: the curves run away at coarse resolution and the
+# interesting structure is all near eta ~ 1-2, so clip the display.
+ETA_MAX_PTSRC = 2.0
+ETA_MAX_IMAGING = 3.5
+
 
 def color_for(i):
     return PALETTE[i % len(PALETTE)]
+
+
+def natural_resolution(samples):
+    """Natural-weight, untapered resolution (mas at 30 GHz) for one subarray.
+
+    This is the subarray's native beam: the point the taperability curve is
+    measured relative to.  inf if the sweep holds no natural-weight row, so
+    that such a subarray sorts to the end rather than crashing the sort."""
+    nat = [s["res"] for s in samples
+           if s["weighting"] == "natural" and not s["taper"]]
+    return min(nat) if nat else float("inf")
+
+
+def order_by_natural_resolution(family, samples_by):
+    """Finest native beam first.  Matplotlib fills a legend column-major, so
+    this makes the panel's legend read from the finest subarray at the top of
+    the first column down to the coarsest at the foot of the last."""
+    return sorted(family, key=lambda n: natural_resolution(samples_by[n]))
 
 
 # --------------------------------------------------------------------------- #
@@ -128,28 +168,37 @@ def load_samples_and_caps():
 # --------------------------------------------------------------------------- #
 # Figure 1: point-source (taperability) envelopes
 
-def _interleaved_legend(fig, compact_handles, compact_labels,
-                        long_handles, long_labels, bottom, extra_rows=0):
-    """External, non-clipping legend below both panels: 7 columns, with the
-    compact-family entry on top and the long-family entry below it in each
-    column, so ncol=7 column-major fill reproduces the two-row family
-    grouping without truncating any label (the earlier per-axes inset
-    legend clipped long subarray names against the axes edge)."""
-    handles, labels = [], []
-    for ch, cl, lh, ll in zip(compact_handles, compact_labels,
-                              long_handles, long_labels):
-        handles += [ch, lh]
-        labels += [cl, ll]
-    fig.legend(handles, labels, loc="lower center", ncol=7, fontsize=7.0,
-              bbox_to_anchor=(0.5, bottom), frameon=False,
-              columnspacing=1.0, handlelength=1.6, handletextpad=0.5)
+def _banner_below(fig, axes, handles, labels, ncol, pad=0.015, **kw):
+    """Blended, figure-wide key hung just under whichever per-panel legend
+    reaches lowest.  The drop is measured from the drawn legends rather than
+    hard-coded, because the two panels hold different numbers of subarrays
+    and so their legends are not the same height."""
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    inv = fig.transFigure.inverted()
+    bottom = min(ax.get_legend().get_window_extent(renderer)
+                 .transformed(inv).y0 for ax in axes)
+    fig.legend(handles, labels, loc="upper center", ncol=ncol,
+               bbox_to_anchor=(0.5, bottom - pad), frameon=False, **kw)
+
+
+def _panel_legend(ax, handles, labels, ncol, y):
+    """Subarray-name legend directly beneath its OWN panel.
+
+    One blended legend under the whole figure was ambiguous: the palette
+    repeats across the two panels, so a merged legend put two entries of the
+    same color side by side.  Anchored below the axes in axes coordinates, so
+    it never clips a long subarray name against the axes edge."""
+    ax.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, y),
+              ncol=ncol, fontsize=7.0, frameon=False, columnspacing=1.0,
+              handlelength=1.6, handletextpad=0.5, borderaxespad=0.0)
 
 
 def make_taperability(samples_by, caps):
-    fig, axes = plt.subplots(1, 2, figsize=(FIG_W, FIG_H + 0.55), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(FIG_W, FIG_H + 1.15), sharey=True)
     fam_handles = {}
-    for ax, family, title in ((axes[0], COMPACT_FAMILY, "compact / core family"),
-                              (axes[1], LONG_FAMILY, "long-baseline family")):
+    for ax, family, title in ((axes[0], LONG_FAMILY, "long-baseline family"),
+                              (axes[1], NONLONG_FAMILY, "non-LONG family")):
         handles, labels = [], []
         for i, name in enumerate(family):
             curve = mr.build_curve(samples_by[name], max_res=caps[name])
@@ -165,15 +214,16 @@ def make_taperability(samples_by, caps):
         fam_handles[id(ax)] = (handles, labels)
         ax.set_xscale("log")
         ax.set_xlabel("resolution at 30 GHz (arcsec)")
-        ax.text(0.03, 0.95, title, transform=ax.transAxes, fontsize=8,
-                ha="left", va="top", style="italic", color="0.35")
+        ax.set_title(title, loc="left", fontsize=8, style="italic",
+                     color="0.35", pad=4)
     axes[0].set_ylabel(r"$\eta$ (sensitivity-loss factor)")
-    axes[0].set_ylim(bottom=1.0)
-    ch, cl = fam_handles[id(axes[0])]
-    lh, ll = fam_handles[id(axes[1])]
-    fig.subplots_adjust(left=0.09, right=0.985, top=0.97, bottom=0.26,
+    axes[0].set_ylim(1.0, ETA_MAX_PTSRC)
+    fig.subplots_adjust(left=0.09, right=0.985, top=0.94, bottom=0.34,
                         wspace=0.08)
-    _interleaved_legend(fig, ch, cl, lh, ll, bottom=0.005)
+    # ncol chosen so both legends run to the same number of rows (5), keeping
+    # the block under the figure square despite the 5 / 9 family split.
+    _panel_legend(axes[0], *fam_handles[id(axes[0])], ncol=1, y=-0.135)
+    _panel_legend(axes[1], *fam_handles[id(axes[1])], ncol=2, y=-0.135)
     fig.savefig(os.path.join(HERE, "taperability.pdf"))
     fig.savefig(os.path.join(HERE, "taperability.png"), dpi=170)
     plt.close(fig)
@@ -240,10 +290,10 @@ def _split_by_state(curve):
 
 def make_imaging(samples_by, caps):
     from matplotlib.lines import Line2D
-    fig, axes = plt.subplots(1, 2, figsize=(FIG_W, FIG_H + 0.75), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(FIG_W, FIG_H + 1.45), sharey=True)
     fam_handles = {}
-    for ax, family, title in ((axes[0], COMPACT_FAMILY, "compact / core family"),
-                              (axes[1], LONG_FAMILY, "long-baseline family")):
+    for ax, family, title in ((axes[0], LONG_FAMILY, "long-baseline family"),
+                              (axes[1], NONLONG_FAMILY, "non-LONG family")):
         handles, labels = [], []
         for i, name in enumerate(family):
             curve = mr.build_curve(samples_by[name], skirt_max=mr.SKIRT_DEFAULT,
@@ -260,25 +310,24 @@ def make_imaging(samples_by, caps):
         fam_handles[id(ax)] = (handles, labels)
         ax.set_xscale("log")
         ax.set_xlabel("resolution at 30 GHz (arcsec)")
-        ax.text(0.03, 0.95, title, transform=ax.transAxes, fontsize=8,
-                ha="left", va="top", style="italic", color="0.35")
+        ax.set_title(title, loc="left", fontsize=8, style="italic",
+                     color="0.35", pad=4)
     axes[0].set_ylabel(r"$\eta$ (sensitivity-loss factor)")
-    axes[0].set_ylim(bottom=1.0)
+    axes[0].set_ylim(1.0, ETA_MAX_IMAGING)
 
-    # state-key legend (line style only; colors carry subarray identity,
-    # see the interleaved subarray-name legend below it)
+    # state-key legend: line style only, so it stays a single blended banner
+    # spanning both panels (it carries no subarray identity, hence no color
+    # ambiguity).  It sits below the two per-panel name legends.
     state_handles = [Line2D([0], [0], color="0.25", **STATE_STYLE[s])
                      for s in ("strict", "traded", "relaxed")]
     state_names = ["strict (skirt $\\leq$ 0.10)",
                    "traded (0.10 $<$ skirt $\\leq$ 0.25, derived)",
                    "relaxed (best achievable skirt $>$ 0.25)"]
-    fig.legend(state_handles, state_names, loc="lower center", ncol=3,
-              fontsize=7.6, frameon=False, bbox_to_anchor=(0.5, 0.135))
-    ch, cl = fam_handles[id(axes[0])]
-    lh, ll = fam_handles[id(axes[1])]
-    fig.subplots_adjust(left=0.09, right=0.985, top=0.97, bottom=0.30,
+    fig.subplots_adjust(left=0.09, right=0.985, top=0.94, bottom=0.37,
                         wspace=0.08)
-    _interleaved_legend(fig, ch, cl, lh, ll, bottom=0.005)
+    _panel_legend(axes[0], *fam_handles[id(axes[0])], ncol=1, y=-0.135)
+    _panel_legend(axes[1], *fam_handles[id(axes[1])], ncol=2, y=-0.135)
+    _banner_below(fig, axes, state_handles, state_names, ncol=3, fontsize=7.6)
     fig.savefig(os.path.join(HERE, "imaging.pdf"))
     fig.savefig(os.path.join(HERE, "imaging.png"), dpi=170)
     plt.close(fig)
@@ -414,6 +463,11 @@ def make_heatmap(samples_by, caps):
 
 def main():
     samples_by, caps = load_samples_and_caps()
+    # Legend order needs the measured curves, so it is fixed here rather than
+    # at import time where the family lists are first built.
+    global NONLONG_FAMILY
+    NONLONG_FAMILY = order_by_natural_resolution(NONLONG_FAMILY, samples_by)
+    print("non-LONG legend order:", NONLONG_FAMILY)
     make_taperability(samples_by, caps)
     make_imaging(samples_by, caps)
     hm_name = make_heatmap(samples_by, caps)

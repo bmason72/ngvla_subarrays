@@ -1,11 +1,13 @@
-# Installing the ALMA, radio-analyst, and ngvla-imaging skills
+# Installing the ALMA, radio-analyst, ngvla-imaging and bmason-memo-style skills
 
 This is a reference for bmason to install three things into Claude Code and
 Codex on this machine: the `working-with-alma-data` knowledge skill at
 `~/Code/skills/alma-data-skill/`, the `radio-analyst` Claude Code plugin (MCP
 servers plus skills) at `~/Code/skills/radio-analyst/`, and this repo's own
 `ngvla-imaging` skill, currently drafted at `skills/ngvla-imaging/` in this
-repository. Nothing here has been installed by an agent; every command below
+repository, and the `bmason-memo-style` writing-voice skill at
+`skills/bmason-memo-style/` (added 9 Sep 2026; install it exactly like
+`ngvla-imaging`). Nothing here has been installed by an agent; every command below
 is meant to be pasted and run by bmason himself. Re-check the paths below with
 `ls` before trusting them, since they were verified on 7 Sep 2026.
 
@@ -25,6 +27,7 @@ symlinked directory; they do not interfere with skill loading.
 mkdir -p ~/.claude/skills
 ln -s ~/Code/skills/alma-data-skill ~/.claude/skills/working-with-alma-data
 ln -s ~/Code/ngvla_subarrays/skills/ngvla-imaging ~/.claude/skills/ngvla-imaging
+ln -s ~/Code/ngvla_subarrays/skills/bmason-memo-style ~/.claude/skills/bmason-memo-style
 ```
 
 To verify, start `claude` in any directory, type `/` and look for the skill
@@ -96,6 +99,7 @@ Codex-facing display metadata, so it was written with Codex in mind.
 mkdir -p ~/.codex/skills
 ln -s ~/Code/skills/alma-data-skill ~/.codex/skills/working-with-alma-data
 ln -s ~/Code/ngvla_subarrays/skills/ngvla-imaging ~/.codex/skills/ngvla-imaging
+ln -s ~/Code/ngvla_subarrays/skills/bmason-memo-style ~/.codex/skills/bmason-memo-style
 ```
 
 Verification: unverified. There is no confirmed CLI command observed on this
@@ -139,13 +143,13 @@ ln -s ~/Code/skills/radio-analyst/.claude/skills/ms-simulator ~/.codex/skills/ms
 
 ```bash
 # Claude Code personal skills (ALMA, ngvla-imaging)
-rm ~/.claude/skills/working-with-alma-data ~/.claude/skills/ngvla-imaging
+rm ~/.claude/skills/working-with-alma-data ~/.claude/skills/ngvla-imaging ~/.claude/skills/bmason-memo-style
 
 # Claude Code plugin
 claude plugin uninstall radio-analyst@radio-analyst
 
 # Codex native skills
-rm ~/.codex/skills/working-with-alma-data ~/.codex/skills/ngvla-imaging
+rm ~/.codex/skills/working-with-alma-data ~/.codex/skills/ngvla-imaging ~/.codex/skills/bmason-memo-style
 rm ~/.codex/skills/radio-interferometry ~/.codex/skills/ms-simulator
 
 # Codex MCP servers (if registered via codex mcp add)

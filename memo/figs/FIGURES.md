@@ -30,21 +30,46 @@ re-deriving envelopes:
   in `ACTIVE_ORDER`.)
 
 For legend readability with 14 curves, each figure splits them into two
-panels sharing a y-axis: the **compact / core family** (the original 7:
-core-inner, core, spiral, mid, core+spiral, spiral+mid, main) and the
-**long-baseline family** (the 7 memo-121-campaign additions containing
-`long` or `core-outer`). Colors are assigned by position within each
-7-member list and reused across panels (Okabe-Ito colorblind-safe palette);
-this is unambiguous because the two families are never drawn on the same
-axes. A single interleaved legend below both panels lists all 14 names
-without truncation (compact-family name on top, long-family name below it,
-in each of 7 columns).
+panels sharing a y-axis (but not an x-axis): the **long-baseline family**
+(left panel, 5 members: `long`, `mid+long`, `spiral+mid+long`, `main+long`,
+`long+mid+spiral+core-outer`) and the **non-LONG family** (right panel, 9
+members: `core`, `spiral`, `mid`, `core+spiral`, `spiral+mid`, `main`,
+`core-inner`, `spiral+core-outer`, `mid+spiral+core-outer`). Membership is
+decided on the `components` column of `subarrays.csv` -- i.e. on whether the
+subarray actually contains LONG antennas -- not on a substring test against
+the subarray's name; a name-based test would wrongly sweep the two
+`core-outer` composites without LONG stations (`spiral+core-outer`,
+`mid+spiral+core-outer`) into the long-baseline family, since `core-outer`
+is just the outer 57 of the 114 Core antennas (memo 121's "outer50core").
+Colors come from Paul Tol's 9-colour "muted" qualitative palette
+(colorblind-safe and print-safe), needed because the non-LONG panel now
+carries 9 curves -- more than the previous 7-colour Okabe-Ito set could
+label without repeating a color within one panel. Colors are assigned by
+position within each family list and still repeat across the two panels,
+but each panel now carries its own legend directly beneath it (long-baseline
+at 1 column, non-LONG at 2 columns, both running to 5 rows) rather than one
+merged interleaved legend, because a merged legend would put two
+same-colored entries from the two panels side by side.
+
+The non-LONG family is ordered by natural-weight, untapered 30 GHz
+resolution, finest native beam first (`order_by_natural_resolution`, called
+from `main()` because the ordering needs the measured curves): `mid`,
+`spiral+mid`, `mid+spiral+core-outer`, `main`, `spiral`, `spiral+core-outer`,
+`core+spiral`, `core`, `core-inner`. Matplotlib fills a legend column-major,
+so that legend reads finest-to-coarsest down the first column and on down
+the second. The long-baseline family is still in `ACTIVE_ORDER` order.
+Family names are drawn with `ax.set_title(..., loc="left")`, above each
+frame rather than inside the axes.
 
 ## figs/taperability.pdf
 
 Point-source (taperability) envelopes at 30 GHz: eta vs. resolution for all
-14 offered subarrays, linear y-axis (eta clamped to the report's own <= 5
-display trim, so it reads 1-5 as expected), log-x. Built via
+14 offered subarrays, linear y-axis, log-x. Samples are still trimmed at the
+report's own eta <= 5 display cutoff before the envelope is built, but the
+axis itself is now truncated further, to eta in [1.0, `ETA_MAX_PTSRC` =
+2.0] -- previously only the floor (1.0) was fixed and the ceiling floated to
+the data; some curves now run off the top of the frame by design, since the
+interesting structure is all near eta ~ 1-2. Built via
 `mr.build_curve(samples_by[name], max_res=caps[name])`, i.e.
 `Envelope(samples).curve(skirt_max=None, ...)` -- PSF shape (skirt) is
 completely ignored, matching the point-source/"minimum eta" definition in
@@ -55,8 +80,8 @@ Caveats for the caption:
   samples; gaps in the underlying sweep show up as a missing stretch of
   curve, not an interpolated guess (the engine does not extrapolate past a
   measured row's ends -- see `envelope.py`'s module docstring).
-* The right panel (long-baseline family) reaches much finer resolutions
-  (sub-milliarcsec for `long` alone) than the left panel's finest (`mid`,
+* The left panel (long-baseline family) reaches much finer resolutions
+  (sub-milliarcsec for `long` alone) than the right panel's finest (`mid`,
   ~3 mas); the two panels intentionally do NOT share an x-axis so each
   family's own dynamic range is legible.
 * Heterogeneous subarrays (`main`, `main+long`, `mid+long`,
@@ -70,7 +95,22 @@ Caveats for the caption:
 
 Imaging (sculptability) envelopes for the same 14 subarrays and layout,
 built via `mr.build_curve(samples_by[name], skirt_max=mr.SKIRT_DEFAULT
-(=0.10), max_res=caps[name])`.
+(=0.10), max_res=caps[name])`. The y-axis is truncated to eta in
+[1.0, `ETA_MAX_IMAGING` = 3.5] (a separate module constant from the
+point-source figure's 3.0; both values were chosen by eye, not derived); as
+in the taperability figure, some curves now run off the top of the frame by
+design.
+
+Legend layout: each panel carries its own subarray-name legend beneath it,
+exactly as in the taperability figure. The strict/traded/relaxed line-style
+key, by contrast, stays a single blended banner spanning the full figure
+width below both panels -- it encodes line style only (no subarray
+identity), so the two panels' repeating color palette does not make it
+ambiguous. That banner is now positioned by `_banner_below`, which measures
+the two just-drawn panel legends and hangs the banner immediately beneath
+whichever of them reaches lowest, rather than at a hard-coded y-offset (the
+two panels' legends are not the same height, since the families split
+5/9 rather than 7/7).
 
 **Important caveat the memo text should address explicitly**: the figure's
 three visual states (solid = strict, dashed = "traded", dotted = "relaxed")
