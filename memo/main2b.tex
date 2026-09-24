@@ -4,7 +4,7 @@
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{graphicx}
-\usepackage[authoryear,round]{natbib}
+\usepackage[numbers,square]{natbib}
 \usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
 
 \setlength{\emergencystretch}{2em}
@@ -13,7 +13,7 @@
 
 \title{An ngVLA Science Subarray Selection Heuristic}
 \author{Brian Mason, Michael Stroh}
-\date{15 September 2026 (draft)}
+\date{15 September 2026 (v1)}
 
 \begin{document}
 \maketitle
@@ -52,7 +52,7 @@ a subarray.  In order to maximize the science throughput of the
 operated with multiple subarrays observing commensally, in parallel.
 
 A high-level concept for how this operation could work is presented in
-\citet{saNarrative}.  Key aspects of this concept for our purposes
+\citep{saNarrative}.  Key aspects of this concept for our purposes
 are:
 \begin{enumerate}
 \item A set of roughly two dozen ``reference subarrays'', which are
@@ -89,7 +89,7 @@ Considerable complexity and technical risk exists in the closely
 related processes of scheduling, and automated imaging of the
 resulting data across a diverse range of science cases (discussed
 below).  The relatively conservative approach to subarraying
-recommended in \citet{saNarrative} is intended to provide a tractable
+recommended in \citep{saNarrative} is intended to provide a tractable
 path--- for prototyping and eventual implementation--- to retiring
 some of the technical risk in the intertwined problems of SA
 assignment, scheduling, and pipeline imaging.
@@ -110,7 +110,7 @@ use Briggs robust weighting \citep{briggs}, often with $r < 0$,
 sacrificing considerable sensitivity in the process.  Under this
 approach different subarrays end up with different sensitivity
 penalties at a given angular resolution, which needs to be accounted
-for in SA assignment and re-assignment.  \citet{memo121} did this for
+for in SA assignment and re-assignment.  \citep{memo121} did this for
 the Envelope Observing Program (EOP) using a considerably larger set
 of simulations (see \S\ref{sec:sims} for discussion).
 
@@ -122,8 +122,6 @@ inputs are specific, mostly quantitative parameters describing the
 primary science intent of the observation. Its outputs are
 a list of subarrays, estimated observing times, and imaging parameters (under
 an assumed imaging scenario), rank-ordered by a selectable creterion.
-
-{\bf TO DO: Check references}
 
 \section{Methodology}
 \label{sec:method}
@@ -145,7 +143,7 @@ SA selection and ranking (observation type ``imaging'') or is not
 (observation type ``point source'').  For imaging observations, the
 maximum allowed PSF ``skirt'' level is specifiable (the python
 interface accepts any value; the web calculator accepts 5\%, 10\%,
-15\%, or 20\%).  The skirt is defined, following \citet{memo106}, as
+15\%, or 20\%).  The skirt is defined, following \citep{memo106}, as
 the azimuthally averaged PSF level at a radius of one fitted FWHM from
 the peak, expressed as a fraction of the PSF peak.  Note that a purely
 Gaussian beam has a skirt of $\sim 6\%$ by this definition, so 5\% is
@@ -167,13 +165,13 @@ Table~\ref{tab:subarrays} lists the Rev.\,F reference subarrays
 currently tabulated.  The first seven (core-inner through main) are
 the components and simple combinations; the remaining seven are the
 LONG-bearing and outer-core combinations introduced by
-\citet{memo121}.  Core-outer is the outer 57 core antennas by radius
+\citep{memo121}.  Core-outer is the outer 57 core antennas by radius
 (the ``outer50core'' of memo 121); it is not offered on its
 own\footnote{One further combination, core+mid, was accidentally
-simulated by Claude. It is an absurd configuration and will not be
-discussed further.}.  This is about half the set of $\sim 24$ reference
-subarrays envisaged in \citet{saNarrative}; the SBA and total-power
-array have not yet been considered.
+simulated by Claude. It is not a useful configuration.}.  This is
+about half the set of $\sim 24$ reference subarrays envisaged in
+\citep{saNarrative}; the SBA and total-power array have not yet been
+considered.
 
 Some heterogeneous subarrays--- i.e. some of the SAs combining
 distinct array components measuring different angular scales, such as
@@ -283,7 +281,7 @@ the geometric mean of the two axes as the resolution $\theta$; the
 dirty-image rms, which gives $\eta$ once normalized by the RMS of the
 natural, untapered point; and the azimuthally averaged PSF out to a
 radius of 10 (CASA-fitted) FWHM. The PSF skirt $s$ is measured from
-the radial profile, defined following \citet{memo65} as the
+the radial profile, defined following \citep{memo65} as the
 azimuthally averaged PSF level at a radius of one fitted FWHM from the
 peak, using annular means one cell wide interpolated with a cubic
 spline. We also calculate and record, from the azimuthally averaged
@@ -342,7 +340,7 @@ the shortest baseline to the LAS, so that $\theta_{{\rm LAS},i} =
 C_{{\rm LAS},i}\,\lambda/b_{\min,i}$; and $\theta_{{\rm cap},i}$ the
 coarsest resolution offered (at 30 GHz) for the subarray in question.
 We adopt $C_{\rm LAS}=0.8$ for all subarrays, comparable to the value
-$0.85$ found in \citet{memo67}; \citet{memo67} found $\sim 0.6$ for
+$0.85$ found in \citep{memo67}; \citep{memo67} found $\sim 0.6$ for
 the SBA.  We also assume that the LAS is independent of $r$ and $t$.
 Both assumptions could fairly straightforwardly be checked.
 
@@ -351,8 +349,8 @@ subarray, from which the imaging performance characteristics---
 resolution $\theta$, noise penalty $\eta$, and PSF skirt height $s$---
 have been measured for a collection of robust and taper values.  A
 given lattice point $(r,t)$ is called $p$.  The noise penalty for a
-given subarray is defined, following \citet{memo55} and
-\citet{memo121}, as
+given subarray is defined, following \citep{memo55} and
+\citep{memo121}, as
 \begin{equation}
   \eta(p) = \frac{\sigma_{\rm dirty}(p)}{\sigma_{\rm dirty}({\rm natural},\,t=0)} ,
 \end{equation}
@@ -389,7 +387,7 @@ function of resolution $\theta$ under some condition:
   that $\theta_{req}/(1+\delta \theta) < \theta < \theta_{req} \times (1+\delta \theta)$, with
   no constraint on PSF shape ($s$).
   This is the the taperability curve
-  in the sense of \citet{memo55} and \citet{memo72}; and
+  in the sense of \citep{memo55} and \citep{memo72}; and
 \item the {\it imaging} curve 
   $\eta_{\rm im}(\theta; s_0)$ returns the point $(r,t)_i$ that
   minimizes $\eta$ subject to the constraints: $s < s_0$ and 
@@ -442,7 +440,7 @@ follows for each reference subarray $i$:
   antennas and rms penalty $\eta_i$, using the python implementation
   of the \ngvla\ sensitivity
   calculator\footnote{\url{https://gitlab.nrao.edu/vrosero/ngvla-sensitivity-calculator}},
-  which incorporates the $T'_{\rm sys}$ model of \citet{memo96}; and
+  which incorporates the $T'_{\rm sys}$ model of \citep{memo96}; and
   the antenna hours $N_i\,\tau_i$.  If no sensitivity was requested, a
   fiducial goal (the one-minute natural-weighting rms of the main
   array at $f$) is used so that the ranking is still defined.
@@ -477,10 +475,13 @@ legacy methods based on those used in \cite{memo121}:
   specified, $b_{min}$ is imputed as that which would be required to
   achieve an $LAS = \theta_{req} \times 10$, although that LAS is not
   used for any other purpose (e.g., excluding SA's).
-\item {\it Baseline performance}: rank SAs, largest first, by
-  the {\it number of total baselines} falling within the range
-  of baselines required. The same $b_{min}$ logic is used as for
-  the ``efficient'' ranking heuristic.
+\item {\it Baseline performance}: rank SAs, largest first, by the {\it
+  number of total baselines} falling within the range of baselines
+  required. The same $b_{min}$ logic is used as for the ``efficient''
+  ranking heuristic. We do not manually exclude Main as was done in
+  \cite{memo121}, since this is not necessary when returning the full
+  ranked list of candidates; it does often naturally occur as the
+  first SA under this criterion.
 \end{enumerate}
 The legacy (``efficient'' and ``performance'') rankings do not
 explicitly account for variations in $\eta$ between SAs, although the
@@ -664,7 +665,7 @@ space with significant complexity and compute cost--- not in
 fundamental terms but practically speaking, with current tools, for
 the simulations and imaging behind the SA calculator.
 
-As noted by \citet{memo78}, the overall approach of modifying the
+As noted by \citep{memo78}, the overall approach of modifying the
 synthesized beam's characteristics with $uv$-density based weights
 breaks down when too many visibilities occupies their own
 $uv$-cell. This regime can occur with short observations (snapshots),
@@ -706,87 +707,88 @@ stated or defined in detail.
 
 {\it The authors acknowledge the Texas Advanced Computing Center
   (TACC) at The University of Texas at Austin for providing
-  computational resources (AST25010) that have contributed to the research
-  results reported within this paper. URL: \url{http://www.tacc.utexas.edu}}
+  computational resources under award AST25010 that have contributed
+  to the research results reported within this paper. URL:
+  \url{http://www.tacc.utexas.edu}}
 
 
 \begin{thebibliography}{}
 
-\bibitem[Briggs(1995)]{briggs}
+\bibitem{briggs}
 Briggs, D.~S. 1995, {\it High Fidelity Deconvolution of Moderately
 Resolved Sources}, PhD thesis, New Mexico Institute of Mining and
 Technology.
 
-\bibitem[Butler et al.(2021)]{memo96}
+\bibitem{memo96}
 Butler, B.~J., Grammer, W., \& Lehmensiek, R. 2021, {\it \ngvla\
 Antenna Noise Temperature Calculation}, \ngvla\ Memo 96.
 
-\bibitem[Carilli et al. (2022)]{configDescription}
+\bibitem{configDescription}
 Carilli, C.~L. 2022, {\it Array Configuration: Design Description},
 \ngvla\ document 020.23.00.00.00-0002-DSN.
 
-\bibitem[Carilli et al.(2020)]{memo78}
+\bibitem{memo78}
 Carilli, C.~L., et al. 2020, {\it High Resolution, Wide Field, Narrow
 Band, Snapshot Imaging}, \ngvla\ Memo 78.
 
-\bibitem[Clark(1980)]{clark}
+\bibitem{clark}
 Clark, B.~G. 1980, A\&A, 89, 377.
 
-\bibitem[Condon et al. (2012)]{condon2012}
+\bibitem{condon2012}
 Condon, J.~J., Cotton, W.~D., Fomalont, E.~B., et al.\ 2012, ApJ, 758, 23,
 ``Resolving the Radio Source Background: Deeper Understanding through Confusion.''
   
-\bibitem[Czekala et al. (2025)]{mpol}
+\bibitem{mpol}
 Czekala, I. et al. 2025, arXiv:2502.00100
   
-\bibitem[H{\"o}gbom(1974)]{hogbom}
+\bibitem{hogbom}
 H{\"o}gbom, J.~A. 1974, A\&AS, 15, 417.
 
-\bibitem[Junklewitz et al.(2016)]{resolve}
+\bibitem{resolve}
 Junklewitz, H. et al. 2016, A\&A 586, A76  
 
-\bibitem[Mason(2021)]{memo67}
+\bibitem{memo67}
 Mason, B. 2021, {\it Demonstration \& Analysis of \ngvla\ Core + Short
 Baseline Array Extended Structure Imaging}, \ngvla\ Memo 67 (v3b).
 
-\bibitem[Mason et al.(2024)]{saNarrative}
-Mason, B., et al. 2024, {\it \ngvla\ Subarraying Operational Concept}, \ngvla\
+\bibitem{saNarrative}
+Mason, B. et al. 2024, {\it \ngvla\ Subarraying Operational Concept}, \ngvla\
 document 020.10.05.05.00-0014-PLA, version A.
 
-\bibitem[Matthews et al. (2021)]{matthews2021}
+\bibitem{matthews2021}
 Matthews, A.~M., Condon, J.~J., Cotton, W.~D., \& Mauch, T. 2021, ApJ, 909, 193,
  ``Source Counts Spanning Eight Decades of Flux Density at 1.4 GHz.''
 
-\bibitem[Rosero(2019a)]{memo55}
+\bibitem{memo55}
 Rosero, V. 2019, {\it Taperability Study for the \ngvla\ and
 Performance Estimates}, \ngvla\ Memo 55.
 
-\bibitem[Rosero(2019b)]{memo65}
+\bibitem{memo65}
 Rosero, V. 2019, {\it Sculpting of the Synthesized Beam and Image
 Fidelity Study of KSG 1: Imaging of Protoplanetary Disks}, \ngvla\
 Memo 65.
 
-\bibitem[Rosero(2020a)]{memo72}
+\bibitem{memo72}
 Rosero, V. 2020, {\it A Study of \ngvla\ Subarray Efficiency: Plains +
 Fractions of the Core}, \ngvla\ Memo 72.
 
-\bibitem[Rosero(2020b)]{memo76}
+\bibitem{memo76}
 Rosero, V. 2020, {\it Subarray Selection for the Reference Observing
 Program}, \ngvla\ Memo 76.
 
-%\bibitem[Rosero(2024)]{sensCalc}
+%\bibitem{sensCalc}
 %Rosero, V. 2024, {\it \ngvla\ Sensitivity Calculator} (Python),
 %\url{https://ngvla.nrao.edu/page/performance}.
 
-\bibitem[Rosero \& Carilli(2022)]{memo106}
+\bibitem{memo106}
 Rosero, V., \& Carilli, C.~L. 2022, {\it \ngvla\ Imaging Science
 Performance Reference Document}, \ngvla\ Memo 106.
 
-\bibitem[Rosero \& Mason(2024)]{memo121}
+\bibitem{memo121}
 Rosero, V., \& Mason, B. 2024, {\it Subarray Study for the Envelope
 Observing Program}, \ngvla\ Memo 121.
 
-\bibitem[Schwab(1984)]{schwab}
+\bibitem{schwab}
 Schwab, F.~R. 1984, AJ, 89, 1076.
 
 \end{thebibliography}
@@ -795,8 +797,6 @@ Schwab, F.~R. 1984, AJ, 89, 1076.
 
 \section{User's Guide}
 \label{sec:guide}
-
-{\bf THIS SECTION NEEDS REVIEW}
 
 The calculator is the {\tt sa\_select} Python package in the project
 repository.  At query time it needs numpy and scipy but not CASA, which is needed
