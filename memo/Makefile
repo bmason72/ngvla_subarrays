@@ -1,7 +1,7 @@
 PDFLATEX ?= /scratch/projects/tacc/texlive/2025/bin/x86_64-linux/pdflatex
 LATEXFLAGS ?= -interaction=nonstopmode
-TEX = ngvla_sa_selection.tex
-PDF = ngvla_sa_selection.pdf
+TEX = main.tex
+PDF = main.pdf
 
 .PHONY: pdf test clean
 
