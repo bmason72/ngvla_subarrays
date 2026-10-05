@@ -4,6 +4,7 @@
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{placeins}
 \usepackage[numbers,square]{natbib}
 \usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
 
@@ -13,7 +14,7 @@
 
 \title{An ngVLA Science Subarray Selection Heuristic}
 \author{Brian Mason, Michael Stroh}
-\date{23 September 2026 (v1)}
+\date{3 October 2026 (v1.\,1)}
 
 \begin{document}
 \maketitle
@@ -30,8 +31,10 @@
   (relative to natural weights)--- as well near-in PSF sidelobe
   (``skirt'')--- over a lattice of robust and taper values. We also
   describe prototype implementations of this heuristic as a web calculator
-  and a python module.
+  and a Python module.
 \end{abstract}
+
+\tableofcontents
 
 \section{Introduction}
 \label{sec:intro}
@@ -57,10 +60,10 @@ are:
 \begin{enumerate}
 \item A set of roughly two dozen ``reference subarrays'', which are
   pre-defined (in operations, with some flexibility).  These consist
-  of individual array ``components'' (e.g.\ spiral, core, mid);
-  combinations of these components (e.g.\ spiral+core, mid+spiral);
+  of individual array ``components'' (e.g.\ Spiral, Core, Mid, Long);
+  combinations of these components (e.g.\ Spiral+Core, Mid+Spiral);
   and complementary combinations of subsets of them (e.g.\
-  spiral+outer half core, inner half core).
+  Spiral+outer half Core, inner half Core).
 \item A subarray (SA) recommendation engine for the Proposal
   Submission Tool (PST), which Principal Investigators (PIs) can use
   to get a ranked list of recommended subarrays that can achieve their
@@ -101,7 +104,7 @@ out of data from interferometers\footnote{Clean
 \citep[e.g.][]{hogbom,clark, schwab}, or {\tt tclean} to use the name
 of the task that implements Clean in CASA.}, the point-spread
 functions (PSFs) of such configurations can give rise to instabilities
-in the deconvolution process.  The naturally weighted PSF of the main
+in the deconvolution process.  The naturally weighted PSF of the Main
 array, for example, has a broad skirt, well beyond the fitted Gaussian
 core of the beam, at more than half the peak level
 \citep{memo65,memo121}.  To reliably eliminate these instabilities, it
@@ -112,7 +115,7 @@ approach different subarrays end up with different sensitivity
 penalties at a given angular resolution, which needs to be accounted
 for in SA assignment and re-assignment.  \citep{memo121} did this for
 the Envelope Observing Program (EOP) using a considerably larger set
-of simulations (see \S\ref{sec:sims} for discussion).
+of simulations (see \S~\ref{sec:sims} for discussion).
 
 The purpose of the present memo is to describe a heuristic--- and its
 prototype implementation--- that performs this task automatically and
@@ -141,7 +144,7 @@ major and minor axes of the fitted Gaussian restoring beam.
 Additionally, the PI specifies whether PSF quality is a constraint on
 SA selection and ranking (observation type ``imaging'') or is not
 (observation type ``point source'').  For imaging observations, the
-maximum allowed PSF ``skirt'' level is specifiable (the python
+maximum allowed PSF ``skirt'' level is specifiable (the Python
 interface accepts any value; the web calculator accepts 5\%, 10\%,
 15\%, or 20\%).  The skirt is defined, following \citep{memo106}, as
 the azimuthally averaged PSF level at a radius of one fitted FWHM from
@@ -162,27 +165,28 @@ see \S~\ref{sec:selection}.
 \label{sec:refsa}
 
 Table~\ref{tab:subarrays} lists the Rev.\,F reference subarrays
-currently tabulated.  The first seven (core-inner through main) are
+currently tabulated.  The first seven (Core-inner through Main) are
 the components and simple combinations; the remaining seven are the
-LONG-bearing and outer-core combinations introduced by
+Long-containing and outer-Core combinations introduced by
 \citep{memo121}.  Core-outer is the outer 57 core antennas by radius
 (the ``outer50core'' of memo 121); it is not offered on its
-own\footnote{One further combination, core+mid, was accidentally
+own\footnote{One further combination, Core+Mid, was accidentally
 simulated by Claude. It is not a useful configuration.}.  This is
 about half the set of $\sim 24$ reference subarrays envisaged in
-\citep{saNarrative}; the SBA and total-power array have not yet been
-considered.
+\citep{saNarrative}; the Short Baseline Array (SBA) \citep{memo43}
+and Total-Power Array (TPA) \citep{tpconcept} have not yet been
+incorporated, but will in the future.
 
 Some heterogeneous subarrays--- i.e. some of the SAs combining
 distinct array components measuring different angular scales, such as
-mid+long--- have caps imposed on the offered resolution
-range. Specifically main, mid+long, main+long, spiral+mid+long and the
-three core-outer combinations (spiral+core-outer,
-mid+spiral+core-outer, long+mid+spiral+core-outer), have the coarsest
+Mid+Long--- have caps imposed on the offered resolution
+range. Specifically Main, Mid+Long, Main+Long, Spiral+Mid+Long and the
+three Core-outer combinations (Spiral+Core-outer,
+Mid+Spiral+Core-outer, Long+Mid+Spiral+Core-outer), have the coarsest
 resolution offered capped at the native beam of the next-to-largest
-component subarray: core for main, core-outer for the core-outer
-combinations, mid for mid+long, main for main+long, and spiral+mid for
-spiral+mid+long.
+component subarray: Core for Main, Core-outer for the Core-outer
+combinations, Mid for Mid+Long, Main for Main+Long, and Spiral+Mid for
+Spiral+Mid+Long.
 
 
 \begin{table}[tb]
@@ -190,31 +194,31 @@ spiral+mid+long.
 \small
 \caption{Rev.\,F reference subarrays tabulated in the prototype.
   $N$ is the number of 18m antennas; $b_{\min}$ and $b_{\max}$ are
-  the shortest and longest baselines after the LONG short-baseline
-  filter, where applied; LAS is $0.8\,\lambda/b_{\min}$ at 30 GHz
+  the shortest and longest baselines after the Long short-baseline
+  filter (\S~\ref{sec:img}), where applied; LAS is $0.8\,\lambda/b_{\min}$ at 30 GHz
   (\S~\ref{sec:heuristic}); the beam cap is the coarsest resolution
   offered at 30 GHz for heterogeneous subarrays (blank where the only
   limit is the $20\times$ natural-beam end of the taper lattice).
-  $b_{\min}$ for main+long is unfiltered (\S~\ref{sec:sims}).}
+  $b_{\min}$ for Main+Long is unfiltered (\S~\ref{sec:sims}).}
 \label{tab:subarrays}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 Subarray & $N$ & $b_{\min}$ (m) & $b_{\max}$ (km) & LAS ($\arcsec$) & Beam cap ($\arcsec$) \\
 \midrule
-core-inner                 &  57 &    42.2 &     1.63 & 39.3   & --      \\
-core                       & 114 &    42.2 &     4.27 & 39.3   & --      \\
-spiral                     &  54 &   811.4 &    39.3  & 2.04   & --      \\
-mid                        &  46 & 10121   &  1273    & 0.163  & --      \\
-core+spiral                & 168 &    42.2 &    39.3  & 39.3   & --      \\
-spiral+mid                 & 100 &   811.4 &  1273    & 2.04   & --      \\
-main (core+spiral+mid)     & 214 &    42.2 &  1273    & 39.3   & 0.710   \\
-long                       &  30 & 515162  &  8686    & 0.0032 & --      \\
-mid+long                   &  76 & 10121   &  8686    & 0.163  & 0.00296 \\
-spiral+mid+long            & 130 &   811.4 &  8686    & 2.04   & 0.0111  \\
-main+long                  & 244 &    36.7 &  8686    & 45.1   & 0.0212  \\
-spiral+core-outer          & 111 &   179.0 &    39.3  & 9.25   & 0.491   \\
-mid+spiral+core-outer      & 157 &   179.0 &  1273    & 9.25   & 0.491   \\
-long+mid+spiral+core-outer & 187 &   179.0 &  8686    & 9.25   & 0.491   \\
+Core-inner                 &  57 &    42.2 &     1.63 & 39.3   & --      \\
+Core                       & 114 &    42.2 &     4.27 & 39.3   & --      \\
+Spiral                     &  54 &   811.4 &    39.3  & 2.04   & --      \\
+Mid                        &  46 & 10121   &  1273    & 0.163  & --      \\
+Core+Spiral                & 168 &    42.2 &    39.3  & 39.3   & --      \\
+Spiral+Mid                 & 100 &   811.4 &  1273    & 2.04   & --      \\
+Main (Core+Spiral+Mid)     & 214 &    42.2 &  1273    & 39.3   & 0.710   \\
+Long                       &  30 & 515162  &  8686    & 0.0032 & --      \\
+Mid+Long                   &  76 & 10121   &  8686    & 0.163  & 0.00296 \\
+Spiral+Mid+Long            & 130 &   811.4 &  8686    & 2.04   & 0.0111  \\
+Main+Long                  & 244 &    36.7 &  8686    & 45.1   & 0.0212  \\
+Spiral+Core-outer          & 111 &   179.0 &    39.3  & 9.25   & 0.491   \\
+Mid+Spiral+Core-outer      & 157 &   179.0 &  1273    & 9.25   & 0.491   \\
+Long+Mid+Spiral+Core-outer & 187 &   179.0 &  8686    & 9.25   & 0.491   \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -222,15 +226,18 @@ long+mid+spiral+core-outer & 187 &   179.0 &  8686    & 9.25   & 0.491   \\
 \subsection{Simulations}
 \label{sec:sims}
 
-A fixed suite of simulated measurement sets--- one per reference
-subarray--- is generated in CASA.  All of the simulations are done at
-30 GHz, with: a single pointing, one 1 MHz channel, 60 second
-integrations, a four hour track (hour angle $\pm 2$ h) on a source at
-declination $+24^\circ$, and thermal noise only (no sky model).  The
-MS is corrupted with a single realization of Gaussian noise using the
-default seed, from which the dirty-image rms is measured
-directly. Once generated, the MS is kept on disk for later
-use (on TACC, the MS's are kept on {\tt \$WORK}).
+CASA is used to generate one simulated measurement set (MS) per
+reference subarray.  All of the simulations are done at 30 GHz, with:
+a single pointing, one 1 MHz channel, 60 second integrations, a four
+hour track (hour angle $\pm 2$ h) on a source at declination
+$+24^\circ$ (chosen so the target transits $\sim 10^{\circ}$ from
+zenith), and thermal noise only (no sky model).  The MS is corrupted
+with a single realization of Gaussian noise using the default seed,
+from which the dirty-image rms is measured directly. Once generated,
+the MS is kept on disk for later use.  Simulations and all subsequent
+analysis were performed on the Stampede3 cluster of the Texas Advanced
+Computing Center (TACC).  The simulated MS's are kept in a persistent
+storage area ({\tt \$WORK} on TACC).
 
 The simulation running infrastructure and the calculators both support
 the capability of tabulating results for different antenna
@@ -238,7 +245,7 @@ configurations and observing and imaging modes. These different sets
 of simulations, corresponding to different antenna configurations and
 observation parameters, are called ``campaigns''.  The released
 calculator has three campaigns: single-channel, 4-hour tracks with
-each of Rev-F, Rev-D, and Rev-C. Rev-F has the most refined set of
+each of Rev.\,F, Rev.\,D, and Rev.\,C. Rev.\,F has the most refined set of
 simulations. It could also be considered to run snapshot and/or MFS
 campaigns (see discussion in \S~\ref{sec:discussion}), and there is
 some code in place, but it is not yet well validated.
@@ -247,9 +254,9 @@ some code in place, but it is not yet well validated.
 \label{sec:img}
 
 Images are made with {\tt tclean} at a fixed imsize in pixels for each
-subarray: 4096 for most single-component subarrays (core, spiral,
-mid); 8192 for core+spiral, spiral+mid, and long; and 15000 for main,
-mid+long, and spiral+mid+long. The cell size is the
+subarray: 4096 for most single-component subarrays (Core, Spiral,
+Mid); 8192 for Core+Spiral, Spiral+Mid, and Long; and 15000 for Main,
+Mid+Long, and Spiral+Mid+Long. The cell size is the
 maximum\footnote{The choice (made by Claude based on an option in the
 pre-existing taper-ability pipeline) to grow the image with uv-taper
 is debatable. It's likely not consequential for the intended
@@ -258,20 +265,20 @@ cell size and the uv-taper/5, where the native cell size is the pixel
 size implied by the longest baseline, given by {\tt im.advise()}. The
 resulting images are all larger than $245^2$ beams in size
 (fitted/actual beams, not native cell $\times 5$); typically they are
-$400^2$ to $600^2$, with long and mid+long at $\sim 1250^2$.  These
+$400^2$ to $600^2$, with Long and Mid+Long at $\sim 1250^2$.  These
 choices trade adequate noise statistics and sampling of the PSF
 plateau--- both of which prefer larger images--- against compute
 cost and the effectiveness of $uv$-weighting, both of which prefer
 smaller images. This is discussed more in \S~\ref{sec:discussion}.
 
-The LONG component contains small groups of $\sim 3$ antennas with
+The Long component contains small groups of $\sim 3$ antennas with
 $\sim 37$--$176$~m spacings, in addition to its multi-thousand-km
-baselines.  These short baselines are irrelevant to imaging with LONG
+baselines.  These short baselines are irrelevant to imaging with Long
 and would distort its PSF, so visibilities with $\sqrt{u^2 + v^2}
 \lambda < 178$~m are excluded before imaging from subarrays containing
-LONG, except main+long, whose core supplies legitimate baselines below
+Long, except Main+Long, whose core supplies legitimate baselines below
 that length\footnote{The $36.7$~m minimum in Table~\ref{tab:subarrays}
-is one of the intra-LONG-station baselines; both HP and HN have
+is one of the intra-Long-station baselines; both HP and HN have
 baselines of about this length.}.
 
 For each desired lattice point a dirty, noise-only image and PSF are
@@ -431,18 +438,18 @@ follows for each reference subarray $i$:
   $\theta_{{\rm  LAS},i} < \theta_{\rm LAS,req}$.
 \item Identify the optimum lattice or curve point for the selected
   mode, imaging or point source, by the logic of \S~\ref{sec:curvegen}.
-  Note that at present, the python calculator uses a look-up table
+  Note that at present, the Python calculator uses a look-up table
   with all measured lattice points; the web calculator uses the
   curves constructed as described in \S~\ref{sec:curvegen}.
 \item Scale the taper $t$ back to the requested frequency.
 \item Compute the integration time $\tau_i$ needed to reach $\sigma_0$
   in a channel of width $\delta\nu$ at $\theta_{\rm req}$ with $N_i$
-  antennas and rms penalty $\eta_i$, using the python implementation
+  antennas and rms penalty $\eta_i$, using the Python implementation
   of the \ngvla\ sensitivity
   calculator\footnote{\url{https://gitlab.nrao.edu/vrosero/ngvla-sensitivity-calculator}},
   which incorporates the $T'_{\rm sys}$ model of \citep{memo96}; and
   the antenna hours $N_i\,\tau_i$.  If no sensitivity was requested, a
-  fiducial goal (the one-minute natural-weighting rms of the main
+  fiducial goal (the one-minute natural-weighting rms of the Main
   array at $f$) is used so that the ranking is still defined.
 \end{enumerate}
 
@@ -487,9 +494,9 @@ The legacy (``efficient'' and ``performance'') rankings do not
 explicitly account for variations in $\eta$ between SAs, although the
 given observing time estimates do account for $\eta$; whether this is
 an advantage or a disavantage depends on whether the robust and taper
-weighting is used to make the science images
-(\S~\ref{sec:discussion}).  We chose to define $b_{max}$ with
-reference to fundamental, subarray-independent concepts in contrast to
+weighting is used to make the science images (see discussion in
+\S~\ref{sec:discussion}).  We chose to define $b_{max}$ with reference
+to fundamental, subarray-independent concepts in contrast to
 \cite{memo121}, which used a lookup table to define an effective
 $b_{max}$ for each SA based on its naturally weighted beam. We also
 added the $b_{min}$ guardrail described above to cover the case where
@@ -508,14 +515,14 @@ the reason(s) for failure were.
 \label{sec:code}
 
 Two prototype subarray calculators implementing the heuristics
-described in this memo have been produced: a python calculator, and a
+described in this memo have been produced: a Python calculator, and a
 web (html+javascript) calculator.  A high-level architecture diagram of how these
 applications relate to the suite of simulations behind them is in
 Fig.~\ref{fig:arch}.
 
 The web calculator is maintained at
 \url{http://www.cv.nrao.edu/~bmason/ngvla-curves-release.html}.
-The code, including the python calculator, are at
+The code, including the Python calculator, are at
 \url{https://github.com/bmason72/ngvla_subarrays}
 
 In addition to ranking subarrays, the calculators provide:
@@ -528,20 +535,21 @@ In addition to ranking subarrays, the calculators provide:
 \item  The number of visibilities {\it per channel} that will be generated
   by an observation of the needed duration for each subarray with 10-second dump times.
 \end{itemize}
+Example screen-shots of the web calculator are in Fig.~\ref{fig:imgNoLas} - Fig.~\ref{fig:ptsrcLas}.
 
-A couple of key differences between the web and python calculators are:
+A couple of key differences between the web and Python calculators are:
 \begin{itemize}
-\item The python calculator directly calls the python version of the
+\item The Python calculator directly calls the Python version of the
   ngVLA sensitivity calcaultor. The web calculator has a pretabulated
   natural-weight point source sensitivity for each subarray at a grid
   of frequencies assuming 1 MHz channel width; and a pre-tabulated
   confusion model.
-\item The python calculator has all measured lattice points. The web
+\item The Python calculator has all measured lattice points. The web
   calculator has these collapsed down into the curves described
   in \S~\ref{sec:curvegen}.
 \end{itemize}
 
-The python and html/javascript code were written almost entirely by a
+The Python and html/javascript code were written almost entirely by a
 combination of Claude Code (mostly) and Codex (when Claude tokens were
 low, and for a complementary perspective) running at TACC. It
 implemented and routinely performed an extensive test suite with $\sim
@@ -559,32 +567,64 @@ results was done by the authors periodically, and at the end.
 \label{fig:arch}
 \end{figure}
 
+\clearpage
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/screenshotImagingNoLas.png}
+    \caption{Screenshot of the web calculator for an {\it imaging} observation with {\it no LAS} specified.}
+    \label{fig:imgNoLas}
+\end{figure}
+
+\begin{figure}[b]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/screenshotPtSrcNoLas.png}
+    \caption{Screenshot of the web calculator for a {\it point source} observation with {\it no LAS} specified.}
+    \label{fig:ptsrcNoLas}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/screenshotImagingLas.png}
+    \caption{Screenshot of the web calculator for an {\it imaging} observation with an {\it LAS specified}.}
+    \label{fig:imgLas}
+\end{figure}
+
+\begin{figure}[b]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/screenshotPtSrcNoLas.png}
+    \caption{Screenshot of the web calculator for a {\it point source} observation with an {\it LAS specified}.}
+    \label{fig:ptsrcLas}
+\end{figure}
+
+\FloatBarrier
 
 \section{Rev.\,F Subarray Performance Curves}
 \label{sec:curves}
+
 
 Figures~\ref{fig:taper} and \ref{fig:imaging} show the point-source
 and imaging ($s_0=10\%$) curves for the fourteen subarrays of
 Table~\ref{tab:subarrays}, at 30 GHz.  Several features are worth
 pointing out.
 \begin{itemize}
-\item The single components (core-inner, core, spiral, mid, long) meet
+\item The single components (Core-inner, Core, Spiral, Mid, Long) meet
   the 10\% skirt criterion at every tabulated resolution, though the
-  LONG-containing subarrays often have other strong PSF features.
+  Long-containing subarrays often have other strong PSF features.
   Their natural skirts are already 9\%--23\%, so the imaging curve
   lies within $\sim 10$--$30\%$ of the point-source curve near the
   native beam and coincides with it once the taper dominates.
-\item The composites containing LONG (mid+long, spiral+mid+long,
-  main+long, long+mid+spiral+core-outer), and also
-  mid+spiral+core-outer, do not
+\item The composites containing Long (Mid+Long, Spiral+Mid+Long,
+  Main+Long, Long+Mid+Spiral+Core-outer), and also
+  Mid+Spiral+Core-outer, do not
   reach a 10\% skirt anywhere in their offered resolution range with
   robust weighting and taper alone; the best achievable skirt is
   mostly in the 10\%--25\% range, and exceeds 25\% at the finest
-  resolutions, near LONG's own native beam.  For these subarrays the
+  resolutions, near Long's own native beam.  For these subarrays the
   imaging curve consists entirely of relaxed points.  
-\item The intermediate composites (core+spiral, spiral+mid,
-  spiral+core-outer) meet the threshold over part of their range and
-  are relaxed, but never worse than 25\%, over the rest.  The main
+\item The intermediate composites (Core+Spiral, Spiral+Mid,
+  Spiral+Core-outer) meet the threshold over part of their range and
+  are relaxed, but never worse than 25\%, over the rest.  The Main
   array (natural skirt 57\%) is relaxed over nearly all of its range;
   this is the case that motivated beam sculpting in the first place
   \citep{memo65}.
@@ -598,7 +638,7 @@ pointing out.
 \includegraphics[width=\linewidth]{figs/taperability.pdf}
 \caption{Point-source (taperability) curves at 30 GHz: $\eta$ versus
   resolution for the fourteen offered Rev.\,F subarrays, split into
-  the LONG-containing family (left) and the non-LONG family (right).
+  the Long-containing family (left) and the non-Long family (right).
   The panels share a $y$ axis but not an $x$ axis.
   Each curve is the minimum $\eta$ over the $(r,t)$ lattice with no
   constraint on PSF shape.  Heterogeneous subarrays are clipped at
@@ -627,7 +667,7 @@ We have presented a subarray ranking and selection heuristic that is
 consistent with the subarraying concept described in
 \cite{saNarrative}, and which further develops methods described in
 \cite{memo106}, \cite{memo121}, and references therein.  We also
-developed and describe here prototype web and python calculators that
+developed and describe here prototype web and Python calculators that
 implement these heuristics. These are suitable tools for updating and
 refining aspects of the ngVLA design that depend on subarray
 selection--- the Envelope Observing Program and its associated size of
@@ -639,14 +679,14 @@ imaging studies to date, areas where this prototype could be
 improved include:
 \begin{enumerate}
 \item Improvements to the machinery, e.g., using performance curves
-  for the python calculator as well as the web calculator.
+  for the Python calculator as well as the web calculator.
 \item Measuring the LAS coefficients $C_i$ and their potential
   dependence on $r$ and $t$.
 \item Accounting for target declination.
 \item Adding additional subarrays, including the SBA; north-south extended options;
-  inner- and outer-half mid combinations to fill gaps in the resolution
-  curves; inner- and outer-half spiral combinations for the same reason;
-  and inward projections of Spiral (spiral+5 and +10) to more efficiently
+  inner- and outer-half Mid combinations to fill gaps in the resolution
+  curves; inner- and outer-half Spiral combinations for the same reason;
+  and inward projections of Spiral (Spiral+5 and +10) to more efficiently
   cover spiral cases that need modestly improved LAS coverage. 
 \item Adding support for continuum (multi-frequency synthesis) cases.
   While this would in principle improve the sculptability of the PSF's
@@ -665,28 +705,28 @@ space with significant complexity and compute cost--- not in
 fundamental terms but practically speaking, with current tools, for
 the simulations and imaging behind the SA calculator.
 
-As noted by \citep{memo78}, the overall approach of modifying the
-synthesized beam's characteristics with $uv$-density based weights
-breaks down when too many visibilities occupies their own
-$uv$-cell. This regime can occur with short observations (snapshots),
-large fields of view, extended arrays, and small numbers of channels
-(e.g. cube imaging or MFS with narrow fractional bandwidths). This
-fact--- plus the complexity implied by items $5$-$7$ above and the
-considerable sensitivity penalty that imaging cases typically pay---
-indicate that {\it improved, practical methods of imaging ngVLA data
-  are urgently required}.  It is possible, but as yet un-demonstrated,
-that it would be sufficient to simply modify the weighting schemes
-used by clean--- e.g. an inner $uv$-taper, as proposed on {\tt
-  CASR-722}, and/or an adapted form of {\tt briggsbwtaper},
-potentially with separate imaging of complementary array components
-that get combined later. Advances in interferometric imaging
-algorithms in recent decades also provide other options, such as
-RESOLVE \citep{resolve} and MPOL \citep{mpol}. Investigations on this
-topic should aim to demonstrate stable reconstruction of a variety of
-sky images while minimizing loss of sensitivity, and minimizing the
-dependence of quantities that need to be measured an tracked on the
-specific observing scenario (field of view, track length, number of
-channels, etc.).
+More fundamentally, as noted by \citep{memo78}, the overall approach
+of modifying the synthesized beam's characteristics with $uv$-density
+based weights breaks down when too many visibilities occupies their
+own $uv$-cell. This regime can occur with short observations
+(snapshots), large fields of view, extended arrays, and small numbers
+of channels (e.g. cube imaging or MFS with narrow fractional
+bandwidths). This fact--- plus the complexity implied by items $5$-$7$
+above and the considerable sensitivity penalty that imaging cases
+typically pay--- indicate that {\it improved, practical methods of
+  imaging ngVLA data are urgently required}.  It is possible, but as
+yet un-demonstrated, that it would be sufficient to simply modify the
+weighting schemes used by clean--- e.g. an inner $uv$-taper, as
+proposed on {\tt CASR-722}, and/or an adapted form of {\tt
+  briggsbwtaper}, potentially with separate imaging of complementary
+array components that get combined later. Advances in interferometric
+imaging algorithms in recent decades also provide other options, such
+as RESOLVE \citep{resolve} and MPOL \citep{mpol}. Investigations on
+this topic should aim to demonstrate stable reconstruction of a
+variety of sky images while minimizing loss of sensitivity, and
+minimizing the dependence of quantities that need to be measured an
+tracked on the specific observing scenario (field of view, track
+length, number of channels, etc.).
 
 While changes to the imaging approach would imply changes in the
 details of imaging, some metadata, and report content, we consider
@@ -701,7 +741,7 @@ each processing block. For example, a specific spectral cube at a
 given spectral resolution; the aggregate continuum image; etc.  This
 capability should be flexible and PI-driven, with clear
 programmatically determinable defaults, and sould not preclude the
-generation of other products. It was imlicit in the Subarray
+generation of other products. It was implicit in the Subarray
 Conceptual Narrative \citep{saNarrative}, but is not yet clearly
 stated or defined in detail.
 
@@ -724,7 +764,7 @@ Butler, B.~J., Grammer, W., \& Lehmensiek, R. 2021, {\it \ngvla\
 Antenna Noise Temperature Calculation}, \ngvla\ Memo 96.
 
 \bibitem{configDescription}
-Carilli, C.~L. 2022, {\it Array Configuration: Design Description},
+Carilli, C.~L., et al. 2022, {\it Array Configuration: Design Description},
 \ngvla\ document 020.23.00.00.00-0002-DSN.
 
 \bibitem{memo78}
@@ -747,9 +787,16 @@ H{\"o}gbom, J.~A. 1974, A\&AS, 15, 417.
 \bibitem{resolve}
 Junklewitz, H. et al. 2016, A\&A 586, A76  
 
+\bibitem{memo43}
+Mason, B., Selina, R., Erickson, A., \& Murphy, E. 2018 {\it The ngVLA Short Baseline Array}, \ngvla\ Memo 43
+  
+
 \bibitem{memo67}
 Mason, B. 2021, {\it Demonstration \& Analysis of \ngvla\ Core + Short
 Baseline Array Extended Structure Imaging}, \ngvla\ Memo 67 (v3b).
+
+\bibitem{tpconcept}  
+Mason, B., Armentrout, W., Ishii, S., Mangum, J., \& Shiimojo, M. 2022, {\it The Total Power Array Concept of Operations \& System Level Requirements}, \ngvla\ document 020.27.00.00.00-0001-REQ-A-TP\_SYS\_REQS
 
 \bibitem{saNarrative}
 Mason, B. et al. 2024, {\it \ngvla\ Subarraying Operational Concept}, \ngvla\
@@ -792,6 +839,18 @@ Observing Program}, \ngvla\ Memo 121.
 Schwab, F.~R. 1984, AJ, 89, 1076.
 
 \end{thebibliography}
+
+\section*{Version History}
+
+% switch to tabularx if the changes gets long it will wrap
+\begin{tabular}{@{}lll@{}}
+\textbf{Version} & \textbf{Date} & \textbf{Changes} \\
+\hline
+v0.1 & 2026-08-23 & Initial draft \\
+v1 & 2026-09-23 & First circulated draft for comments \\
+v1.1 & 2026-10-03 & Minor revisions based on comments \\
+v1.2 & 2026-10-05 & Add calculator screen-shot figures \\
+\end{tabular}
 
 \appendix
 
