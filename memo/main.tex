@@ -12,9 +12,11 @@
 \newcommand{\ngvla}{ngVLA}
 \newcommand{\arcsec}{^{\prime\prime}}
 
-\title{An ngVLA Science Subarray Selection Heuristic}
+
+\title{ngVLA Memo 141\\[0.5em]
+  An ngVLA Science Subarray Selection Heuristic and Prototpe Calculator}
 \author{Brian Mason, Michael Stroh}
-\date{3 October 2026 (v1.\,1)}
+\date{14 October 2026 (v1.\,3)}
 
 \begin{document}
 \maketitle
@@ -164,18 +166,14 @@ see \S~\ref{sec:selection}.
 \subsection{Reference Subarrays}
 \label{sec:refsa}
 
-Table~\ref{tab:subarrays} lists the Rev.\,F reference subarrays
-currently tabulated.  The first seven (Core-inner through Main) are
-the components and simple combinations; the remaining seven are the
-Long-containing and outer-Core combinations introduced by
-\citep{memo121}.  Core-outer is the outer 57 core antennas by radius
-(the ``outer50core'' of memo 121); it is not offered on its
-own\footnote{One further combination, Core+Mid, was accidentally
-simulated by Claude. It is not a useful configuration.}.  This is
-about half the set of $\sim 24$ reference subarrays envisaged in
-\citep{saNarrative}; the Short Baseline Array (SBA) \citep{memo43}
-and Total-Power Array (TPA) \citep{tpconcept} have not yet been
-incorporated, but will in the future.
+Table~\ref{tab:subarrays} lists the Rev.\,F reference subarrays currently tabulated.  The first seven (Core-inner 
+through Main) are the components and simple combinations; the remaining seven are the Long-containing and outer-Core 
+combinations introduced by \citep{memo121}.  Core-outer is the outer 57 core antennas by radius (the ``outer50core'' 
+of memo 121); it is not offered on its own\footnote{One further combination, Core+Mid, was accidentally simulated by 
+Claude. It is not a useful configuration.}.  Spiral and Spiral+Mid subarrays with 5 and 10 antennas from the Core 
+added (1 or two per arm) are also included. This is about $2/3$ the set of $\sim 24$ reference subarrays envisaged in 
+\citep{saNarrative}; the Short Baseline Array (SBA) \citep{memo43} and Total-Power Array (TPA) \citep{tpconcept} have 
+not yet been incorporated, but will in the future.
 
 Some heterogeneous subarrays--- i.e. some of the SAs combining
 distinct array components measuring different angular scales, such as
@@ -199,7 +197,10 @@ Spiral+Mid+Long.
   (\S~\ref{sec:heuristic}); the beam cap is the coarsest resolution
   offered at 30 GHz for heterogeneous subarrays (blank where the only
   limit is the $20\times$ natural-beam end of the taper lattice).
-  $b_{\min}$ for Main+Long is unfiltered (\S~\ref{sec:sims}).}
+  $b_{\min}$ for Main+Long is unfiltered (\S~\ref{sec:sims}).
+\small $^{\S}$spiral+$N$ is the spiral plus $N$ core antennas ($N=5$ or 10): one
+antenna per spiral arm for $N=5$, two per arm for $N=10$.  Each pick is the
+unselected core antenna nearest the arm's current tip, in the tangent plane.}
 \label{tab:subarrays}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
@@ -208,9 +209,13 @@ Subarray & $N$ & $b_{\min}$ (m) & $b_{\max}$ (km) & LAS ($\arcsec$) & Beam cap (
 Core-inner                 &  57 &    42.2 &     1.63 & 39.3   & --      \\
 Core                       & 114 &    42.2 &     4.27 & 39.3   & --      \\
 Spiral                     &  54 &   811.4 &    39.3  & 2.04   & --      \\
-Mid                        &  46 & 10121   &  1273    & 0.163  & --      \\
+Spiral+5$^{\S}$ & 59 & 403.9 & 39.3 & 0.0803 & -- \\
+Spiral+10$^{\S}$ & 64 & 287.5 & 39.3 & 0.0845 & -- \\
 Core+Spiral                & 168 &    42.2 &    39.3  & 39.3   & --      \\
+Mid                        &  46 & 10121   &  1273    & 0.163  & --      \\
 Spiral+Mid                 & 100 &   811.4 &  1273    & 2.04   & --      \\
+Mid+Spiral+5$^{\S}$ & 105 & 403.9 & 1273 & 0.01218 & -- \\
+Mid+Spiral+10$^{\S}$ & 110 & 287.52 & 1273 & 0.0130 & -- \\
 Main (Core+Spiral+Mid)     & 214 &    42.2 &  1273    & 39.3   & 0.710   \\
 Long                       &  30 & 515162  &  8686    & 0.0032 & --      \\
 Mid+Long                   &  76 & 10121   &  8686    & 0.163  & 0.00296 \\
@@ -745,7 +750,14 @@ generation of other products. It was implicit in the Subarray
 Conceptual Narrative \citep{saNarrative}, but is not yet clearly
 stated or defined in detail.
 
-{\it The authors acknowledge the Texas Advanced Computing Center
+{\it The National Radio Astronomy Observatory and Green Bank
+  Observatory are facilities of the U.S. National Science Foundation
+  operated under cooperative agreement by Associated Universities,
+  Inc. This work was supported by award AST-2334267 (ngVLA Design
+  Activities); NRAO related activities are funded under award
+  AST-1647378 (NRAO Operations/Development).
+  This work made use of NumPy  \citep{numpy} and SciPy  \citep{scipy}
+  The authors acknowledge the Texas Advanced Computing Center
   (TACC) at The University of Texas at Austin for providing
   computational resources under award AST25010 that have contributed
   to the research results reported within this paper. URL:
@@ -780,7 +792,10 @@ Condon, J.~J., Cotton, W.~D., Fomalont, E.~B., et al.\ 2012, ApJ, 758, 23,
   
 \bibitem{mpol}
 Czekala, I. et al. 2025, arXiv:2502.00100
-  
+
+\bibitem{numpy}
+Harris, C.~R. et al. 2020, Nature, 585, 357.
+
 \bibitem{hogbom}
 H{\"o}gbom, J.~A. 1974, A\&AS, 15, 417.
 
@@ -838,6 +853,8 @@ Observing Program}, \ngvla\ Memo 121.
 \bibitem{schwab}
 Schwab, F.~R. 1984, AJ, 89, 1076.
 
+\bibitem{scipy}
+Virtanen, P. et al. 2020, Nature Methods, 17, 261.
 \end{thebibliography}
 
 \section*{Version History}
@@ -850,6 +867,7 @@ v0.1 & 2026-08-23 & Initial draft \\
 v1 & 2026-09-23 & First circulated draft for comments \\
 v1.1 & 2026-10-03 & Minor revisions based on comments \\
 v1.2 & 2026-10-05 & Add calculator screen-shot figures \\
+v1.3 & 2026-10-14 & Add Spiral and Mid $+5$ and $+10$ to table \\
 \end{tabular}
 
 \appendix
